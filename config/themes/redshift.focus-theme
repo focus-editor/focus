@@ -1,0 +1,92 @@
+[16]  # Version number. Do not delete.
+
+[colors]
+background0:                            040608FF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            270F0FFF
+selection_active:                       206A7FAF
+selection_inactive:                     498A7E4F
+selection_highlight:                    CF447756
+search_result_active:                   CF44777F
+search_result_inactive:                 CF447736
+scrollbar:                              CC338227
+scrollbar_hover:                        CC33827F
+scrollbar_background:                   2B10104C
+cursor:                                 FF4D40FF
+cursor_inactive:                        196666FF
+paste_animation:                        491C1CFF
+splitter:                               3D0F0FFF
+splitter_hover:                         491C1CFF
+letter_highlight:                       599999FF
+list_cursor_lite:                       CC338219
+list_cursor:                            CC33824C
+shadow_dark:                            0E161C7F
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             F8AD34FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             227722FF
+
+region_scope_export:                    040608FF
+region_scope_file:                      0B141AFF
+region_scope_module:                    250A0AFF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+region_heredoc:                         10191FFF
+
+build_panel_background:                 140101FF
+build_panel_scrollbar:                  CC338227
+build_panel_scrollbar_hover:            CC33827F
+build_panel_scrollbar_background:       2B10104C
+build_panel_title_bar:                  3A1C1DFF
+
+code_default:                           B4E7FFFF
+code_comment:                           605B78FF
+code_type:                              A62E50FF
+code_function:                          CB5D7DFF
+code_punctuation:                       D1A788FF
+code_operation:                         D6783EFF
+code_string_literal:                    B3495DFF
+code_value:                             77B7B8FF
+code_highlight:                         F4F492FF
+code_error:                             FF4769FF
+code_keyword:                           8C485CFF
+code_warning:                           E4D97DFF
+code_invalid:                           FF4769FF
+code_multiline_string:                  BDD9FCFF
+code_raw_string:                        F4F492FF
+code_char_literal:                      F4F492FF
+code_identifier:                        F0C5C7FF
+code_note:                              CB5D7DFF
+code_number:                            77b7b8FF
+code_multiline_comment:                 605B78FF
+code_modifier:                          8C485CFF
+code_attribute:                         5C9FD1FF
+code_enum_variant:                      F0C5C7FF
+code_macro:                             CB5D7DFF
+code_builtin_variable:                  9DD2DEFF
+code_builtin_function:                  CB5D7DFF
+code_builtin_exception:                 CB5D7DFF
+code_directive:                         8C485CFF
+code_directive_modifier:                8A2845DF
+code_header:                            5C9FD1FF
+code_header2:                           CB5D7DFF
+code_header3:                           CB5D7DFF
+code_header4:                           CB5D7DFF
+code_header5:                           CB5D7DFF
+code_header6:                           CB5D7DFF
+
+# Added after migration to version [13]
+ruler:                                  196666FF
+bracket_highlight:                      CF447756
+indent_guide:                           CF447756
