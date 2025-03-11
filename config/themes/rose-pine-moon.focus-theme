@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # (https://rosepinetheme.com/)
+
+[colors]
+background0:                            232136FF
+background1:                            2A273FFF
+background2:                            393552FF
+background3:                            2A273FFF
+background4:                            393552FF
+selection_active:                       44415AFF
+selection_inactive:                     393552FF
+selection_highlight:                    44415AFF
+search_result_active:                   EB6F92FF
+search_result_inactive:                 9CCFD875
+scrollbar:                              524F67FF
+scrollbar_hover:                        524F67FF
+scrollbar_background:                   26233AFF
+cursor:                                 56526EFF
+cursor_inactive:                        56526EFF
+paste_animation:                        56526EFF
+splitter:                               2A273FFF
+splitter_hover:                         44415AFF
+letter_highlight:                       C4A7E7FF
+list_cursor_lite:                       393552FF
+list_cursor:                            393552FF
+shadow_dark:                            FFFFFF10
+shadow_transparent:                     00000000
+text_input_label:                       E0DEF4FF
+char_under_cursor:                      000000FF
+
+ui_default:                             E0DEF4FF
+ui_dim:                                 908CABFF
+ui_neutral:                             908CABFF
+ui_warning:                             F6C177FF
+ui_warning_dim:                         F6C177FF
+ui_error:                               EB6F92FF
+ui_error_bright:                        EB6F92FF
+ui_success:                             9CCFD8FF
+
+region_scope_export:                    232136FF
+region_scope_file:                      2A273F75
+region_scope_module:                    2A273F75
+region_header:                          393552FF
+region_success:                         56526EFF
+region_warning:                         F6C177FF
+region_error:                           EB6F92FF
+region_heredoc:                         2A273FFF
+
+build_panel_background:                 2A273FFF
+build_panel_scrollbar:                  524F67FF
+build_panel_scrollbar_hover:            524F67FF
+build_panel_scrollbar_background:       26233AFF
+build_panel_title_bar:                  232136FF
+
+code_default:                           E0DEF4FF
+code_comment:                           6E6A86FF
+code_type:                              F6C177FF
+code_function:                          C4A7E7FF
+code_punctuation:                       6E6A86FF
+code_operation:                         9CCFD8FF
+code_string_literal:                    EBBCBAFF
+code_value:                             F6C177FF
+code_highlight:                         44415AFF
+code_error:                             EB6F92FF
+code_warning:                           F6C177FF
+code_keyword:                           3E8FB0FF
+code_invalid:                           EB6F92FF
+code_multiline_string:                  EBBCBAFF
+code_raw_string:                        EBBCBAFF
+code_char_literal:                      9CCFD8FF
+code_identifier:                        E0DEF4FF
+code_note:                              56526EFF
+code_number:                            F6C177FF
+code_multiline_comment:                 6E6A86FF
+code_modifier:                          3E8FB0FF
+code_attribute:                         F6C177FF
+code_enum_variant:                      9CCFD8FF
+code_macro:                             C4A7E7FF
+code_builtin_variable:                  EB6F92FF
+code_builtin_function:                  EB6F92FF
+code_builtin_exception:                 EB6F92FF
+code_directive:                         F6C177FF
+code_directive_modifier:                F6C177FF
+code_header:                            EB6F92FF
+code_header2:                           F6C177FF
+code_header3:                           EBBCBAFF
+code_header4:                           9CCFD8FF
+code_header5:                           C4A7E7FF
+code_header6:                           3E8FB0FF
+
+ruler:                                  56526EFF
+bracket_highlight:                      44415AFF
+indent_guide:                           393552FF

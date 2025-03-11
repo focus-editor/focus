@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # (https://github.com/catppuccin/catppuccin)
+
+[colors]
+background0:                            1E1E2EFF
+background1:                            181825FF
+background2:                            11111BFF
+background3:                            181825FF
+background4:                            313244FF
+selection_active:                       45475AFF
+selection_inactive:                     313244FF
+selection_highlight:                    45475AFF
+search_result_active:                   F38BA875
+search_result_inactive:                 89DCEB75
+scrollbar:                              9399b2FF
+scrollbar_hover:                        9399b2FF
+scrollbar_background:                   313244FF
+cursor:                                 B5A6A8FF
+cursor_inactive:                        585B70FF
+paste_animation:                        B5A6A8FF
+splitter:                               181825FF
+splitter_hover:                         45475AFF
+letter_highlight:                       89B4FAFF
+list_cursor_lite:                       313244FF
+list_cursor:                            313244FF
+shadow_dark:                            11111B50
+shadow_transparent:                     11111B10
+text_input_label:                       CAD3F5FF
+char_under_cursor:                      000000FF
+
+ui_default:                             CDD6F4FF
+ui_dim:                                 9DA0ABFF
+ui_neutral:                             9DA0ABFF
+ui_warning:                             F9E2AFFF
+ui_warning_dim:                         F9E2AFFF
+ui_error:                               F38BA8FF
+ui_error_bright:                        F38BA8FF
+ui_success:                             A6E3A1FF
+
+region_scope_export:                    1E1E2EFF
+region_scope_file:                      18182575
+region_scope_module:                    18182575
+region_header:                          313244FF
+region_success:                         585b70FF
+region_warning:                         F9E2AFFF
+region_error:                           F38BA8FF
+region_heredoc:                         181825FF
+
+build_panel_background:                 181825FF
+build_panel_scrollbar:                  9399b2FF
+build_panel_scrollbar_hover:            9399b2FF
+build_panel_scrollbar_background:       313244FF
+build_panel_title_bar:                  11111BFF
+
+code_default:                           CDD6F4FF
+code_comment:                           9399B2FF
+code_type:                              F9E2AFFF
+code_function:                          89B4FAFF
+code_punctuation:                       939AB7FF
+code_operation:                         91D7E3FF
+code_string_literal:                    A6DA95FF
+code_value:                             F5A97FFF
+code_highlight:                         494D64FF
+code_error:                             ED8796FF
+code_warning:                           EED49FFF
+code_keyword:                           C6A0F6FF
+code_invalid:                           DD4E52FF
+code_multiline_string:                  A6DA95FF
+code_raw_string:                        A6DA95FF
+code_char_literal:                      8BD5CAFF
+code_identifier:                        CAD3F5FF
+code_note:                              4C505EFF
+code_number:                            F5A97FFF
+code_multiline_comment:                 9399B2FF
+code_modifier:                          C6A0F6FF
+code_attribute:                         F9E2AFFF
+code_enum_variant:                      94E2D5FF
+code_macro:                             CBA6F7FF
+code_builtin_variable:                  F38BA8FF
+code_builtin_function:                  F38BA8FF
+code_builtin_exception:                 F38BA8FF
+code_directive:                         F9E2AFff
+code_directive_modifier:                F9E2AFFF
+code_header:                            F38BA8FF
+code_header2:                           FAB387FF
+code_header3:                           F9E2AFFF
+code_header4:                           A6E3A1FF
+code_header5:                           74C7ECFF
+code_header6:                           B4BEFEFF
+
+ruler:                                  4C505EFF
+bracket_highlight:                      252525FF
+indent_guide:                           313244FF
