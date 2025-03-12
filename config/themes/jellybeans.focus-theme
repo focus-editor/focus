@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # (https://github.com/nanotech/jellybeans.vim)
+
+[colors]
+background0:                            151515FF
+background1:                            1C1C1CFF
+background2:                            262626FF
+background3:                            1C1C1CFF
+background4:                            303030FF
+selection_active:                       3D4070FF
+selection_inactive:                     303030FF
+selection_highlight:                    3D4070FF
+search_result_active:                   D8AD4B75
+search_result_inactive:                 8197BFFF
+scrollbar:                              606060FF
+scrollbar_hover:                        707070FF
+scrollbar_background:                   303030FF
+cursor:                                 FFFFAAFF
+cursor_inactive:                        606060FF
+paste_animation:                        606060FF
+splitter:                               1C1C1CFF
+splitter_hover:                         3D4070FF
+letter_highlight:                       8197BFFF
+list_cursor_lite:                       303030FF
+list_cursor:                            303030FF
+shadow_dark:                            00000050
+shadow_transparent:                     00000010
+text_input_label:                       A8A8A8FF
+char_under_cursor:                      000000FF
+
+ui_default:                             A8A8A8FF
+ui_dim:                                 888888FF
+ui_neutral:                             888888FF
+ui_warning:                             D8AD4BFF
+ui_warning_dim:                         D8AD4BFF
+ui_error:                               E84F4FFF
+ui_error_bright:                        E84F4FFF
+ui_success:                             99AD6AFF
+
+region_scope_export:                    151515FF
+region_scope_file:                      1C1C1CA0
+region_scope_module:                    1C1C1CA0
+region_header:                          303030FF
+region_success:                         606060FF
+region_warning:                         D8AD4BFF
+region_error:                           E84F4FFF
+region_heredoc:                         1C1C1CFF
+
+build_panel_background:                 1C1C1CFF
+build_panel_scrollbar:                  606060FF
+build_panel_scrollbar_hover:            707070FF
+build_panel_scrollbar_background:       303030FF
+build_panel_title_bar:                  262626FF
+
+code_default:                           A8A8A8FF
+code_comment:                           888888FF
+code_type:                              8FBFDFFF
+code_function:                          FFC66DFF
+code_punctuation:                       888888FF
+code_operation:                         8197BFFF
+code_string_literal:                    99AD6AFF
+code_value:                             CF6A4CFF
+code_highlight:                         3D4070FF
+code_error:                             E84F4FFF
+code_warning:                           D8AD4BFF
+code_keyword:                           8197BFFF
+code_invalid:                           E84F4FFF
+code_multiline_string:                  99AD6AFF
+code_raw_string:                        99AD6AFF
+code_char_literal:                      C6B6EEFF
+code_identifier:                        A8A8A8FF
+code_note:                              606060FF
+code_number:                            CF6A4CFF
+code_multiline_comment:                 888888FF
+code_modifier:                          8197BFFF
+code_attribute:                         D8AD4BFF
+code_enum_variant:                      8FBFDFFF
+code_macro:                             C6B6EEFF
+code_builtin_variable:                  E84F4FFF
+code_builtin_function:                  E84F4FFF
+code_builtin_exception:                 E84F4FFF
+code_directive:                         D8AD4BFF
+code_directive_modifier:                D8AD4BFF
+code_header:                            E84F4FFF
+code_header2:                           CF6A4CFF
+code_header3:                           D8AD4BFF
+code_header4:                           99AD6AFF
+code_header5:                           8197BFFF
+code_header6:                           C6B6EEFF
+
+ruler:                                  606060FF
+bracket_highlight:                      3D4070FF
+indent_guide:                           303030FF

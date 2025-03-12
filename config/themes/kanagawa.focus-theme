@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # (https://github.com/rebelot/kanagawa.nvim)
+
+[colors]
+background0:                            1F1F28FF
+background1:                            16161DFF
+background2:                            2A2A37FF
+background3:                            16161DFF
+background4:                            363646FF
+selection_active:                       2D4F67FF
+selection_inactive:                     363646FF
+selection_highlight:                    2D4F67FF
+search_result_active:                   DCA56175
+search_result_inactive:                 7E9CD8FF
+scrollbar:                              54546DFF
+scrollbar_hover:                        717C7CFF
+scrollbar_background:                   363646FF
+cursor:                                 C8C093FF
+cursor_inactive:                        54546DFF
+paste_animation:                        54546DFF
+splitter:                               16161DFF
+splitter_hover:                         2D4F67FF
+letter_highlight:                       7E9CD8FF
+list_cursor_lite:                       363646FF
+list_cursor:                            363646FF
+shadow_dark:                            0D0C0C50
+shadow_transparent:                     0D0C0C10
+text_input_label:                       DCD7BAFF
+char_under_cursor:                      000000FF
+
+ui_default:                             DCD7BAFF
+ui_dim:                                 C8C093FF
+ui_neutral:                             C8C093FF
+ui_warning:                             FFA066FF
+ui_warning_dim:                         FFA066FF
+ui_error:                               FF5D62FF
+ui_error_bright:                        FF5D62FF
+ui_success:                             98BB6CFF
+
+region_scope_export:                    1F1F28FF
+region_scope_file:                      16161D75
+region_scope_module:                    16161D75
+region_header:                          363646FF
+region_success:                         54546DFF
+region_warning:                         FFA066FF
+region_error:                           FF5D62FF
+region_heredoc:                         16161DFF
+
+build_panel_background:                 16161DFF
+build_panel_scrollbar:                  54546DFF
+build_panel_scrollbar_hover:            717C7CFF
+build_panel_scrollbar_background:       363646FF
+build_panel_title_bar:                  2A2A37FF
+
+code_default:                           DCD7BAFF
+code_comment:                           727169FF
+code_type:                              7FB4CAFF
+code_function:                          7AA89FFF
+code_punctuation:                       C8C093FF
+code_operation:                         8A9A7BFF
+code_string_literal:                    98BB6CFF
+code_value:                             FFA066FF
+code_highlight:                         2D4F67FF
+code_error:                             FF5D62FF
+code_warning:                           FFA066FF
+code_keyword:                           957FB8FF
+code_invalid:                           FF5D62FF
+code_multiline_string:                  98BB6CFF
+code_raw_string:                        98BB6CFF
+code_char_literal:                      FF9E3BFF
+code_identifier:                        DCD7BAFF
+code_note:                              626880FF
+code_number:                            D27E99FF
+code_multiline_comment:                 727169FF
+code_modifier:                          7E9CD8FF
+code_attribute:                         DCA561FF
+code_enum_variant:                      7FB4CAFF
+code_macro:                             957FB8FF
+code_builtin_variable:                  E46876FF
+code_builtin_function:                  7AA89FFF
+code_builtin_exception:                 E46876FF
+code_directive:                         957FB8FF
+code_directive_modifier:                957FB8FF
+code_header:                            E46876FF
+code_header2:                           D27E99FF
+code_header3:                           DCA561FF
+code_header4:                           98BB6CFF
+code_header5:                           7E9CD8FF
+code_header6:                           957FB8FF
+
+ruler:                                  54546DFF
+bracket_highlight:                      2D4F67FF
+indent_guide:                           363646FF
