@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # Based on VSCode Dark theme
+
+[colors]
+background0:                            1E1E1EFF
+background1:                            252526FF
+background2:                            333333FF
+background3:                            2D2D30FF
+background4:                            3C3C3CFF
+selection_active:                       264F78FF
+selection_inactive:                     3A3D41FF
+selection_highlight:                    264F78FF
+search_result_active:                   515C6A75
+search_result_inactive:                 007ACCFF
+scrollbar:                              424242FF
+scrollbar_hover:                        4E4E4EFF
+scrollbar_background:                   3C3C3CFF
+cursor:                                 AEAFADFF
+cursor_inactive:                        A0A0A0FF
+paste_animation:                        5E5E5EFF
+splitter:                               252526FF
+splitter_hover:                         3A3D41FF
+letter_highlight:                       569CD6FF
+list_cursor_lite:                       3C3C3CFF
+list_cursor:                            3C3C3CFF
+shadow_dark:                            00000050
+shadow_transparent:                     00000010
+text_input_label:                       D4D4D4FF
+char_under_cursor:                      000000FF
+
+ui_default:                             D4D4D4FF
+ui_dim:                                 CCCCCCFF
+ui_neutral:                             CCCCCCFF
+ui_warning:                             DCDCAAFF
+ui_warning_dim:                         DCDCAAFF
+ui_error:                               F48771FF
+ui_error_bright:                        F48771FF
+ui_success:                             89D185FF
+
+region_scope_export:                    1E1E1EFF
+region_scope_file:                      252526A0
+region_scope_module:                    252526A0
+region_header:                          3C3C3CFF
+region_success:                         5E5E5EFF
+region_warning:                         DCDCAAFF
+region_error:                           F48771FF
+region_heredoc:                         252526FF
+
+build_panel_background:                 252526FF
+build_panel_scrollbar:                  424242FF
+build_panel_scrollbar_hover:            4E4E4EFF
+build_panel_scrollbar_background:       3C3C3CFF
+build_panel_title_bar:                  333333FF
+
+code_default:                           D4D4D4FF
+code_comment:                           6A9955FF
+code_type:                              4EC9B0FF
+code_function:                          DCDCAAFF
+code_punctuation:                       D4D4D4FF
+code_operation:                         D4D4D4FF
+code_string_literal:                    CE9178FF
+code_value:                             B5CEA8FF
+code_highlight:                         3A3D41FF
+code_error:                             F48771FF
+code_warning:                           DCDCAAFF
+code_keyword:                           569CD6FF
+code_invalid:                           F48771FF
+code_multiline_string:                  CE9178FF
+code_raw_string:                        CE9178FF
+code_char_literal:                      D7BA7DFF
+code_identifier:                        9CDCFEFF
+code_note:                              6A9955FF
+code_number:                            B5CEA8FF
+code_multiline_comment:                 6A9955FF
+code_modifier:                          569CD6FF
+code_attribute:                         DCDCAAFF
+code_enum_variant:                      4EC9B0FF
+code_macro:                             C586C0FF
+code_builtin_variable:                  9CDCFEFF
+code_builtin_function:                  DCDCAAFF
+code_builtin_exception:                 F48771FF
+code_directive:                         C586C0FF
+code_directive_modifier:                C586C0FF
+code_header:                            F48771FF
+code_header2:                           B5CEA8FF
+code_header3:                           DCDCAAFF
+code_header4:                           89D185FF
+code_header5:                           569CD6FF
+code_header6:                           9CDCFEFF
+
+ruler:                                  5E5E5EFF
+bracket_highlight:                      3A3D41FF
+indent_guide:                           3C3C3CFF
