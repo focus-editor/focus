@@ -85,10 +85,10 @@ draw_frame :: () {
     //         // @split
     // }
 
-    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(active_editor_rect, status_bar_height);
+    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(active_editor_rect);
     if panel_is_active then active_editor_rect = panel_editor_rect;
 
-    panel_is_active, panel_editor_rect  = maybe_draw_build_panel(status_bar_height);
+    panel_is_active, panel_editor_rect  = maybe_draw_build_panel();
     if panel_is_active then active_editor_rect = panel_editor_rect;
 
     if #complete active_global_widget == {
@@ -108,6 +108,7 @@ draw_frame :: () {
     }
 
     draw_user_messages(screen);
+    draw_key_sequence_in_progress(active_editor_rect);
 
     // Reset UI state after drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) {
@@ -400,6 +401,37 @@ draw_user_messages :: (main_area: Rect) {
     }
 }
 
+draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
+    if !key_sequence_input_in_progress() return;
+
+    margin  := floor(12 * dpi_scale);
+    padding_v := floor(4 * dpi_scale);
+    padding_h := floor(6 * dpi_scale);
+
+    rect_height := cast(float) font_ui_small.character_height + 2 * padding_v;
+
+    pen := bottom_left(active_editor_rect) + Vector2.{ margin, margin };
+    if config.settings.status_bar_position == .bottom && editors_get_layout() != .None then pen.y += status_bar_height;
+
+    text_y := pen.y + padding_v * 1.5;
+
+    for 0 .. key_sequence_input.active_sequence_length - 1 {
+        combo_strings := key_combo_strings(key_sequence_input.potential_multipart_matches[0].mapping.key_sequence[it]);
+        combo := join(..combo_strings, "-",, temp);
+        if it == key_sequence_input.active_sequence_length - 1 then combo = tprint("% ...", combo);
+
+        rect := Rect.{ pen.x, pen.y, 0, rect_height };
+        rect.w = xx Simp.prepare_text(font_ui_small, combo) + 2 * padding_h;
+        rect = align_to_grid(rect);
+        shadow_rect := expand(rect, 1);
+        shadow_rect.y -= 2;
+        draw_rounded_rect(shadow_rect, Color.BACKGROUND_1);
+        draw_rounded_rect(rect, Color.SELECTION_ACTIVE);
+        Simp.draw_prepared_text(font_ui_small, xx (pen.x + padding_h), xx text_y, xx Color.UI_DEFAULT);
+        pen.x += rect.w + padding_h;
+    }
+}
+
 should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
     active_editor, active_buffer := get_active_editor_and_buffer();
     if !active_editor return false;
@@ -416,7 +448,7 @@ should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
     return true;
 }
 
-maybe_draw_color_preview_panel :: (active_editor_rect: Rect, status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
+maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
@@ -697,7 +729,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
     Simp.immediate_flush();
 }
 
-maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
+maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if !build_panel_is_shown return;
 
     position := build_panel_get_position();
@@ -2187,33 +2219,6 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
-    if key_sequence_input_in_progress() {
-        // Draw separator
-        pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
-        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
-
-        // Draw key sequence
-        builder: String_Builder;
-        builder.allocator = temp;
-
-        for 0 .. key_sequence_input.active_sequence_length - 1 {
-            combo_strings := key_combo_strings(key_sequence_input.potential_multipart_matches[0].mapping.key_sequence[it]);
-            for combo_strings {
-                print_to_builder(*builder, "%", it);
-                if it_index < combo_strings.count - 1  print_to_builder(*builder, "+");
-            }
-
-            print_to_builder(*builder, " ");
-        }
-
-        print_to_builder(*builder, "...");
-
-        pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder,, allocator = temp));
-        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
-    }
-
     pen.x += width;
 
     return width, pen;
@@ -2348,7 +2353,7 @@ draw_open_file_dialog :: () {
                             path_chunks_trimmed := array_view(path_chunks, 1, it_index);
                             dir_path: string = ---;
                             if path_chunks_trimmed.count == 0 dir_path = root_dir;
-                            else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+                            else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/",, temp));
                             platform_open_in_explorer(dir_path);
                         } else {
                             // Regular Click = Trim chunks past this dir
