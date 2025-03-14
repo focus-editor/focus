@@ -36,13 +36,13 @@ ui_error_bright:                        FF0000FF
 ui_success:                             227722FF
 
 region_scope_export:                    040608FF
-region_scope_file:                      0B141AFF
-region_scope_module:                    250A0AFF
+region_scope_file:                      050E14FF
+region_scope_module:                    170707FF
 region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
-region_heredoc:                         10191FFF
+region_heredoc:                         170D0DFF
 
 build_panel_background:                 140101FF
 build_panel_scrollbar:                  CC338227
