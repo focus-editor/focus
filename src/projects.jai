@@ -27,7 +27,7 @@ add_to_most_recent_projects :: (path: string) {
         array_add(*deduped_projects, copy_temporary_string(project));
     }
 
-    new_file_contents := tprint("%\n%\n", RECENT_PROJECTS_HEADER, join(..deduped_projects, "\n"));
+    new_file_contents := tprint("%\n%\n", RECENT_PROJECTS_HEADER, join(..deduped_projects, "\n",, temp));
     target_file := get_recent_projects_file_path();
     success = write_entire_file(target_file, new_file_contents);
     if !success { log_error("Couldn't write to file %", target_file); return; }
