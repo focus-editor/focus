@@ -205,7 +205,7 @@ map_name_to_color :: (name: string) -> Color {
         case "scrollbar_background";                    return .SCROLLBAR_BACKGROUND;
         case "cursor";                                  return .CURSOR;
         case "cursor_inactive";                         return .CURSOR_INACTIVE;
-        case "cursor_line_highlight";                   return .CURSOR_LINE_HIGHLIGHT
+        case "cursor_line_highlight";                   return .CURSOR_LINE_HIGHLIGHT;
         case "paste_animation";                         return .PASTE_ANIMATION;
         case "splitter";                                return .SPLITTER;
         case "splitter_hover";                          return .SPLITTER_HOVER;
