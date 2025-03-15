@@ -522,13 +522,22 @@ maybe_wait_for_delay :: (using anim: *Tween_Animation($T)) -> bool {
     return false;
 }
 
-get_animation_value :: (using anim: Tween_Animation($T)) -> T {
+get_animation_value :: (using anim: Tween_Animation($T)) -> T, finished: bool {
     t := (frame_time64 - (started_at + delay)) / duration;
-    t = clamp(t, 0, 1);
-    if #complete func == {
-        case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
-        case .smoothstep; return start + cast(T) (cast(float)(target - start) * t * t * (3.0 - 2.0 * t));
+
+    finished := false;
+    if t >= 1 {
+        t = 1;
+        finished = true;
     }
+    
+    result: T;
+    if #complete func == {
+        case .lerp;       result = start + cast(T) (cast(float)(target - start) * t);
+        case .smoothstep; result = start + cast(T) (cast(float)(target - start) * t * t * (3.0 - 2.0 * t));
+    }
+
+    return result, finished;
 }
 
 get_identifier_name :: (name: Code) -> string {

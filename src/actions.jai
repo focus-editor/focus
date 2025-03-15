@@ -257,14 +257,7 @@ activate_hold_action :: (action: $Action_Type, event: Input.Event) {
 
     hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
 
-    // NOTE: array_add_if_unique didn't work because it couldn't find the operator == for Hold_Actions.
-    // I tried making it public but it didn't help.
-    // array_add_if_unique(*active_hold_actions, hold_action);
-
-    for active_hold_actions {
-        if it == hold_action return;  // already there
-    }
-    array_add(*active_hold_actions, hold_action);
+    array_add_if_unique(*active_hold_actions, hold_action);
 }
 
 is_hold_action :: inline (action: Action_Editors) -> bool {
@@ -276,10 +269,27 @@ is_hold_action :: inline (action: Action_Editors) -> bool {
            action == .scroll_viewport_right;
 }
 
+// This function just remembers that a linger action is now active, so that we can deactivate it on modifier key release.
+activate_lingering_action :: (lingering_action: Lingering_Action) {
+    for active_lingering_actions {
+        if it.action == lingering_action.action && it.modifier_keys.packed == lingering_action.modifier_keys.packed remove it;  // clear all existing similar actions
+    }
 
-active_hold_actions: [..] Hold_Action;
+    array_add(*active_lingering_actions, lingering_action);
+}
 
-// We have to get store the matched mapping because one action may be matched
+should_show_pane_tabs :: (pane: *Editor_Pane) -> bool {
+    for active_lingering_actions {
+        if it.action == .show_pane_tabs && it.show_pane_tabs.pane == pane return true;
+    }
+    return false;
+}
+
+
+active_hold_actions:      [..] Hold_Action;
+active_lingering_actions: [..] Lingering_Action;
+
+// We have to store the matched mapping because one action may be matched
 // by multiple key combos, so when a key is released, in order to deactivate the action
 // we need to check whether it actually belongs to the combo that activated the action!
 Hold_Action :: struct {
@@ -287,10 +297,32 @@ Hold_Action :: struct {
     matched_mapping: Key_Mapping;
 }
 
+// A lingering action is an action which is considered still active until all the modifier keys which
+// triggered it are released. Example: switching between buffers using Ctrl-Tab. While Ctrl is held
+// we want to still show the list of buffers, but once it's released we want to hide it.
+// Note that when Tab is released it doesn't deactivate the action, unlike the hold actions
+Lingering_Action :: struct {
+    action: Action_Type;
+    modifier_keys: Mods;
+
+    // Extra action data
+    union {
+        show_pane_tabs: struct {
+            pane: *Editor_Pane;
+        };
+    }
+
+    Action_Type :: enum {
+        show_pane_tabs;
+        show_pane_numbers;
+    }
+}
+
 
 #scope_file
 
-operator == :: (a: Hold_Action, b: Hold_Action) -> bool {
+operator== :: (a: Hold_Action, b: Hold_Action) -> bool {
     return memcmp(*a, *b, size_of(Hold_Action)) == 0;
 }
+#poke_name Basic operator==;
 
