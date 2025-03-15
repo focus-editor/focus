@@ -26,7 +26,6 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
                         case .scroll_viewport_right;        if editor_smooth_scroll.direction == .right then editor_smooth_scroll.direction = .none;
                     }
                 }
-                // @Incomplete: Does stopping hold actions actually count as handling an event in the sense that it should suppress other event handlers?
                 return hold_actions_to_be_stopped.count > 0;
             }
 
@@ -62,7 +61,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     if action == {
         case .close_all_editors;                close_all_editors();
         case .close_other_editors_in_pane;      close_other_editors_in_pane();
-        case .close_editor;                     close_editor();
+        case .close_editor;                     close_editor(*event);
 
         case .close_pane;                       close_pane(.in_place);
         case .close_left_pane;                  close_pane(.left);
@@ -441,6 +440,24 @@ active_editor_type_char :: (char: u32) {
     editor.cursor_moved = .unimportant;
     cursors_start_blinking();
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
+}
+
+maybe_deactivate_lingering_actions :: () {
+    for active_lingering_actions {
+        all_modifier_keys_released := (
+            (!it.modifier_keys.ctrl_pressed     || !ctrl_pressed()     ) &&
+            (!it.modifier_keys.shift_pressed    || !shift_pressed()    ) &&
+            (!it.modifier_keys.alt_pressed      || !alt_pressed()      ) &&
+            (!it.modifier_keys.cmd_meta_pressed || !cmd_meta_pressed() )
+        );
+        if all_modifier_keys_released {
+            if #complete it.action == {
+                case .show_pane_tabs;    print("No longer showing pane buffers | ");
+                case .show_pane_numbers;
+            }
+            remove it;
+        }
+    }
 }
 
 get_active_editor_id :: () -> s64 {
@@ -980,12 +997,13 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
     return true;
 }
 
-close_editor :: () {
+close_editor :: (event: *Input.Event) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
     active_editor_id := get_active_editor_id();
     if active_editor_id >= 0 {
         close_editor_by_id(active_editor_id);
+        if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
     } else {
         close_pane(.in_place);
     }
@@ -1519,16 +1537,18 @@ assert_leaf_pane :: (pane: *Editor_Pane, msg := "Expected a leaf pane but got so
     assert(pane.right == null, msg);
 }
 
-go_to_next_buffer :: () {
+go_to_next_buffer :: (event: *Input.Event) {
     if !editors.active_pane return;
     assert_leaf_pane(editors.active_pane);
 
     using editors.active_pane;
     if editor_index < 0 || !editor_ids return;
     editor_index = (editor_index + 1) % editor_ids.count;
+
+    if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
 }
 
-go_to_previous_buffer :: () {
+go_to_previous_buffer :: (event: *Input.Event) {
     if !editors.active_pane return;
     assert_leaf_pane(editors.active_pane);
 
@@ -1536,9 +1556,20 @@ go_to_previous_buffer :: () {
     if editor_index < 0 || !editor_ids return;
     editor_index -= 1;
     if editor_index < 0 then editor_index = editor_ids.count - 1;
+
+    if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
 }
 
 #scope_file
+
+activate_show_pane_tabs_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
+    action := Lingering_Action.{
+        action = .show_pane_tabs,
+        modifier_keys = modifier_keys,
+        show_pane_tabs.pane = pane,
+    };
+    activate_lingering_action(action);
+}
 
 find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
     re_text := ifx whole_word then tprint("\\w%\\w", needle) else needle;
@@ -4420,6 +4451,12 @@ Editor_Pane :: struct {
 
     editor_index: s64 = -1;
     editor_ids: [..] s64;
+
+    tab_draw_info: struct {
+        tab_list_x_offset   := #run Tween_Animation(float).{ duration = 0.05, func = .smoothstep };
+        selected_tab_width  := #run Tween_Animation(float).{ duration = 0.05, func = .smoothstep };
+        last_selected_index := -1;  // to trigger the animation
+    };
 
     layout: Layout = .single;
     splitter_pos: float = 0.5;

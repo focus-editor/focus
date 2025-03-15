@@ -130,7 +130,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
 
     if layout == .single {
         if editor_index >= 0 {
-            draw_editor(editor_ids[editor_index], rect, pane_ui_id);
+            draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane);
         } else {
             clicked := maybe_set_hot_or_active(pane_ui_id, rect, .NORMAL);
             if clicked {
@@ -868,7 +868,8 @@ coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
     return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar := true, total_editor_area := Rect.{}) {
+// TODO: remove total_editor_area
+draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true, total_editor_area := Rect.{}) {
     as_build_panel := is_build_panel(editor_id);
 
     using editor := *open_editors[editor_id];
@@ -2010,132 +2011,183 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar :=
     }
 
     // Draw status bar
-    if !as_build_panel {
-        footer_color := Color.BACKGROUND_4;
-        draw_rect(status_bar_rect, footer_color, extra_draw_info = .{is_background = true});
+    if !as_build_panel && has_status_bar {
+        status_bar_bg_color := Color.BACKGROUND_4;
+        draw_rect(status_bar_rect, status_bar_bg_color, extra_draw_info = .{is_background = true});
         if #complete buffer_settings.status_bar_position == {
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
         }
 
-        push_scissor(status_bar_rect);
-        defer pop_scissor();
-
-        status_bar_rect = shrink_x(status_bar_rect, text_offset.x);
-
-        width   := 0.0;
-        padding := floor(4 * dpi_scale);
-
-        pen := Vector2.{
-            status_bar_rect.x,
-            status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-        };
-
-        // Draw file name and path
-        width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
-
-        // Draw line, column numbers, and selection length
-        {
-            cut_rect := status_bar_rect;
-            cut_rect.x = pen.x + padding;
-            cut_rect.w = status_bar_rect.x + status_bar_rect.w - cut_rect.x;
-            push_scissor(cut_rect);
-            defer pop_scissor();
-
-            pen_x := status_bar_rect.x + status_bar_rect.w;
-            should_draw_separator := false;
-
-            _maybe_draw_separator :: () #expand {
-                if !should_draw_separator {
-                    should_draw_separator = true;
-                    return;
-                }
-
-                `pen_x -= 3 * padding;
-                rect := cut_right(status_bar_rect, 1);
-                rect.x = `pen_x;
-                draw_rect(rect, Color.BACKGROUND_0);
-                `pen_x -= 3 * padding;
-            }
-
-            // Draw line col
-            if buffer_settings.status_bar_show_line_col {
-                _maybe_draw_separator();
-
-                line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
-                col  := 0;
-                {
-                    // Do not count indented tabs here, only count each tab as one character.
-                    start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
-                    s := cast(string) to_view(buffer.bytes, start, end - start);
-                    while s {
-                        byte := s[0];
-                        advance(*s, 1 + trailingBytesForUTF8[byte]);
-                        col += 1;
-                    }
-                }
-
-                #if DEBUG {
-                    width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
-                } else {
-                    width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
-                }
-                pen_x -= width;
-                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
-            }
-
-            // Draw indentation type
-            if buffer_settings.status_bar_show_indentation {
-                _maybe_draw_separator();
-                indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
-                label := tprint("%: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
-                width = xx Simp.prepare_text(font_ui_bold, label);
-                pen_x -= width;
-                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
-            }
-
-            // Draw length of selected text if any text is currently selected
-            if buffer_settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
-                _maybe_draw_separator();
-                label := tprint("Selected: % chars", num_selected_chars);
-                if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes", num_selected_chars, num_selected_bytes);
-                width = xx Simp.prepare_text(font_ui_bold, label);
-                pen_x -= width;
-                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
-            }
-
-            _maybe_draw_separator();
-
-            // Maybe draw the number of cursors off screen
-            if editor.cursors.count > 1 && cursors_off_screen && buffer_settings.status_bar_show_cursors_off_screen {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
-                cursor_indicator_x := pen_x - width - char_x_advance;
-                Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
-
-                cursor_width := ifx buffer_settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
-                cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
-                cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
-
-                if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
-
-                hover_rect := Rect.{ cursor_rect.x - padding, status_bar_rect.y, cursor_rect.w + padding + width + 2 * padding, status_bar_rect.h };
-                cursor_number_id := get_ui_id_from_loc();
-                maybe_set_hot_or_active(cursor_number_id, hover_rect, .NORMAL);
-                if is_hovering_over(cursor_number_id) {
-                    draw_tooltip_bottom_left(tprint("Cursors off screen: %", cursors_off_screen), top_right(cursor_rect));
-                }
-            }
-
-            // Make sure the text is cut nicely (only if footer color is not translucent, otherwise it won't work)
-            if map_color_to_vec4(footer_color).w >= 1.0 {
-                fadeout_rect := cut_rect;
-                fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
-                fadeout_rect.w = 4 * padding;
-                draw_rect(fadeout_rect, footer_color, extra_draw_info = .{is_background = true, is_translucent_on_the_right = true});
-            }
+        if should_show_pane_tabs(pane) {
+            draw_pane_tabs(pane, status_bar_rect, text_offset);
+        } else {
+            draw_status_bar(editor, buffer, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
         }
     }
 
+}
+
+draw_pane_tabs :: (pane: *Editor_Pane, rect: Rect, text_offset: Vector2) {
+    push_scissor(rect);
+    defer pop_scissor();
+
+    status_bar_rect := shrink_x(rect, text_offset.x);
+
+    current_x_offset, anim_finished := get_animation_value(pane.tab_draw_info.tab_list_x_offset);
+    if !anim_finished then redraw_requested = true;
+
+    pen := Vector2.{
+        status_bar_rect.x + current_x_offset,
+        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+    };
+    padding := floor(4 * dpi_scale);
+
+    // Draw selected tab
+    current_tab_width:, anim_finished = get_animation_value(pane.tab_draw_info.selected_tab_width);
+    if !anim_finished then redraw_requested = true;
+
+    centered_tab := Rect.{ rect.x + (rect.w - current_tab_width) / 2, rect.y, current_tab_width, rect.h };
+    draw_rect(centered_tab, Color.LIST_CURSOR);
+
+    // Draw other tabs
+    for pane.editor_ids {
+        editor := *open_editors[it];
+        buffer := *open_buffers[editor.buffer_id];
+
+        start_x := pen.x;
+        pen.x += padding;
+        _, pen = draw_file_info(buffer, 0, padding, pen);
+        pen.x += padding;
+
+        if it_index == pane.editor_index && it_index != pane.tab_draw_info.last_selected_index {
+            pane.tab_draw_info.last_selected_index = it_index;
+
+            width := pen.x - start_x;
+            offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);;
+            start_animation(*pane.tab_draw_info.tab_list_x_offset,  current_x_offset,  offset);
+            start_animation(*pane.tab_draw_info.selected_tab_width, current_tab_width, width);
+        }
+    }
+}
+
+draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
+    push_scissor(rect);
+    defer pop_scissor();
+
+    status_bar_rect := shrink_x(rect, text_offset.x);
+
+    width   := 0.0;
+    padding := floor(4 * dpi_scale);
+
+    pen := Vector2.{
+        status_bar_rect.x,
+        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+    };
+
+    // Draw file name and path
+    width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
+
+    // Draw line, column numbers, and selection length
+    {
+        cut_rect := status_bar_rect;
+        cut_rect.x = pen.x + padding;
+        cut_rect.w = status_bar_rect.x + status_bar_rect.w - cut_rect.x;
+        push_scissor(cut_rect);
+        defer pop_scissor();
+
+        pen_x := status_bar_rect.x + status_bar_rect.w;
+        should_draw_separator := false;
+
+        _maybe_draw_separator :: () #expand {
+            if !should_draw_separator {
+                should_draw_separator = true;
+                return;
+            }
+
+            `pen_x -= 3 * padding;
+            rect := cut_right(status_bar_rect, 1);
+            rect.x = `pen_x;
+            draw_rect(rect, Color.BACKGROUND_0);
+            `pen_x -= 3 * padding;
+        }
+
+        // Draw line col
+        if buffer_settings.status_bar_show_line_col {
+            _maybe_draw_separator();
+
+            line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
+            col  := 0;
+            {
+                // Do not count indented tabs here, only count each tab as one character.
+                start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
+                s := cast(string) to_view(buffer.bytes, start, end - start);
+                while s {
+                    byte := s[0];
+                    advance(*s, 1 + trailingBytesForUTF8[byte]);
+                    col += 1;
+                }
+            }
+
+            #if DEBUG {
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
+            } else {
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
+            }
+            pen_x -= width;
+            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+        }
+
+        // Draw indentation type
+        if buffer_settings.status_bar_show_indentation {
+            _maybe_draw_separator();
+            indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+            label := tprint("%: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
+            width = xx Simp.prepare_text(font_ui_bold, label);
+            pen_x -= width;
+            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+        }
+
+        // Draw length of selected text if any text is currently selected
+        if buffer_settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
+            _maybe_draw_separator();
+            label := tprint("Selected: % chars", num_selected_chars);
+            if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes", num_selected_chars, num_selected_bytes);
+            width = xx Simp.prepare_text(font_ui_bold, label);
+            pen_x -= width;
+            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+        }
+
+        _maybe_draw_separator();
+
+        // Maybe draw the number of cursors off screen
+        if editor.cursors.count > 1 && cursors_off_screen && buffer_settings.status_bar_show_cursors_off_screen {
+            width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
+            cursor_indicator_x := pen_x - width - char_x_advance;
+            Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
+
+            cursor_width := ifx buffer_settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
+            cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
+            cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
+
+            if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
+
+            hover_rect := Rect.{ cursor_rect.x - padding, status_bar_rect.y, cursor_rect.w + padding + width + 2 * padding, status_bar_rect.h };
+            cursor_number_id := get_ui_id_from_loc();
+            maybe_set_hot_or_active(cursor_number_id, hover_rect, .NORMAL);
+            if is_hovering_over(cursor_number_id) {
+                draw_tooltip_bottom_left(tprint("Cursors off screen: %", cursors_off_screen), top_right(cursor_rect));
+            }
+        }
+
+        // Make sure the text is cut nicely (only if footer color is not translucent, otherwise it won't work)
+        if map_color_to_vec4(status_bar_bg_color).w >= 1.0 {
+            fadeout_rect := cut_rect;
+            fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
+            fadeout_rect.w = 4 * padding;
+            draw_rect(fadeout_rect, status_bar_bg_color, extra_draw_info = .{is_background = true, is_translucent_on_the_right = true});
+        }
+    }
 }
 
 draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false, draw_config_warning := false) -> new_width: float, new_pen: Vector2 {

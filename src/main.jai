@@ -304,7 +304,7 @@ main :: () {
 
             if !handled {
                 action := map_event_to_action(event, Action_Editors);
-                handled = handle_common_editor_action(action);
+                handled = handle_common_editor_action(action, event = *event);
             }
             if !handled {
                 action := map_event_to_action(event, Action_Build);
@@ -324,6 +324,8 @@ main :: () {
 
             key_sequence_input_process_event(event, handled);
         }
+
+        maybe_deactivate_lingering_actions();
 
         execute_deferred_actions();
 
@@ -364,7 +366,7 @@ main :: () {
     }
 }
 
-handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
+handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place, event: *Input.Event = null) -> handled: bool {
     if action == {
         case .quit;                                             defer_action_quit();                                return true;
 
@@ -408,8 +410,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .cursor_go_back;                                   cursor_go_back();                                   return true;
         case .cursor_go_forward;                                cursor_go_forward();                                return true;
 
-        case .go_to_previous_buffer;                            go_to_previous_buffer();                            return true;
-        case .go_to_next_buffer;                                go_to_next_buffer();                                return true;
+        case .go_to_previous_buffer;                            go_to_previous_buffer(event);                       return true;
+        case .go_to_next_buffer;                                go_to_next_buffer(event);                           return true;
 
         case .build_panel_toggle;                               build_panel_toggle();                               return true;
         case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
@@ -717,6 +719,18 @@ unimplemented :: (loc := #caller_location) {
 
 key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
     return Input.input_button_states[key];
+}
+
+ctrl_pressed :: inline () -> bool {
+    return key_state(.CTRL) & .DOWN != 0;
+}
+
+alt_pressed :: inline () -> bool {
+    return key_state(.ALT) & .DOWN != 0;
+}
+
+cmd_meta_pressed :: inline () -> bool {
+    return key_state(.CMD) & .DOWN != 0;
 }
 
 shift_pressed :: inline () -> bool {
