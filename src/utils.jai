@@ -495,6 +495,11 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
+start_animation :: (anim: *Tween_Animation(T), target: $T, duration: float = 0.0, delay: float64 = 0.0) {
+    value := get_animation_value(anim);
+    start_animation(anim, value, target, duration, delay);
+}
+
 start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, duration: float = 0.0, delay: float64 = 0.0) {
     anim.start  = start;
     anim.target = target;
@@ -530,7 +535,7 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T, finished: bool {
         t = 1;
         finished = true;
     }
-    
+
     result: T;
     if #complete func == {
         case .lerp;       result = start + cast(T) (cast(float)(target - start) * t);
