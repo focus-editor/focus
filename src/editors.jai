@@ -4452,10 +4452,10 @@ Editor_Pane :: struct {
     editor_index: s64 = -1;
     editor_ids: [..] s64;
 
-    tab_draw_info: struct {
-        tab_list_x_offset  := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
-        selected_x_offset  := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
-        selected_tab_width := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    editor_draw_info: struct {
+        should_recalculate_width := true;
+        max_file_name_width:   float;
+        max_folder_name_width: float;
     };
 
     layout: Layout = .single;

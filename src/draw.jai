@@ -2030,21 +2030,40 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2)
     margin  := floor(8 * dpi_scale);
     padding := floor(4 * dpi_scale);
 
+    using pane.editor_draw_info;
+
     // Figure out the position and dimensions of the rect
     entry_height := font_ui_line_height + padding * 2;
-    max_width  := main_area.w;
+    max_width  := 1.0 * main_area.w;  // TODO: make configurable
     max_height := 0.5 * main_area.h;  // TODO: make configurable
     max_entries := cast(int) (max_height / entry_height);
-    real_height := entry_height * min(max_entries, pane.editor_ids.count) + padding;
+    real_height := entry_height * min(max_entries, pane.editor_ids.count) + padding * 0.5;
     if real_height < status_bar_height then real_height = status_bar_height;
 
-    // TODO: calculate rect width
+    if should_recalculate_width {
+        max_file_name_width   = -1;
+        max_folder_name_width = -1;
 
-    rect := cut_left(main_area, main_area.w * 0.5);
+        for pane.editor_ids {
+            editor := *open_editors[it];
+            buffer := *open_buffers[editor.buffer_id];
+
+            _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name, dry_run = true);
+            if max_file_name_width < pen.x then max_file_name_width = pen.x;
+
+            _, pen = draw_file_info(buffer, 0, padding, Vector2.{}, flags = .folder, dry_run = true);
+            if max_folder_name_width < pen.x then max_folder_name_width = pen.x;
+        }
+
+        should_recalculate_width = false;
+    }
+    real_width := max_file_name_width + max_folder_name_width + text_offset.x * 2 + margin * 3;
+    real_width = min(real_width, max_width);
+
+    rect := cut_left(main_area, real_width);
     rect = cut_bottom(rect, real_height);
 
     entry_rect := cut_top(rect, entry_height);
-    entry_rect.y -= 0.5 * padding;
 
     draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{ is_background = true });
 
@@ -2060,100 +2079,25 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2)
         editor := *open_editors[it];
         buffer := *open_buffers[editor.buffer_id];
 
-        if it_index == pane.editor_index then draw_rect(entry_rect, Color.LIST_CURSOR);
+        if it_index == pane.editor_index {
+            if it_index == 0 {
+                draw_rounded_rect_with_corners(entry_rect, Color.LIST_CURSOR, br = .none, bl = .none);
+            } else {
+                draw_rect(entry_rect, Color.LIST_CURSOR);
+            }
+        }
 
-        draw_file_info(buffer, 0, padding, pen, flags = .none);
+        draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified);
+
+        folder_pen := pen;
+        folder_pen.x += max_file_name_width + margin * 3;
+        draw_file_info(buffer, 0, padding, folder_pen, flags = .folder);
+
         pen.y -= entry_height;
         entry_rect.y -= entry_height;
     }
 
 }
-
-// draw_pane_tabs :: (pane: *Editor_Pane, rect: Rect, text_offset: Vector2) {
-//     push_scissor(rect);
-//     defer pop_scissor();
-
-//     tab_list_x_offset, anim_finished := get_animation_value(pane.tab_draw_info.tab_list_x_offset);
-//     if !anim_finished then redraw_requested = true;
-
-//     pen := Vector2.{
-//         rect.x + tab_list_x_offset + text_offset.x,
-//         rect.y + (rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-//     };
-
-//     // Draw tabs
-//     total_width := 0.0;
-//     selected_x_offset := 0.0;
-
-//     for pane.editor_ids {
-//         editor := *open_editors[it];
-//         buffer := *open_buffers[editor.buffer_id];
-
-//         start_x := pen.x;
-
-//         if it_index == pane.editor_index {
-//             // Draw selected tab highlight
-//             _, new_pen := draw_file_info(buffer, 0, padding, pen, flags = .none, dry_run = true);
-
-//             selected_tab_width := new_pen.x - start_x + margin * 2;
-//             if selected_tab_width != pane.tab_draw_info.selected_tab_width.target {
-//                 // TODO: don't specify start
-//                 start_animation(*pane.tab_draw_info.selected_tab_width, selected_tab_width);
-//                 redraw_requested = true;
-//             }
-
-//             if selected_x_offset != pane.tab_draw_info.selected_x_offset.target {
-//                 start_animation(*pane.tab_draw_info.selected_x_offset, selected_x_offset);
-//                 redraw_requested = true;
-//             }
-
-//             selected_tab_width, anim_finished = get_animation_value(pane.tab_draw_info.selected_tab_width);
-//             if !anim_finished then redraw_requested = true;
-
-//             selected_x_offset, anim_finished = get_animation_value(pane.tab_draw_info.selected_x_offset);
-//             if !anim_finished then redraw_requested = true;
-
-//             selected_tab_rect := Rect.{ rect.x + tab_list_x_offset + selected_x_offset, rect.y, selected_tab_width, rect.h };
-//             draw_rounded_rect(selected_tab_rect, Color.LIST_CURSOR);
-//         }
-
-//         _, pen = draw_file_info(buffer, 0, padding, pen, flags = .none);
-//         pen.x += 2 * margin;
-
-//         total_width += (pen.x - start_x);
-//         if it_index < pane.editor_index then selected_x_offset += (pen.x - start_x);
-//     }
-
-//     // When the selected tab gets close to any edge, trigger horizontal scrolling
-//     {
-//         tab_list_x_offset_target := tab_list_x_offset;
-//         scroll_margin := rect.w * 0.3;
-
-//         selected_tab_rect_x := pane.tab_draw_info.selected_x_offset.target;
-//         selected_tab_rect_w := pane.tab_draw_info.selected_tab_width.target;
-
-//         distance_to_left_edge  := selected_tab_rect_x - rect.x;
-//         distance_to_right_edge := rect.x + rect.w - (selected_tab_rect_x + selected_tab_rect_w);
-
-//         if distance_to_right_edge < distance_to_left_edge {
-//             if distance_to_right_edge < scroll_margin {
-//                 // There's a bug in here?
-//                 tab_list_x_offset_target = rect.w - scroll_margin - selected_tab_rect_w - pane.tab_draw_info.selected_x_offset.target;
-//             }
-//         } else {
-//             if distance_to_left_edge < scroll_margin {
-//                 tab_list_x_offset_target = scroll_margin - pane.tab_draw_info.selected_x_offset.target;
-//             }
-//         }
-
-//         tab_list_x_offset_target = clamp(tab_list_x_offset_target, rect.w - total_width, 0);
-
-//         if tab_list_x_offset_target != pane.tab_draw_info.tab_list_x_offset.target {
-//             start_animation(*pane.tab_draw_info.tab_list_x_offset, tab_list_x_offset_target);
-//             redraw_requested = true;
-//         }
-//     }
-// }
 
 draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
     push_scissor(rect);
@@ -2276,6 +2220,7 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar
 
 File_Info_Draw_Flags :: enum_flags {
     none;
+    file_name;
     modified;
     deleted_on_disk;
     modified_on_disk;
@@ -2283,8 +2228,9 @@ File_Info_Draw_Flags :: enum_flags {
     error_when_saving;
     crlf_warning;
     config_warning;
-    file_folder;
-    default :: modified | deleted_on_disk | modified_on_disk | read_only | file_folder;
+    folder_separator;
+    folder;
+    default :: file_name | modified | deleted_on_disk | modified_on_disk | read_only | folder | folder_separator;
 }
 
 draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, dry_run := false, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
@@ -2293,18 +2239,19 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
     pen := _pen;
 
-    // Icon
-    icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
-    icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
-    icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-    if !dry_run then Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
-    width += font_icons.em_width * 1.2;
+    // Icon + file name
+    if flags & .file_name {
+        icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
+        icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+        icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+        if !dry_run then Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
+        width += font_icons.em_width * 1.2;
 
-    // File name
-    pen.x += width + padding;
-    file_name_font := ifx bold then font_ui_bold else font_ui;
-    width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
-    if !dry_run then Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+        pen.x += width + padding;
+        file_name_font := ifx bold then font_ui_bold else font_ui;
+        width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
+        if !dry_run then Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    }
 
     if buffer.modified && (flags & .modified) {
         pen.x += width + padding;
@@ -2356,12 +2303,14 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         }
     }
 
-    if buffer.has_file && (flags & .file_folder) {
+    if buffer.has_file && (flags & .folder_separator) {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
         if !dry_run then Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
+    }
 
+    if buffer.has_file && (flags & .folder) {
         // Draw file path
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
