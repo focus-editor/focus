@@ -278,9 +278,9 @@ activate_lingering_action :: (lingering_action: Lingering_Action) {
     array_add(*active_lingering_actions, lingering_action);
 }
 
-should_show_pane_tabs :: (pane: *Editor_Pane) -> bool {
+should_show_pane_editors :: (pane: *Editor_Pane) -> bool {
     for active_lingering_actions {
-        if it.action == .show_pane_tabs && it.show_pane_tabs.pane == pane return true;
+        if it.action == .show_pane_editors && it.show_pane_editors.pane == pane return true;
     }
     return false;
 }
@@ -307,13 +307,13 @@ Lingering_Action :: struct {
 
     // Extra action data
     union {
-        show_pane_tabs: struct {
+        show_pane_editors: struct {
             pane: *Editor_Pane;
         };
     }
 
     Action_Type :: enum {
-        show_pane_tabs;
+        show_pane_editors;
         show_pane_numbers;
     }
 }
