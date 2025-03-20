@@ -452,7 +452,7 @@ maybe_deactivate_lingering_actions :: () {
         );
         if all_modifier_keys_released {
             if #complete it.action == {
-                case .show_pane_tabs;    print("No longer showing pane buffers | ");
+                case .show_pane_editors;    // nothing to do
                 case .show_pane_numbers;
             }
             remove it;
@@ -1564,9 +1564,9 @@ go_to_previous_buffer :: (event: *Input.Event) {
 
 activate_show_pane_tabs_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
     action := Lingering_Action.{
-        action = .show_pane_tabs,
+        action = .show_pane_editors,
         modifier_keys = modifier_keys,
-        show_pane_tabs.pane = pane,
+        show_pane_editors.pane = pane,
     };
     activate_lingering_action(action);
 }
@@ -4453,9 +4453,9 @@ Editor_Pane :: struct {
     editor_ids: [..] s64;
 
     tab_draw_info: struct {
-        tab_list_x_offset   := #run Tween_Animation(float).{ duration = 0.05, func = .smoothstep };
-        selected_tab_width  := #run Tween_Animation(float).{ duration = 0.05, func = .smoothstep };
-        last_selected_index := -1;  // to trigger the animation
+        tab_list_x_offset  := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+        selected_x_offset  := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+        selected_tab_width := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
     };
 
     layout: Layout = .single;

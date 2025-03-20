@@ -2018,58 +2018,142 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
         }
-
-        if should_show_pane_tabs(pane) {
-            draw_pane_tabs(pane, status_bar_rect, text_offset);
-        } else {
-            draw_status_bar(editor, buffer, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
-        }
+        draw_status_bar(editor, buffer, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
     }
 
+    if should_show_pane_editors(pane) {
+        draw_pane_editors(pane, main_area, text_offset);
+    }
 }
 
-draw_pane_tabs :: (pane: *Editor_Pane, rect: Rect, text_offset: Vector2) {
+draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2) {
+    margin  := floor(8 * dpi_scale);
+    padding := floor(4 * dpi_scale);
+
+    // Figure out the position and dimensions of the rect
+    entry_height := font_ui_line_height + padding * 2;
+    max_width  := main_area.w;
+    max_height := 0.5 * main_area.h;  // TODO: make configurable
+    max_entries := cast(int) (max_height / entry_height);
+    real_height := entry_height * min(max_entries, pane.editor_ids.count) + padding;
+    if real_height < status_bar_height then real_height = status_bar_height;
+
+    // TODO: calculate rect width
+
+    rect := cut_left(main_area, main_area.w * 0.5);
+    rect = cut_bottom(rect, real_height);
+
+    entry_rect := cut_top(rect, entry_height);
+    entry_rect.y -= 0.5 * padding;
+
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{ is_background = true });
+
     push_scissor(rect);
     defer pop_scissor();
 
-    status_bar_rect := shrink_x(rect, text_offset.x);
-
-    current_x_offset, anim_finished := get_animation_value(pane.tab_draw_info.tab_list_x_offset);
-    if !anim_finished then redraw_requested = true;
-
     pen := Vector2.{
-        status_bar_rect.x + current_x_offset,
-        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        entry_rect.x + text_offset.x,
+        entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
     };
-    padding := floor(4 * dpi_scale);
 
-    // Draw selected tab
-    current_tab_width:, anim_finished = get_animation_value(pane.tab_draw_info.selected_tab_width);
-    if !anim_finished then redraw_requested = true;
-
-    centered_tab := Rect.{ rect.x + (rect.w - current_tab_width) / 2, rect.y, current_tab_width, rect.h };
-    draw_rect(centered_tab, Color.LIST_CURSOR);
-
-    // Draw other tabs
     for pane.editor_ids {
         editor := *open_editors[it];
         buffer := *open_buffers[editor.buffer_id];
 
-        start_x := pen.x;
-        pen.x += padding;
-        _, pen = draw_file_info(buffer, 0, padding, pen);
-        pen.x += padding;
+        if it_index == pane.editor_index then draw_rect(entry_rect, Color.LIST_CURSOR);
 
-        if it_index == pane.editor_index && it_index != pane.tab_draw_info.last_selected_index {
-            pane.tab_draw_info.last_selected_index = it_index;
-
-            width := pen.x - start_x;
-            offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);;
-            start_animation(*pane.tab_draw_info.tab_list_x_offset,  current_x_offset,  offset);
-            start_animation(*pane.tab_draw_info.selected_tab_width, current_tab_width, width);
-        }
+        draw_file_info(buffer, 0, padding, pen, flags = .none);
+        pen.y -= entry_height;
+        entry_rect.y -= entry_height;
     }
+
 }
+
+// draw_pane_tabs :: (pane: *Editor_Pane, rect: Rect, text_offset: Vector2) {
+//     push_scissor(rect);
+//     defer pop_scissor();
+
+//     tab_list_x_offset, anim_finished := get_animation_value(pane.tab_draw_info.tab_list_x_offset);
+//     if !anim_finished then redraw_requested = true;
+
+//     pen := Vector2.{
+//         rect.x + tab_list_x_offset + text_offset.x,
+//         rect.y + (rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+//     };
+
+//     // Draw tabs
+//     total_width := 0.0;
+//     selected_x_offset := 0.0;
+
+//     for pane.editor_ids {
+//         editor := *open_editors[it];
+//         buffer := *open_buffers[editor.buffer_id];
+
+//         start_x := pen.x;
+
+//         if it_index == pane.editor_index {
+//             // Draw selected tab highlight
+//             _, new_pen := draw_file_info(buffer, 0, padding, pen, flags = .none, dry_run = true);
+
+//             selected_tab_width := new_pen.x - start_x + margin * 2;
+//             if selected_tab_width != pane.tab_draw_info.selected_tab_width.target {
+//                 // TODO: don't specify start
+//                 start_animation(*pane.tab_draw_info.selected_tab_width, selected_tab_width);
+//                 redraw_requested = true;
+//             }
+
+//             if selected_x_offset != pane.tab_draw_info.selected_x_offset.target {
+//                 start_animation(*pane.tab_draw_info.selected_x_offset, selected_x_offset);
+//                 redraw_requested = true;
+//             }
+
+//             selected_tab_width, anim_finished = get_animation_value(pane.tab_draw_info.selected_tab_width);
+//             if !anim_finished then redraw_requested = true;
+
+//             selected_x_offset, anim_finished = get_animation_value(pane.tab_draw_info.selected_x_offset);
+//             if !anim_finished then redraw_requested = true;
+
+//             selected_tab_rect := Rect.{ rect.x + tab_list_x_offset + selected_x_offset, rect.y, selected_tab_width, rect.h };
+//             draw_rounded_rect(selected_tab_rect, Color.LIST_CURSOR);
+//         }
+
+//         _, pen = draw_file_info(buffer, 0, padding, pen, flags = .none);
+//         pen.x += 2 * margin;
+
+//         total_width += (pen.x - start_x);
+//         if it_index < pane.editor_index then selected_x_offset += (pen.x - start_x);
+//     }
+
+//     // When the selected tab gets close to any edge, trigger horizontal scrolling
+//     {
+//         tab_list_x_offset_target := tab_list_x_offset;
+//         scroll_margin := rect.w * 0.3;
+
+//         selected_tab_rect_x := pane.tab_draw_info.selected_x_offset.target;
+//         selected_tab_rect_w := pane.tab_draw_info.selected_tab_width.target;
+
+//         distance_to_left_edge  := selected_tab_rect_x - rect.x;
+//         distance_to_right_edge := rect.x + rect.w - (selected_tab_rect_x + selected_tab_rect_w);
+
+//         if distance_to_right_edge < distance_to_left_edge {
+//             if distance_to_right_edge < scroll_margin {
+//                 // There's a bug in here?
+//                 tab_list_x_offset_target = rect.w - scroll_margin - selected_tab_rect_w - pane.tab_draw_info.selected_x_offset.target;
+//             }
+//         } else {
+//             if distance_to_left_edge < scroll_margin {
+//                 tab_list_x_offset_target = scroll_margin - pane.tab_draw_info.selected_x_offset.target;
+//             }
+//         }
+
+//         tab_list_x_offset_target = clamp(tab_list_x_offset_target, rect.w - total_width, 0);
+
+//         if tab_list_x_offset_target != pane.tab_draw_info.tab_list_x_offset.target {
+//             start_animation(*pane.tab_draw_info.tab_list_x_offset, tab_list_x_offset_target);
+//             redraw_requested = true;
+//         }
+//     }
+// }
 
 draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
     push_scissor(rect);
@@ -2086,7 +2170,7 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar
     };
 
     // Draw file name and path
-    width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
+    width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning);
 
     // Draw line, column numbers, and selection length
     {
@@ -2190,7 +2274,20 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar
     }
 }
 
-draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false, draw_config_warning := false) -> new_width: float, new_pen: Vector2 {
+File_Info_Draw_Flags :: enum_flags {
+    none;
+    modified;
+    deleted_on_disk;
+    modified_on_disk;
+    read_only;
+    error_when_saving;
+    crlf_warning;
+    config_warning;
+    file_folder;
+    default :: modified | deleted_on_disk | modified_on_disk | read_only | file_folder;
+}
+
+draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, dry_run := false, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
     file_name_color := Color.UI_DEFAULT;
     if buffer.modified then file_name_color = Color.UI_WARNING;
 
@@ -2200,50 +2297,50 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
     icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
     icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-    Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
+    if !dry_run then Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
     width += font_icons.em_width * 1.2;
 
     // File name
     pen.x += width + padding;
     file_name_font := ifx bold then font_ui_bold else font_ui;
     width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
-    Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    if !dry_run then Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
 
-    if buffer.modified {
+    if buffer.modified && (flags & .modified) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
         y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
-        Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
+        if !dry_run then Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
     }
 
     // Maybe warnings
-    if buffer.deleted && !buffer.readonly {
+    if buffer.deleted && !buffer.readonly && (flags & .deleted_on_disk) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
-    } else if buffer.modified_on_disk {
+        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+    } else if buffer.modified_on_disk  && (flags & .modified_on_disk) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
-    if buffer.readonly {
+    if buffer.readonly && (flags & .read_only) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
-    if buffer.error_when_saving {
+    if buffer.error_when_saving && (flags & .error_when_saving) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
 
-    if buffer.crlf && draw_crlf_warning {
+    if buffer.crlf && (flags & .crlf_warning) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
-        Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+        if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
-    if draw_config_warning && buffer.has_file {
+    if buffer.has_file && (flags & .config_warning) {
         label: string;
         if is_current_global_config(buffer.file.full_path) {
             label = "[current global config]";
@@ -2255,20 +2352,20 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         if label {
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui, label);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+            if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
         }
     }
 
-    if buffer.has_file {
+    if buffer.has_file && (flags & .file_folder) {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
-        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
+        if !dry_run then Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
 
         // Draw file path
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
+        if !dry_run then Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
     pen.x += width;
