@@ -276,6 +276,23 @@ activate_lingering_action :: (lingering_action: Lingering_Action) {
     }
 
     array_add(*active_lingering_actions, lingering_action);
+    lingering_action_activated_this_frame = true;
+}
+
+deactivate_lingering_action :: (lingering_action: Lingering_Action) {
+    // Maybe we won't actually need this function if we don't want to do anything on deactivate.
+    // Will remove at some point if still unused
+    if #complete lingering_action.action == {
+        case .show_pane_editors;    // nothing to do
+        case .show_pane_numbers;    // TODO
+    }
+}
+
+clear_all_lingering_actions :: () {
+    for active_lingering_actions {
+        deactivate_lingering_action(it);
+        remove it;
+    }
 }
 
 should_show_pane_editors :: (pane: *Editor_Pane) -> bool {
@@ -288,6 +305,7 @@ should_show_pane_editors :: (pane: *Editor_Pane) -> bool {
 
 active_hold_actions:      [..] Hold_Action;
 active_lingering_actions: [..] Lingering_Action;
+lingering_action_activated_this_frame := false;
 
 // We have to store the matched mapping because one action may be matched
 // by multiple key combos, so when a key is released, in order to deactivate the action

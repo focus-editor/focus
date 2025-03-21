@@ -282,6 +282,7 @@ main :: () {
 
             // Maybe handle a common action that applies to all widgets
             handled := false;
+            lingering_action_activated_this_frame = false;
 
             // Pass events to the active widget.
             // Note that the active widget may change during the frame, so the following events
@@ -322,7 +323,9 @@ main :: () {
                 if event.type == .KEYBOARD && event.key_code == #char "Q" && event.key_pressed && event.cmd_meta_pressed then num_text_input_events_to_ignore += 1;
             }
 
-            key_sequence_input_process_event(event, handled);
+            handled = key_sequence_input_process_event(event, handled);
+
+            if handled && !lingering_action_activated_this_frame then clear_all_lingering_actions();
         }
 
         maybe_deactivate_lingering_actions();
