@@ -887,7 +887,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     if !is_valid(rect) return;
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
-    if became_active then activate_editors();
+    if became_active {
+        activate_editors();
+        clear_all_lingering_actions();
+    }
 
     active_editor_id := get_active_editor_id();
     editor_is_active := editor_id == active_editor_id && Input.input_application_has_focus;
@@ -2050,8 +2053,8 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
     }
 
     // Figure out the position and dimensions of the rect
-    max_width  := 1.0 * main_area.w;  // TODO: make configurable
-    max_height := 0.5 * main_area.h;  // TODO: make configurable
+    max_width  := 1.0 * main_area.w;
+    max_height := 0.5 * main_area.h;
     real_width := max_file_name_width + max_folder_name_width + text_offset.x * 2 + margin * 2;
     real_width = min(real_width, max_width);
     entry_height := font_ui_line_height + padding * 2;
