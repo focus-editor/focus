@@ -2022,25 +2022,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     }
 
     if should_show_pane_editors(pane) {
-        draw_pane_editors(pane, main_area, text_offset);
+        draw_pane_editors(pane, main_area, status_bar_rect, text_offset);
     }
 }
 
-draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2) {
+draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect, text_offset: Vector2) {
     margin  := floor(8 * dpi_scale);
     padding := floor(4 * dpi_scale);
 
     using pane.editor_draw_info;
 
-    // Figure out the position and dimensions of the rect
-    entry_height := font_ui_line_height + padding * 2;
-    max_width  := 1.0 * main_area.w;  // TODO: make configurable
-    max_height := 0.5 * main_area.h;  // TODO: make configurable
-    max_entries := cast(int) (max_height / entry_height);
-    real_height := entry_height * min(max_entries, pane.editor_ids.count) + padding * 0.5;
-    if real_height < status_bar_height then real_height = status_bar_height;
-
-    if should_recalculate_width {
+    // Calculate initial width when we draw for the first time
+    if max_file_name_width < 0 || max_folder_name_width < 0 {
         max_file_name_width   = -1;
         max_folder_name_width = -1;
 
@@ -2048,53 +2041,107 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2)
             editor := *open_editors[it];
             buffer := *open_buffers[editor.buffer_id];
 
-            _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name, dry_run = true);
+            _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name | .modified, dry_run = true);
             if max_file_name_width < pen.x then max_file_name_width = pen.x;
 
             _, pen = draw_file_info(buffer, 0, padding, Vector2.{}, flags = .folder, dry_run = true);
             if max_folder_name_width < pen.x then max_folder_name_width = pen.x;
         }
-
-        should_recalculate_width = false;
     }
-    real_width := max_file_name_width + max_folder_name_width + text_offset.x * 2 + margin * 3;
+
+    // Figure out the position and dimensions of the rect
+    max_width  := 1.0 * main_area.w;  // TODO: make configurable
+    max_height := 0.5 * main_area.h;  // TODO: make configurable
+    real_width := max_file_name_width + max_folder_name_width + text_offset.x * 2 + margin * 2;
     real_width = min(real_width, max_width);
+    entry_height := font_ui_line_height + padding * 2;
+    max_entries := cast(int) (max_height / entry_height);
+    num_visible_entries := min(pane.editor_ids.count, max_entries);
 
-    rect := cut_left(main_area, real_width);
-    rect = cut_bottom(rect, real_height);
+    // Align the first entry with the status bar file name
+    entry_rect := cut_left(main_area, real_width);
+    entry_rect  = cut_bottom(entry_rect, entry_height);
+    pen := Vector2.{
+        entry_rect.x + text_offset.x,
+        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+    };
+    entry_rect.y = status_bar_rect.y + (status_bar_rect.h - entry_rect.h) / 2;
+    if config.settings.status_bar_position == .bottom {
+        entry_rect.y += (num_visible_entries - 1) * entry_height;
+        pen.y        += (num_visible_entries - 1) * entry_height;
+    }
 
-    entry_rect := cut_top(rect, entry_height);
+    rect := entry_rect;
+    rect.y -= entry_height * (num_visible_entries - 1);
+    rect.h *= num_visible_entries;
 
     draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{ is_background = true });
 
     push_scissor(rect);
     defer pop_scissor();
 
-    pen := Vector2.{
-        entry_rect.x + text_offset.x,
-        entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-    };
+    // Recalculate averages as we draw
+    new_max_file_name_width   := -1.0;
+    new_max_folder_name_width := -1.0;
+
+    // Scrolling
+    // TODO: extract common scrolling code somewhere and reuse if possible
+    {
+        content_height := pane.editor_ids.count * entry_height;
+        max_y_scroll   := max(cast(s32)(content_height - rect.h), 0);
+        target := scroll_anim.target;
+        selected_top    := pane.editor_index * entry_height - target;
+        selected_bottom := selected_top + entry_height;
+        bounds_top, bounds_bottom := 0.0, rect.h;
+        if rect.h >= 2 * entry_height then bounds_top, bounds_bottom = floor(rect.h * 0.2), floor(rect.h * 0.8);
+        if selected_top    < bounds_top    then target = cast(s32) (pane.editor_index * entry_height - bounds_top);
+        if selected_bottom > bounds_bottom then target = cast(s32) ((pane.editor_index + 1) * entry_height - bounds_bottom);
+        target = clamp(target, 0, max_y_scroll);
+        if target != scroll_anim.target {
+            start_animation(*scroll_anim, target);
+            redraw_requested = true;
+        }
+    }
+
+    scroll_y, anim_finished := get_animation_value(scroll_anim);
+    if !anim_finished then redraw_requested = true;
+    entry_rect.y += scroll_y;
+    pen.y        += scroll_y;
 
     for pane.editor_ids {
         editor := *open_editors[it];
         buffer := *open_buffers[editor.buffer_id];
 
         if it_index == pane.editor_index {
-            if it_index == 0 {
-                draw_rounded_rect_with_corners(entry_rect, Color.LIST_CURSOR, br = .none, bl = .none);
-            } else {
-                draw_rect(entry_rect, Color.LIST_CURSOR);
-            }
+            // Draw list cursor
+            top_corners    := Corner_Rounding.none;
+            bottom_corners := Corner_Rounding.none;
+            if it_index == 0 then top_corners = .in;
+            if it_index == pane.editor_ids.count - 1 then bottom_corners = .in;
+            draw_rounded_rect_with_corners(entry_rect, Color.LIST_CURSOR, tl = top_corners, tr = top_corners, br = bottom_corners, bl = bottom_corners);
         }
 
-        draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified);
+        _, pen_after := draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified);
+        file_name_width := pen_after.x - pen.x;
+        if new_max_file_name_width < file_name_width then new_max_file_name_width = file_name_width;
 
         folder_pen := pen;
-        folder_pen.x += max_file_name_width + margin * 3;
-        draw_file_info(buffer, 0, padding, folder_pen, flags = .folder);
+        folder_pen.x += max_file_name_width + margin * 2;
+        _, pen_after = draw_file_info(buffer, 0, padding, folder_pen, flags = .folder);
+        new_folder_name_width := pen_after.x - folder_pen.x;
+        if new_max_folder_name_width < new_folder_name_width then new_max_folder_name_width = new_folder_name_width;
 
-        pen.y -= entry_height;
         entry_rect.y -= entry_height;
+        pen.y        -= entry_height;
+    }
+
+    if max_file_name_width   != new_max_file_name_width {
+        max_file_name_width = new_max_file_name_width;
+        redraw_requested = true;
+    }
+    if max_folder_name_width != new_max_folder_name_width {
+        max_folder_name_width = new_max_folder_name_width;
+        redraw_requested = true;
     }
 
 }

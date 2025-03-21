@@ -149,6 +149,22 @@ cut_top :: (rect: Rect, amount: float, $margin := 0) -> (top: Rect, remainder: R
     return top, remainder;
 }
 
+top :: inline (using rect: Rect) -> float {
+    return y + h;
+}
+
+bottom :: inline (using rect: Rect) -> float {
+    return y;
+}
+
+left :: inline (using rect: Rect) -> float {
+    return x;
+}
+
+right :: inline (using rect: Rect) -> float {
+    return x + w;
+}
+
 bottom_left :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
     return .{x, y};
