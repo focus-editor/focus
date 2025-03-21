@@ -451,10 +451,7 @@ maybe_deactivate_lingering_actions :: () {
             (!it.modifier_keys.cmd_meta_pressed || !cmd_meta_pressed() )
         );
         if all_modifier_keys_released {
-            if #complete it.action == {
-                case .show_pane_editors;    // nothing to do
-                case .show_pane_numbers;
-            }
+            deactivate_lingering_action(it);
             remove it;
         }
     }

@@ -137,7 +137,7 @@ key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
     return builder_to_string(*b,, allocator = temp);
 }
 
-key_sequence_input_process_event :: (event: Input.Event, handled: bool) {
+key_sequence_input_process_event :: (event: Input.Event, handled: bool) -> handled: bool {
     using key_sequence_input;
 
     // Modifier keys pressed by themselves should't reset key sequence
@@ -158,11 +158,14 @@ key_sequence_input_process_event :: (event: Input.Event, handled: bool) {
         array_reset_keeping_memory(*potential_multipart_matches);
         array_add(*potential_multipart_matches, ..new_multipart_matches);
         array_reset_keeping_memory(*new_multipart_matches);
+        handled = true;
     }
 
     // Remember the current active widget. If it changes as a result of an event,
     // we want to reset any key sequence in progress, even if that event wasn't a keyboard event
     active_widget = active_global_widget;
+
+    return handled;
 }
 
 key_sequence_input_in_progress :: inline () -> bool {
