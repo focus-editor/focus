@@ -495,9 +495,9 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), target: $T, duration: float = 0.0, delay: float64 = 0.0) {
+start_animation :: (anim: *Tween_Animation(T), target: $T) {
     value := get_animation_value(anim);
-    start_animation(anim, value, target, duration, delay);
+    start_animation(anim, value, target);
 }
 
 start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, duration: float = 0.0, delay: float64 = 0.0) {
