@@ -4453,9 +4453,9 @@ Editor_Pane :: struct {
     editor_ids: [..] s64;
 
     editor_draw_info: struct {
-        should_recalculate_width := true;
         max_file_name_width:   float;
         max_folder_name_width: float;
+        scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     };
 
     layout: Layout = .single;
