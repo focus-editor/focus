@@ -770,6 +770,31 @@ editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -
     return pane;
 }
 
+editors_show_existing_buffer :: (buffer_id: s64) {
+    _find_by_buffer_id :: (pane: *Editor_Pane, buffer_id: s64) -> *Editor_Pane, editor_index: s64 = -1 {
+        if !pane return null;
+
+        for pane.editor_ids {
+            editor := *open_editors[it];
+            if editor.buffer_id == buffer_id return pane, it_index;
+        }
+
+        child1, editor_index := _find_by_buffer_id(pane.child1, buffer_id);
+        if child1 return child1, editor_index;
+
+        child2:, editor_index= _find_by_buffer_id(pane.child2, buffer_id);
+        if child2 return child2, editor_index;
+
+        return null;
+    }
+
+    pane, editor_index := _find_by_buffer_id(editors.root, buffer_id);
+    if !pane return;
+
+    pane.editor_index = editor_index;
+    activate_pane(pane);
+}
+
 get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {
     if !pane || !pane.editor_ids return -1;
     return pane.editor_ids[pane.editor_index];

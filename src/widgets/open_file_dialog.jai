@@ -157,11 +157,15 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
         case .file;
             if folder_only return true;
             if mode != .save && mode != .move {
-                if entry.buffer_id >= 0 {
-                    editors_open_buffer(entry.buffer_id, placement);
+                if mode == .open_editors && placement == .in_place && entry.buffer_id >= 0 {
+                    editors_show_existing_buffer(entry.buffer_id);
                 } else {
-                    path := entry.full_path;
-                    editors_open_file(path, placement);
+                    if entry.buffer_id >= 0 {
+                        editors_open_buffer(entry.buffer_id, placement);
+                    } else {
+                        path := entry.full_path;
+                        editors_open_file(path, placement);
+                    }
                 }
             }
             close_open_file_dialog(.SELECTED_PATH, entry.full_path);
