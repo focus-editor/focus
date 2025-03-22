@@ -1535,6 +1535,7 @@ assert_leaf_pane :: (pane: *Editor_Pane, msg := "Expected a leaf pane but got so
 }
 
 go_to_next_buffer :: (event: *Input.Event) {
+    if active_global_widget != .editors return;
     if !editors.active_pane return;
     assert_leaf_pane(editors.active_pane);
 
@@ -1546,6 +1547,7 @@ go_to_next_buffer :: (event: *Input.Event) {
 }
 
 go_to_previous_buffer :: (event: *Input.Event) {
+    if active_global_widget != .editors return;
     if !editors.active_pane return;
     assert_leaf_pane(editors.active_pane);
 
