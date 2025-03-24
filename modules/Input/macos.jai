@@ -268,6 +268,7 @@ update_cocoa_window_events :: () {
         } else {
             nsevent = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, NSDate.distantPast(), NSDefaultRunLoopMode, YES);
         }
+        autorelease(nsevent);
         if !nsevent then break;
 
         NSApplication.sendEvent(NSApp, nsevent);
