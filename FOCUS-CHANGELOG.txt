@@ -5,7 +5,7 @@
 + Bug fixes:
     + ...
 + Other changes:
-    + ...
+    + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
 
 
 # RELEASES ==================================================================
