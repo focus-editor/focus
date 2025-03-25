@@ -168,9 +168,11 @@ pointer_listener :: wl_pointer_listener.{
         ctx: Context;
         push_context ctx {
             d: *Wayland_Display = wl_proxy_get_user_data(self);
-            delta := wl_fixed_to_int(value);
+            delta := wl_fixed_to_double(value);
+            delta_with_multiplier := -delta * 6;
+            scroll_value := ifx delta_with_multiplier > 0 ceil(delta_with_multiplier) else floor(delta_with_multiplier);
             if !d.pointer_axis_accumulator[axis] {
-                d.pointer_axis_accumulator[axis] = -delta * 4;
+                d.pointer_axis_accumulator[axis] = xx scroll_value;
             }
         }
     },
