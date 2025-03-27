@@ -71,18 +71,18 @@ defer_action_delete :: (buffer_id: s64) {
     push_action(.delete, .{ delete = .{ buffer_id = buffer_id } });
 }
 
-defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: s64 = -1, notify := false) {
-    if !pane return;
-    push_action(.close_editors, .{ close_editors = .{ pane = pane, except = except, notify = notify } });
-}
-
 defer_action_close_pane :: (pane: *Editor_Pane) {
     if !pane return;
     push_action(.close_pane, .{ close_pane = .{ pane = pane } });
 }
 
-defer_action_close_buffer :: (buffer_id: s64) {
-    push_action(.close_buffer, .{ close_buffer = .{ buffer_id = buffer_id } });
+defer_action_close_editor :: (editor_id: s64) {
+    push_action(.close_editor, .{ close_editor = .{ editor_id = editor_id } });
+}
+
+defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: s64 = -1, notify := false) {
+    if !pane return;
+    push_action(.close_editors_for_pane, .{ close_editors_for_pane = .{ pane = pane, except = except, notify = notify } });
 }
 
 defer_action_close_all_editors :: () {
@@ -133,8 +133,8 @@ execute_top_action :: () -> Action_Result {
         case .build_command;                            return execute_build_command(action);
         case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
         case .wait_for_killed_command_to_stop;          return execute_wait_for_killed_command_to_stop(action);
-        case .close_buffer;                             return execute_close_buffer(action);
-        case .close_editors;                            return execute_close_editors(action);
+        case .close_editor;                             return execute_close_editor(action);
+        case .close_editors_for_pane;                   return execute_close_editors_for_pane(action);
         case .close_all_editors;                        return execute_close_all_editors(action);
         case .close_pane;                               return execute_close_pane(action);
         case .close_other_panes;                        return execute_close_other_panes(action);
@@ -167,8 +167,8 @@ remove_top_action :: () {
         case .build_command;
         case .wait_for_workspace_scanning_to_finish;
         case .wait_for_killed_command_to_stop;
-        case .close_buffer;
-        case .close_editors;
+        case .close_editor;
+        case .close_editors_for_pane;
         case .close_all_editors;
         case .close_pane;
         case .close_other_panes;
@@ -195,9 +195,9 @@ Deferred_Action :: struct {
         load_project_config:    struct { path: string; }
         reload_workspace:       struct { automatic: bool; }
         build_command:          struct { command_id: s64; }
-        close_editors:          struct { pane: *Editor_Pane; except: s64; notify: bool; }
+        close_editor:           struct { editor_id: s64; }
+        close_editors_for_pane: struct { pane: *Editor_Pane; except: s64; notify: bool; }
         close_pane:             struct { pane: *Editor_Pane; }
-        close_buffer:           struct { buffer_id: s64; }
     }
 
     Kind :: enum {
@@ -213,8 +213,8 @@ Deferred_Action :: struct {
         reload_workspace;
         wait_for_workspace_scanning_to_finish;
         wait_for_killed_command_to_stop;
-        close_buffer;
-        close_editors;
+        close_editor;
+        close_editors_for_pane;
         close_all_editors;
         close_pane;
         close_other_panes;
@@ -255,8 +255,9 @@ execute_save_buffers :: (action: Deferred_Action) -> Action_Result {
 
         case .OK_TO_ALL; #through;
         case .OK;
+            buffer_ids_to_save := array_copy(buffer_ids,, temp);  // otherwise remove_top_action will destroy it
             remove_top_action();
-            for buffer_ids  save(it);
+            for < buffer_ids_to_save  save(it);
             return .NEXT;
 
         case .NO_TO_ALL; return .DONE;
@@ -451,12 +452,14 @@ execute_wait_for_killed_command_to_stop :: (action: Deferred_Action) -> Action_R
     return .DONE;
 }
 
-execute_close_buffer :: (action: Deferred_Action) -> Action_Result {
+execute_close_editor :: (action: Deferred_Action) -> Action_Result {
+    editor_id := action.details.close_editor.editor_id;
+    close_editor_by_id(editor_id);
     return .DONE;
 }
 
-execute_close_editors :: (action: Deferred_Action) -> Action_Result {
-    using action.details.close_editors;
+execute_close_editors_for_pane :: (action: Deferred_Action) -> Action_Result {
+    using action.details.close_editors_for_pane;
 
     num_closed := 0;
     {
@@ -478,10 +481,13 @@ execute_close_editors :: (action: Deferred_Action) -> Action_Result {
 }
 
 execute_close_all_editors :: (action: Deferred_Action) -> Action_Result {
+    close_all_editors();
     return .DONE;
 }
 
 execute_close_pane :: (action: Deferred_Action) -> Action_Result {
+    pane := action.details.close_pane.pane;
+    close_pane(pane);
     return .DONE;
 }
 
