@@ -1022,13 +1022,17 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
 action_close_editor :: (event: *Input.Event) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
-    active_editor_id := get_active_editor_id();
-    if active_editor_id >= 0 {
-        close_editor_by_id(active_editor_id);
-        if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
-    } else {
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor {
+        // No editors left - close pane
         action_close_pane(.in_place);
+        return;
     }
+
+    if event && !is_unsaved(buffer) then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
+
+    defer_action_close_editor(get_active_editor_id());
+    if is_unsaved(buffer) then defer_action_save_buffers(.[editor.buffer_id]);
 }
 
 close_editor_by_id :: (editor_id: s64) {
@@ -1064,12 +1068,31 @@ close_editor_by_id :: (editor_id: s64) {
     buffer_id := editor.buffer_id;
     if !_buffer_is_still_open(editors.root, buffer_id) {
         buffer := *open_buffers[buffer_id];
+        if is_unsaved(buffer) {
+            if buffer.has_file {
+                reload_from_disk(buffer_id, force = true);
+            } else {
+                reset(*buffer.bytes);
+                buffer.deleted = true;
+                buffer.modified = false;
+            }
+            reset_all_editors_for_buffer(buffer_id);
+        }
+        buffer.num_times_opened = 0;  // deprioritise it in the full file list
         array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
-        if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
-        if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // don't show any <new file>'s in the list if we closed them
     }
 
     close_search_bar(editor);
+}
+
+reset_all_editors_for_buffer :: (buffer_id: s64) {
+    for * editor : open_editors {
+        if editor.buffer_id != buffer_id  continue;
+
+        free_editor(editor);
+        editor.* = Editor.{ buffer_id = buffer_id };
+        add(*editor.cursors, Cursor.{});
+    }
 }
 
 action_close_other_editors_in_pane :: () {
@@ -1089,12 +1112,26 @@ action_close_all_editors :: () {
     defer_action_close_all_editors();
 
     unsaved_buffer_ids := get_unsaved_buffer_ids();
-    for unsaved_buffer_ids  defer_action_close_buffer(it);
+    defer_action_save_buffers(unsaved_buffer_ids);
 }
 
 close_all_editors :: () {
-    // At this point we should have checked that no unsaved buffers exist
+    // At this point we should have decided the fate of unsaved buffers
     array_reset_keeping_memory(*most_recent_buffers);
+
+    for * buffer, buffer_id : open_buffers {
+        if !is_unsaved(buffer)  continue;
+
+        if buffer.has_file {
+            reload_from_disk(buffer_id, force = true);
+        } else {
+            reset(*buffer.bytes);
+            buffer.deleted = true;
+            buffer.modified = false;
+        }
+        reset_all_editors_for_buffer(buffer_id);
+        buffer.num_times_opened = 0;  // deprioritise it in the full file list
+    }
 
     _free_pane_tree(editors.root);
 
@@ -1599,7 +1636,7 @@ go_to_next_buffer :: (event: *Input.Event) {
     if editor_index < 0 || !editor_ids return;
     editor_index = (editor_index + 1) % editor_ids.count;
 
-    if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
+    if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 }
 
 go_to_previous_buffer :: (event: *Input.Event) {
@@ -1612,12 +1649,12 @@ go_to_previous_buffer :: (event: *Input.Event) {
     editor_index -= 1;
     if editor_index < 0 then editor_index = editor_ids.count - 1;
 
-    if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
+    if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 }
 
 #scope_file
 
-activate_show_pane_tabs_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
+activate_show_pane_editors_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
     action := Lingering_Action.{
         action = .show_pane_editors,
         modifier_keys = modifier_keys,
