@@ -16,7 +16,7 @@ defer_action_switch_to_project :: (path: string) {
     push_action(.load_project_config, .{ load_project_config = .{ path = copy_string(path) } });
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
-    push_action(.save_all_buffers);
+    defer_action_save_all_buffers();
 }
 
 defer_action_reload_workspace :: (automatic: bool) {
@@ -24,7 +24,7 @@ defer_action_reload_workspace :: (automatic: bool) {
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = automatic } });
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
-    push_action(.save_all_buffers);
+    defer_action_save_all_buffers();
 }
 
 defer_action_close_project :: () {
@@ -33,7 +33,7 @@ defer_action_close_project :: () {
     push_action(.close_project);
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
-    push_action(.save_all_buffers);
+    defer_action_save_all_buffers();
 }
 
 defer_action_quit :: () {
@@ -41,7 +41,7 @@ defer_action_quit :: () {
     push_action(.quit);
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
-    push_action(.save_all_buffers);
+    defer_action_save_all_buffers();
 }
 
 defer_action_build_command :: (command_id: s64) {
@@ -71,6 +71,37 @@ defer_action_delete :: (buffer_id: s64) {
     push_action(.delete, .{ delete = .{ buffer_id = buffer_id } });
 }
 
+defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: s64 = -1, notify := false) {
+    if !pane return;
+    push_action(.close_editors, .{ close_editors = .{ pane = pane, except = except, notify = notify } });
+}
+
+defer_action_close_pane :: (pane: *Editor_Pane) {
+    if !pane return;
+    push_action(.close_pane, .{ close_pane = .{ pane = pane } });
+}
+
+defer_action_close_buffer :: (buffer_id: s64) {
+    push_action(.close_buffer, .{ close_buffer = .{ buffer_id = buffer_id } });
+}
+
+defer_action_close_all_editors :: () {
+    push_action(.close_all_editors);
+}
+
+defer_action_close_other_panes :: () {
+    push_action(.close_other_panes);
+}
+
+defer_action_save_all_buffers :: () {
+    unsaved_buffer_ids := get_unsaved_buffer_ids();
+    push_action(.save_buffers, .{ save_buffers = .{ buffer_ids = array_copy(unsaved_buffer_ids) } });
+}
+
+defer_action_save_buffers :: (buffer_ids: [] s64) {
+    push_action(.save_buffers, .{ save_buffers = .{ buffer_ids = array_copy(buffer_ids) } });
+}
+
 
 Deferred_Action_Id :: #type,distinct s64;
 
@@ -92,7 +123,7 @@ execute_top_action :: () -> Action_Result {
     if #complete action.kind == {
         case .quit;                                     return execute_quit(action);
         case .save_as;                                  return execute_save_as(action);
-        case .save_all_buffers;                         return execute_save_all_buffers(action);
+        case .save_buffers;                             return execute_save_buffers(action);
         case .delete;                                   return execute_delete(action);
         case .confirm_overwrite;                        return execute_confirm_overwrite(action);
         case .kill_running_command;                     return execute_kill_running_command(action);
@@ -102,6 +133,11 @@ execute_top_action :: () -> Action_Result {
         case .build_command;                            return execute_build_command(action);
         case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
         case .wait_for_killed_command_to_stop;          return execute_wait_for_killed_command_to_stop(action);
+        case .close_buffer;                             return execute_close_buffer(action);
+        case .close_editors;                            return execute_close_editors(action);
+        case .close_all_editors;                        return execute_close_all_editors(action);
+        case .close_pane;                               return execute_close_pane(action);
+        case .close_other_panes;                        return execute_close_other_panes(action);
     }
 }
 
@@ -117,10 +153,13 @@ remove_top_action :: () {
             using action.details.confirm_overwrite;
             if file_path { free(file_path); file_path = ""; }
 
+        case .save_buffers;
+            using action.details.save_buffers;
+            array_free(buffer_ids);
+
         // Nothing to free
         case .quit;
         case .save_as;
-        case .save_all_buffers;
         case .delete;
         case .kill_running_command;
         case .reload_workspace;
@@ -128,6 +167,11 @@ remove_top_action :: () {
         case .build_command;
         case .wait_for_workspace_scanning_to_finish;
         case .wait_for_killed_command_to_stop;
+        case .close_buffer;
+        case .close_editors;
+        case .close_all_editors;
+        case .close_pane;
+        case .close_other_panes;
     }
 }
 
@@ -145,17 +189,21 @@ Deferred_Action :: struct {
 
     Details :: union {
         save_as:                struct { buffer_id: s64; is_move: bool; }
+        save_buffers:           struct { buffer_ids: [] s64; }
         confirm_overwrite:      struct { buffer_id: s64; is_move: bool; file_path: string; }
         delete:                 struct { buffer_id: s64; }
         load_project_config:    struct { path: string; }
         reload_workspace:       struct { automatic: bool; }
         build_command:          struct { command_id: s64; }
+        close_editors:          struct { pane: *Editor_Pane; except: s64; notify: bool; }
+        close_pane:             struct { pane: *Editor_Pane; }
+        close_buffer:           struct { buffer_id: s64; }
     }
 
     Kind :: enum {
         quit;
         save_as;
-        save_all_buffers;
+        save_buffers;
         delete;
         confirm_overwrite;
         kill_running_command;
@@ -165,6 +213,11 @@ Deferred_Action :: struct {
         reload_workspace;
         wait_for_workspace_scanning_to_finish;
         wait_for_killed_command_to_stop;
+        close_buffer;
+        close_editors;
+        close_all_editors;
+        close_pane;
+        close_other_panes;
     }
 }
 
@@ -185,12 +238,17 @@ execute_quit :: (action: Deferred_Action) -> Action_Result {
     return .DONE;
 }
 
-execute_save_all_buffers :: (action: Deferred_Action) -> Action_Result {
+execute_save_buffers :: (action: Deferred_Action) -> Action_Result {
+    buffer_ids := action.details.save_buffers.buffer_ids;
     result := dialog_get_result(*unsaved_buffers_dialog, action.id);
     if #complete result == {
         case .UNINITTED;
-            if unsaved_buffers_exist() {
-                show_dialog(*unsaved_buffers_dialog, action.id, .{});
+            for buffer_ids {
+                buffer := *open_buffers[it];
+                if !is_unsaved(buffer) remove it;
+            }
+            if buffer_ids {
+                show_dialog(*unsaved_buffers_dialog, action.id, .{ buffer_ids = buffer_ids });
                 return .WAIT;
             }
             return .DONE;
@@ -198,7 +256,7 @@ execute_save_all_buffers :: (action: Deferred_Action) -> Action_Result {
         case .OK_TO_ALL; #through;
         case .OK;
             remove_top_action();
-            save_all();
+            for buffer_ids  save(it);
             return .NEXT;
 
         case .NO_TO_ALL; return .DONE;
@@ -257,9 +315,15 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
 execute_delete :: (action: Deferred_Action) -> Action_Result {
     using action.details.delete;
 
+    _close_editors_for_buffer :: (buffer_id: s64) {
+        for editor, editor_id : open_editors {
+            if editor.buffer_id == buffer_id then close_editor_by_id(editor_id);
+        }
+    }
+
     buffer := *open_buffers[buffer_id];
     if buffer.readonly  { add_user_warning("Can't delete a readonly buffer"); return .CANCEL; }
-    if !buffer.has_file { close_editors_for_buffer(buffer_id); return .DONE; }  // no one cares it doesn't have a file, they just want it gone
+    if !buffer.has_file { _close_editors_for_buffer(buffer_id); return .DONE; }  // no one cares it doesn't have a file, they just want it gone
 
     result := dialog_get_result(*delete_file_dialog, action.id);
     if #complete result == {
@@ -276,7 +340,7 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
                 return .CANCEL;
             }
             add_success_message("File '%' has been deleted", buffer.file.full_path, dismiss_in_seconds = 3);
-            close_editors_for_buffer(buffer_id);
+            _close_editors_for_buffer(buffer_id);
             return .DONE;
 
         case .PENDING;   return .WAIT;
@@ -387,4 +451,41 @@ execute_wait_for_killed_command_to_stop :: (action: Deferred_Action) -> Action_R
     return .DONE;
 }
 
+execute_close_buffer :: (action: Deferred_Action) -> Action_Result {
+    return .DONE;
+}
+
+execute_close_editors :: (action: Deferred_Action) -> Action_Result {
+    using action.details.close_editors;
+
+    num_closed := 0;
+    {
+        editors_to_close: [..] s64;
+        editors_to_close.allocator = temp;
+        for pane.editor_ids {
+            if it == except continue;
+            array_add(*editors_to_close, it);
+        }
+
+        for editors_to_close {
+            close_editor_by_id(it);
+            num_closed += 1;
+        }
+    }
+    if notify then add_success_message("Closed % editor%", num_closed, ifx num_closed != 1 then "s" else "", dismiss_in_seconds = 3);
+
+    return .DONE;
+}
+
+execute_close_all_editors :: (action: Deferred_Action) -> Action_Result {
+    return .DONE;
+}
+
+execute_close_pane :: (action: Deferred_Action) -> Action_Result {
+    return .DONE;
+}
+
+execute_close_other_panes :: (action: Deferred_Action) -> Action_Result {
+    return .DONE;
+}
 

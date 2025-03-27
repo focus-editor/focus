@@ -2936,7 +2936,7 @@ draw_unsaved_buffers_dialog :: () {
         entry_height  := font_ui_line_height + padding * 2;
         entry_rect := cut_top(extra_rect, entry_height);
 
-        for unsaved_buffers_dialog.unsaved_buffer_ids {
+        for unsaved_buffers_dialog.buffer_ids {
             buffer := *open_buffers[it];
             {
                 push_scissor(entry_rect);
@@ -2954,7 +2954,7 @@ draw_unsaved_buffers_dialog :: () {
         }
     }
 
-    num_unsaved_buffers := unsaved_buffers_dialog.unsaved_buffer_ids.count;
+    num_unsaved_buffers := unsaved_buffers_dialog.buffer_ids.count;
     header  := "Unsaved files. Continue?";
     message := "Please decide what to do with the following files:";
     if num_unsaved_buffers == 1 {

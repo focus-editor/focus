@@ -59,16 +59,16 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     // Handle actions which work without an active editor first
     handled := true;
     if action == {
-        case .close_all_editors;                close_all_editors();
-        case .close_other_editors_in_pane;      close_other_editors_in_pane();
-        case .close_editor;                     close_editor(*event);
+        case .close_all_editors;                action_close_all_editors();
+        case .close_other_editors_in_pane;      action_close_other_editors_in_pane();
+        case .close_editor;                     action_close_editor(*event);
 
-        case .close_pane;                       close_pane(.in_place);
-        case .close_left_pane;                  close_pane(.left);
-        case .close_right_pane;                 close_pane(.right);
-        case .close_top_pane;                   close_pane(.top);
-        case .close_bottom_pane;                close_pane(.bottom);
-        case .close_other_panes;                close_other_panes();
+        case .close_pane;                       action_close_pane(.in_place);
+        case .close_left_pane;                  action_close_pane(.left);
+        case .close_right_pane;                 action_close_pane(.right);
+        case .close_top_pane;                   action_close_pane(.top);
+        case .close_bottom_pane;                action_close_pane(.bottom);
+        case .close_other_panes;                action_close_other_panes();
 
         case;                                   handled = false;
     }
@@ -1019,7 +1019,7 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
     return true;
 }
 
-close_editor :: (event: *Input.Event) {
+action_close_editor :: (event: *Input.Event) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
     active_editor_id := get_active_editor_id();
@@ -1027,7 +1027,7 @@ close_editor :: (event: *Input.Event) {
         close_editor_by_id(active_editor_id);
         if event then activate_show_pane_tabs_action(event.modifier_flags, editors.active_pane);
     } else {
-        close_pane(.in_place);
+        action_close_pane(.in_place);
     }
 }
 
@@ -1072,38 +1072,28 @@ close_editor_by_id :: (editor_id: s64) {
     close_search_bar(editor);
 }
 
-close_editors_for_buffer :: (buffer_id: s64) {
-    for editor, editor_id : open_editors {
-        if editor.buffer_id == buffer_id then close_editor_by_id(editor_id);
-    }
-}
-
-close_editors_for_pane :: (pane: *Editor_Pane, except := -1) -> num_closed: int {
-    editors_to_close: [..] s64;
-    editors_to_close.allocator = temp;
-    for pane.editor_ids {
-        if it == except continue;
-        array_add(*editors_to_close, it);
-    }
-
-    num_closed := 0;
-    for editors_to_close {
-        close_editor_by_id(it);
-        num_closed += 1;
-    }
-
-    return num_closed;
-}
-
-close_other_editors_in_pane :: () {
+action_close_other_editors_in_pane :: () {
     if build_panel_is_active() return;
 
-    num_closed := close_editors_for_pane(editors.active_pane, except = get_active_editor_id());
+    active_editor_id := get_active_editor_id();
 
-    add_success_message("Closed % editor%", num_closed, ifx num_closed != 1 then "s" else "", dismiss_in_seconds = 3);
+    defer_action_close_editors_for_pane(editors.active_pane, except = active_editor_id, notify = true);
+
+    unsaved_buffer_ids := get_unsaved_buffers_in_pane(editors.active_pane);
+    active_buffer_id := open_editors[active_editor_id].buffer_id;
+    array_unordered_remove_by_value(*unsaved_buffer_ids, active_buffer_id);
+    defer_action_save_buffers(unsaved_buffer_ids);
+}
+
+action_close_all_editors :: () {
+    defer_action_close_all_editors();
+
+    unsaved_buffer_ids := get_unsaved_buffer_ids();
+    for unsaved_buffer_ids  defer_action_close_buffer(it);
 }
 
 close_all_editors :: () {
+    // At this point we should have checked that no unsaved buffers exist
     array_reset_keeping_memory(*most_recent_buffers);
 
     _free_pane_tree(editors.root);
@@ -1113,7 +1103,40 @@ close_all_editors :: () {
     activate_pane(editors.root);
 }
 
+action_close_other_panes :: () {
+    defer_action_close_other_panes();
+
+    unsaved_buffer_ids_in_other_panes := get_unsaved_buffers_in_pane(editors.root, except = editors.active_pane);
+    defer_action_save_buffers(unsaved_buffer_ids_in_other_panes);
+}
+
+get_unsaved_buffers_in_pane :: (pane: *Editor_Pane, except: *Editor_Pane = null) -> [] s64 /* temp */ {
+    unsaved_buffer_ids: [..] s64;
+    unsaved_buffer_ids.allocator = temp;
+
+    _collect_unsaved_buffers :: (pane: *Editor_Pane, except: *Editor_Pane, results: *[..] s64) {
+        if !pane return;
+        if pane == except return;
+
+        if pane.layout == .single {
+            for pane.editor_ids {
+                editor := *open_editors[it];
+                buffer := *open_buffers[editor.buffer_id];
+                if is_unsaved(buffer) then array_add(results, editor.buffer_id);
+            }
+        } else {
+            _collect_unsaved_buffers(pane.child1, except, results);
+            _collect_unsaved_buffers(pane.child2, except, results);
+        }
+    }
+
+    _collect_unsaved_buffers(pane, except, *unsaved_buffer_ids);
+
+    return unsaved_buffer_ids;
+}
+
 close_other_panes :: () {
+    // At this point we should've verified there are no unsaved buffers in the other panes
     active_pane := editors.active_pane;
 
     assert_leaf_pane(active_pane);
@@ -1165,39 +1188,47 @@ remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
     if pane.editor_ids && pane.editor_index < 0 then pane.editor_index = 0;
 }
 
-close_pane :: (placement: Editor_Placement) {
+action_close_pane :: (placement: Editor_Placement) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
     pane := get_adjacent_editor_pane(editors.active_pane, placement);
     if !pane return;
+
+    defer_action_close_pane(pane);
+    defer_action_close_editors_for_pane(pane);
+
+    unsaved_buffer_ids := get_unsaved_buffers_in_pane(pane);
+    defer_action_save_buffers(unsaved_buffer_ids);
+}
+
+close_pane :: (pane: *Editor_Pane) {
+    // At this point we should've checked and confirmed we're ok with any unsaved buffers in this pane
     assert_leaf_pane(pane, "Attempting to close a non-leaf pane. This is a bug.");
 
-    close_editors_for_pane(pane);
-
     parent := pane.parent;
-    if parent != null {
-        // We will replace the target pane's parent with its sibling
-        assert(!parent.editor_ids);
-        sibling := ifx parent.child1 == pane then parent.child2 else parent.child1;
+    if parent == null return;  // we're root
 
-        parents_parent := parent.parent;
-        parent.* = sibling.*;
-        parent.parent = parents_parent;  // preserve the original parent
-        if sibling.layout != .single {
-            sibling.child1.parent = parent;
-            sibling.child2.parent = parent;
-        }
+    // We will replace the target pane's parent with its sibling
+    assert(!parent.editor_ids);
+    sibling := ifx parent.child1 == pane then parent.child2 else parent.child1;
 
-        // Any pane numbers after the one we're closing need to be decremented
-        shift_pane_numbers(pane.number);
-
-        if pane == editors.active_pane then activate_pane(parent);
-        if sibling == editors.active_pane then editors.active_pane = parent;
-
-        array_reset(*pane.editor_ids);
-        free(pane);
-        free(sibling);
+    parents_parent := parent.parent;
+    parent.* = sibling.*;
+    parent.parent = parents_parent;  // preserve the original parent
+    if sibling.layout != .single {
+        sibling.child1.parent = parent;
+        sibling.child2.parent = parent;
     }
+
+    // Any pane numbers after the one we're closing need to be decremented
+    shift_pane_numbers(pane.number);
+
+    if pane == editors.active_pane then activate_pane(parent);
+    if sibling == editors.active_pane then editors.active_pane = parent;
+
+    array_reset(*pane.editor_ids);
+    free(pane);
+    free(sibling);
 }
 
 shift_pane_numbers :: (number: s64) {
@@ -2496,20 +2527,6 @@ save_active_buffer :: () {
     if editor_id < 0 return;
 
     save(open_editors[editor_id].buffer_id);
-}
-
-save :: (buffer_id: s64) {
-    buffer := *open_buffers[buffer_id];
-    if buffer.readonly || buffer.internal return;
-
-    if buffer.modified_on_disk {
-        // Don't save without showing a confirmation dialog
-        defer_action_overwrite_buffer(buffer_id);
-    } else if buffer.has_file {
-        save_buffer(buffer, buffer_id);
-    } else {
-        defer_action_save_as(buffer_id);
-    }
 }
 
 open_file_directory :: (buffer_id: s64) {
