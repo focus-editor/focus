@@ -1029,10 +1029,10 @@ action_close_editor :: (event: *Input.Event) {
         return;
     }
 
-    if event && !is_unsaved(buffer) then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
+    if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 
     defer_action_close_editor(get_active_editor_id());
-    if is_unsaved(buffer) then defer_action_save_buffers(.[editor.buffer_id]);
+    if is_unsaved(buffer) && num_editors_for_buffer_in_the_tree(editor.buffer_id) <= 1 then defer_action_save_buffers(.[editor.buffer_id]);
 }
 
 close_editor_by_id :: (editor_id: s64) {
@@ -1049,24 +1049,10 @@ close_editor_by_id :: (editor_id: s64) {
         make_editor_active(new_editor_id);
     }
 
-    _buffer_is_still_open :: (pane: *Editor_Pane, buffer_id: s64) -> bool {
-        if !pane return false;
-        if pane.layout == .single {
-            for pane.editor_ids {
-                editor := *open_editors[it];
-                if editor.buffer_id == buffer_id return true;
-            }
-            return false;
-        } else {
-            result := _buffer_is_still_open(pane.child1, buffer_id);
-            if !result then result = _buffer_is_still_open(pane.child2, buffer_id);
-            return result;
-        }
-    }
-
     editor := *open_editors[editor_id];
     buffer_id := editor.buffer_id;
-    if !_buffer_is_still_open(editors.root, buffer_id) {
+
+    if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 {
         buffer := *open_buffers[buffer_id];
         if is_unsaved(buffer) {
             if buffer.has_file {
@@ -1083,6 +1069,27 @@ close_editor_by_id :: (editor_id: s64) {
     }
 
     close_search_bar(editor);
+}
+
+num_editors_for_buffer_in_the_tree :: (buffer_id: s64) -> int {
+    // A buffer can have several editors, but not all of them might be in the editor tree
+    _num_editors_in_subtree :: (pane: *Editor_Pane, buffer_id: s64) -> int {
+        if !pane return 0;
+
+        num_editors := 0;
+        if pane.layout == .single {
+            for pane.editor_ids {
+                editor := *open_editors[it];
+                if editor.buffer_id == buffer_id then num_editors += 1;
+            }
+        } else {
+            num_editors += _num_editors_in_subtree(pane.child1, buffer_id);
+            num_editors += _num_editors_in_subtree(pane.child2, buffer_id);
+        }
+        return num_editors;
+    }
+
+    return _num_editors_in_subtree(editors.root, buffer_id);
 }
 
 reset_all_editors_for_buffer :: (buffer_id: s64) {
@@ -1102,9 +1109,11 @@ action_close_other_editors_in_pane :: () {
 
     defer_action_close_editors_for_pane(editors.active_pane, except = active_editor_id, notify = true);
 
-    unsaved_buffer_ids := get_unsaved_buffers_in_pane(editors.active_pane);
-    active_buffer_id := open_editors[active_editor_id].buffer_id;
-    array_unordered_remove_by_value(*unsaved_buffer_ids, active_buffer_id);
+    unsaved_buffer_ids := get_unsaved_buffers_in_subtree(editors.active_pane);
+    array_unordered_remove_by_value(*unsaved_buffer_ids, open_editors[active_editor_id].buffer_id);  // don't ask about the active buffer, we're not closing it
+    for unsaved_buffer_ids {
+        if num_editors_for_buffer_in_the_tree(it) >= 2  remove it;
+    }
     defer_action_save_buffers(unsaved_buffer_ids);
 }
 
@@ -1143,11 +1152,18 @@ close_all_editors :: () {
 action_close_other_panes :: () {
     defer_action_close_other_panes();
 
-    unsaved_buffer_ids_in_other_panes := get_unsaved_buffers_in_pane(editors.root, except = editors.active_pane);
+    buffer_ids_in_active_pane: [..] s64;
+    buffer_ids_in_active_pane.allocator = temp;
+    for editors.active_pane.editor_ids  array_add(*buffer_ids_in_active_pane, open_editors[it].buffer_id);
+
+    unsaved_buffer_ids_in_other_panes := get_unsaved_buffers_in_subtree(editors.root, except = editors.active_pane);
+    for unsaved_buffer_ids_in_other_panes {
+        if array_find(buffer_ids_in_active_pane, it)  remove it;
+    }
     defer_action_save_buffers(unsaved_buffer_ids_in_other_panes);
 }
 
-get_unsaved_buffers_in_pane :: (pane: *Editor_Pane, except: *Editor_Pane = null) -> [] s64 /* temp */ {
+get_unsaved_buffers_in_subtree :: (pane: *Editor_Pane, except: *Editor_Pane = null) -> [] s64 /* temp */ {
     unsaved_buffer_ids: [..] s64;
     unsaved_buffer_ids.allocator = temp;
 
@@ -1234,7 +1250,10 @@ action_close_pane :: (placement: Editor_Placement) {
     defer_action_close_pane(pane);
     defer_action_close_editors_for_pane(pane);
 
-    unsaved_buffer_ids := get_unsaved_buffers_in_pane(pane);
+    unsaved_buffer_ids := get_unsaved_buffers_in_subtree(pane);
+    for unsaved_buffer_ids {
+        if num_editors_for_buffer_in_the_tree(it) >= 2  remove it;
+    }
     defer_action_save_buffers(unsaved_buffer_ids);
 }
 
