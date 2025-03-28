@@ -1052,23 +1052,25 @@ close_editor_by_id :: (editor_id: s64) {
     editor := *open_editors[editor_id];
     buffer_id := editor.buffer_id;
 
-    if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 {
-        buffer := *open_buffers[buffer_id];
-        if is_unsaved(buffer) {
-            if buffer.has_file {
-                reload_from_disk(buffer_id, force = true);
-            } else {
-                reset(*buffer.bytes);
-                buffer.deleted = true;
-                buffer.modified = false;
-            }
-            reset_all_editors_for_buffer(buffer_id);
-        }
-        buffer.num_times_opened = 0;  // deprioritise it in the full file list
-        array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
-    }
+    if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 then close_buffer(buffer_id);
 
     close_search_bar(editor);
+}
+
+close_buffer :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    if is_unsaved(buffer) {
+        if buffer.has_file {
+            reload_from_disk(buffer_id, force = true);
+        } else {
+            reset(*buffer.bytes);
+            buffer.deleted = true;
+            buffer.modified = false;
+        }
+        reset_all_editors_for_buffer(buffer_id);
+    }
+    buffer.num_times_opened = 0;  // deprioritise it in the full file list
+    array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
 }
 
 num_editors_for_buffer_in_the_tree :: (buffer_id: s64) -> int {
@@ -1128,19 +1130,7 @@ close_all_editors :: () {
     // At this point we should have decided the fate of unsaved buffers
     array_reset_keeping_memory(*most_recent_buffers);
 
-    for * buffer, buffer_id : open_buffers {
-        if !is_unsaved(buffer)  continue;
-
-        if buffer.has_file {
-            reload_from_disk(buffer_id, force = true);
-        } else {
-            reset(*buffer.bytes);
-            buffer.deleted = true;
-            buffer.modified = false;
-        }
-        reset_all_editors_for_buffer(buffer_id);
-        buffer.num_times_opened = 0;  // deprioritise it in the full file list
-    }
+    for open_editors  close_buffer(it.buffer_id);
 
     _free_pane_tree(editors.root);
 
@@ -1195,6 +1185,13 @@ close_other_panes :: () {
     assert_leaf_pane(active_pane);
     if active_pane == editors.root return;
 
+    // Close buffers in other panes
+    // NOTE: must be done before everything else is destroyed!
+    for open_editors {
+        if array_find(active_pane.editor_ids, it_index) continue;
+        if num_editors_for_buffer_in_the_tree(it.buffer_id) <= 1 then close_buffer(it.buffer_id);
+    }
+
     // Take the active pane out of the tree
     if active_pane.parent.child1 == active_pane then active_pane.parent.child1 = null;
     if active_pane.parent.child2 == active_pane then active_pane.parent.child2 = null;
@@ -1206,17 +1203,6 @@ close_other_panes :: () {
     active_pane.parent = null;
     editors.root = active_pane;
     editors.root.number = 1;
-
-    // Preserve remaining open buffers
-    active_pane_buffer_ids: [..] s64;
-    active_pane_buffer_ids.allocator = temp;
-    for active_pane.editor_ids {
-        editor := *open_editors[it];
-        array_add(*active_pane_buffer_ids, editor.buffer_id);
-    }
-    for most_recent_buffers {
-        if !array_find(active_pane_buffer_ids, it) then remove it;
-    }
 }
 
 #scope_file
@@ -1281,6 +1267,11 @@ close_pane :: (pane: *Editor_Pane) {
 
     if pane == editors.active_pane then activate_pane(parent);
     if sibling == editors.active_pane then editors.active_pane = parent;
+
+    for pane.editor_ids {
+        buffer_id := open_editors[it].buffer_id;
+        if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 then close_buffer(buffer_id);
+    }
 
     array_reset(*pane.editor_ids);
     free(pane);
