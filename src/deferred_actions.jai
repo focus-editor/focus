@@ -492,6 +492,7 @@ execute_close_pane :: (action: Deferred_Action) -> Action_Result {
 }
 
 execute_close_other_panes :: (action: Deferred_Action) -> Action_Result {
+    close_other_panes();
     return .DONE;
 }
 
