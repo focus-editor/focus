@@ -13,7 +13,7 @@ Delete_File_Details :: struct { buffer_id: s64; }
 
 dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
     return .[
-        .{ "Delete", .OK,     .[ .ENTER,  #char "Y", #char "D" ], Color.UI_ERROR,   Color.UI_DEFAULT },
+        .{ "Delete", .OK,     .[ #char "Y", #char "D" ], Color.UI_ERROR,   Color.UI_DEFAULT },
         .{ "Cancel", .CANCEL, .[ .ESCAPE, #char "N", #char "C" ], Color.UI_NEUTRAL, Color.UI_DEFAULT },
     ];
 }

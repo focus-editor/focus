@@ -46,7 +46,7 @@ close_dialog :: (dialog: *Generic_Confirm_Dialog($Details), result: Generic_Conf
     dialog.result = result;
     activate_editors();
     redraw_requested = true;
-    dialog.focused_button_index = -1;
+    dialog.focused_button_index = 0;
 }
 
 dialog_get_details :: (dialog: *Generic_Confirm_Dialog) -> Generic_Confirm_Dialog.Details {
@@ -83,7 +83,7 @@ Generic_Confirm_Dialog :: struct(Details: Type) {
     get_buttons: () -> [] Generic_Confirm_Dialog_Button;  // this could've been a constant on the struct itself, but the compiler won't allow setting it for some reason, looks like a bug
     on_show:     () -> ();
 
-    focused_button_index := -1;
+    focused_button_index := 0;
 }
 
 Generic_Confirm_Dialog_Button :: struct {

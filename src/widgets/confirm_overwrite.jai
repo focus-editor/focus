@@ -19,7 +19,7 @@ dialog_set_details :: (details: Dialog_Details) {
 
 dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
     return .[
-        .{ "Overwrite", .OK,     .[ .ENTER,  #char "Y", #char "O" ], Color.UI_ERROR,   Color.UI_DEFAULT },
+        .{ "Overwrite", .OK,     .[ #char "Y", #char "O" ], Color.UI_ERROR,   Color.UI_DEFAULT },
         .{ "Cancel",    .CANCEL, .[ .ESCAPE, #char "N", #char "C" ], Color.UI_NEUTRAL, Color.UI_DEFAULT },
     ];
 }
