@@ -182,33 +182,34 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
 
         case .close_dialog;                     hide_build_panel();
-        case .escape;                           handle_escape(editor);
+        case .escape;                           action_escape(editor);
 
-        case .save;                             save_active_buffer();
-        case .save_all;                         save_all();
+        case .save;                             action_save();
+        case .save_all;                         action_save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
-        case .open_file_directory;              open_file_directory (editor.buffer_id);
-        case .move_current_file;                defer_action_move   (editor.buffer_id);
-        case .delete_current_file;              defer_action_delete (editor.buffer_id);
-        case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
+        case .open_file_directory;              action_open_file_directory(editor.buffer_id);
+        case .move_current_file;                defer_action_move  (editor.buffer_id);
+        case .delete_current_file;              defer_action_delete(editor.buffer_id);
+        case .reload_from_disk;                 action_reload_from_disk(editor.buffer_id);
 
-        case .duplicate_editor;                 duplicate_editor(.on_the_side);
-        case .duplicate_editor_left;            duplicate_editor(.left);
-        case .duplicate_editor_right;           duplicate_editor(.right);
-        case .duplicate_editor_top;             duplicate_editor(.top);
-        case .duplicate_editor_bottom;          duplicate_editor(.bottom);
+        case .duplicate_editor;                 action_duplicate_editor(.on_the_side);
+        case .duplicate_editor_left;            action_duplicate_editor(.left);
+        case .duplicate_editor_right;           action_duplicate_editor(.right);
+        case .duplicate_editor_top;             action_duplicate_editor(.top);
+        case .duplicate_editor_bottom;          action_duplicate_editor(.bottom);
 
-        case .move_editor_left;                 move_editor(.left);
-        case .move_editor_right;                move_editor(.right);
-        case .move_editor_top;                  move_editor(.top);
-        case .move_editor_bottom;               move_editor(.bottom);
+        case .move_editor_left;                 action_move_editor(.left);
+        case .move_editor_right;                action_move_editor(.right);
+        case .move_editor_top;                  action_move_editor(.top);
+        case .move_editor_bottom;               action_move_editor(.bottom);
 
-        case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
-        case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .up, fast = true);    activate_hold_action(action, event);
-        case .scroll_viewport_down;             smooth_scroll(editor, direction = .down);               activate_hold_action(action, event);
-        case .scroll_viewport_down_fast;        smooth_scroll(editor, direction = .down, fast = true);  activate_hold_action(action, event);
-        case .scroll_viewport_left;             smooth_scroll(editor, direction = .left, fast = true);  activate_hold_action(action, event);
-        case .scroll_viewport_right;            smooth_scroll(editor, direction = .right, fast = true); activate_hold_action(action, event);
+        case .scroll_viewport_up;               action_scroll_viewport(action, event, editor, direction = .up);
+        case .scroll_viewport_up_fast;          action_scroll_viewport(action, event, editor, direction = .up, fast = true);
+        case .scroll_viewport_down;             action_scroll_viewport(action, event, editor, direction = .down);
+        case .scroll_viewport_down_fast;        action_scroll_viewport(action, event, editor, direction = .down, fast = true);
+        case .scroll_viewport_left;             action_scroll_viewport(action, event, editor, direction = .left, fast = true);
+        case .scroll_viewport_right;            action_scroll_viewport(action, event, editor, direction = .right, fast = true);
+
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
@@ -216,20 +217,20 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .revert_select_word_or_create_another_cursor; revert_select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .move_selection_to_next_word;                 move_selection_to_next_word(editor, buffer);                 keep_selection = true;
 
-        case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
-        case .toggle_line_numbers;              toggle_line_numbers                 ();
-        case .copy_current_line_info;           copy_current_line_info              (editor, buffer);
-        case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
-        case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
-        case .remove_additional_cursors;        remove_additional_cursors           (editor);
-        case .add_cursors_to_line_ends;         add_cursors_to_line_ends            (editor, buffer);
-        case .add_cursors_to_line_starts;       add_cursors_to_line_starts          (editor, buffer);
-        case .swap_selections;                  swap_selections                     (editor, buffer);           keep_selection = true;
-        case .select_all;                       select_all                          (editor, buffer);           keep_selection = true;
-        case .create_cursor_above;              create_cursor                       (editor, buffer, .above);   keep_selection = true;
-        case .create_cursor_below;              create_cursor                       (editor, buffer, .below);   keep_selection = true;
-        case .create_cursors_around;            create_cursors_around               (editor, buffer);           keep_selection = true;
-        case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id); keep_selection = true;
+        case .toggle_line_wrap;                 action_toggle_line_wrap                 (editor);
+        case .toggle_line_numbers;              action_toggle_line_numbers              ();
+        case .copy_current_line_info;           action_copy_current_line_info           (editor, buffer);
+        case .center_viewport_on_cursor;        action_center_viewport_on_cursor        (editor, buffer);
+        case .move_cursor_to_viewport_center;   action_move_cursor_to_viewport_center   (editor, buffer);
+        case .remove_additional_cursors;        remove_additional_cursors               (editor);
+        case .add_cursors_to_line_ends;         action_add_cursors_to_line_ends         (editor, buffer);
+        case .add_cursors_to_line_starts;       action_add_cursors_to_line_starts       (editor, buffer);
+        case .swap_selections;                  action_swap_selections                  (editor, buffer);           keep_selection = true;
+        case .select_all;                       action_select_all                       (editor, buffer);           keep_selection = true;
+        case .create_cursor_above;              action_create_cursor                    (editor, buffer, .above);   keep_selection = true;
+        case .create_cursor_below;              action_create_cursor                    (editor, buffer, .below);   keep_selection = true;
+        case .create_cursors_around;            create_cursors_around                   (editor, buffer);           keep_selection = true;
+        case .strip_trailing_whitespace;        strip_trailing_whitespace               (buffer, editor.buffer_id); keep_selection = true;
 
         case .choose_language;                  show_dialog                         (*language_dialog);
 
@@ -328,13 +329,13 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         }
     }
 
-    if new_group then new_edit_group(buffer, editor);  // do it after action
-
     if is_a_move_action(action) && shift_pressed then keep_selection = true;
 
     if editor.cursor_moved && !keep_selection {
         for * editor.cursors { it.sel = it.pos; }  // remove selection
     }
+
+    if new_group then new_edit_group(buffer, editor);  // do it after action
 
     // NOTE: even though we also do it in refresh_open_buffers, we do it here
     // so that if more than one event is processed in the same frame, the next one
@@ -800,11 +801,11 @@ get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {
     return pane.editor_ids[pane.editor_index];
 }
 
-center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
+action_center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
     editor.scroll_to_cursor = .yes;
 }
 
-move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
+action_move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
     // If that ever changes we'll need to change this code (and do it when we know the layout)
@@ -1324,7 +1325,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     scroll_to_selected = .snap;
 }
 
-handle_escape :: (editor: *Editor) {
+action_escape :: (editor: *Editor) {
     if build_panel_is_shown {
         hide_build_panel();
         return;
@@ -1485,7 +1486,7 @@ free_editor :: (using editor: *Editor) {
     reset(*wrapped_line_starts);
 }
 
-move_editor :: (placement: Editor_Placement) {
+action_move_editor :: (placement: Editor_Placement) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
@@ -1543,7 +1544,7 @@ switch_to_pane_by_number :: (number: s64) {
     activate_pane(target_pane);
 }
 
-duplicate_editor :: (placement: Editor_Placement) {
+action_duplicate_editor :: (placement: Editor_Placement) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
@@ -2163,7 +2164,7 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
 }
 
-save_all :: () {
+action_save_all :: () {
     unsaved_buffer_ids := get_unsaved_buffer_ids();
     for < unsaved_buffer_ids  save(it);
 }
@@ -2186,7 +2187,7 @@ delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     cursor_moved = .refresh_only;
 }
 
-create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
+action_create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
     organise_cursors(editor);
 
     if where == .above && original_cursor < main_cursor {
@@ -2569,14 +2570,14 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
     return editor.search_whole_words;
 }
 
-save_active_buffer :: () {
+action_save :: () {
     editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id < 0 return;
 
     save(open_editors[editor_id].buffer_id);
 }
 
-open_file_directory :: (buffer_id: s64) {
+action_open_file_directory :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
 
     if !buffer.has_file || !buffer.file.full_path {
@@ -2591,6 +2592,20 @@ open_file_directory :: (buffer_id: s64) {
     }
 
     platform_open_in_explorer(path);
+}
+
+action_reload_from_disk :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    if !buffer.has_file || !buffer.file.full_path {
+        add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
+        return;
+    }
+
+    reload_from_disk(buffer_id, force = true, show_user_messages = true);
+
+    add_success_message("File contents has been reloaded from\n%", buffer.file.full_path);
+
+    finder.need_to_refresh_results = true;
 }
 
 toggle_expand :: () {
@@ -2613,7 +2628,7 @@ toggle_editor_expand :: (expanded: bool) {
     // }
 }
 
-smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
+action_scroll_viewport :: (action: Action_Editors, event: Input.Event, editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
     // Only set this if there's a new set of inputs. Since keystrokes will repeat if held down for long,
     // the start_*/started_at values would be reset constantly in the middle of scrolling, causing stutter.
     if direction != editor_smooth_scroll.direction || fast != editor_smooth_scroll.fast {
@@ -2623,6 +2638,8 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
         editor_smooth_scroll.start_y    = editor.viewport.top;
         editor_smooth_scroll.fast       = fast;
     }
+
+    activate_hold_action(action, event);
 }
 
 cursors_match :: (c1: Array(Cursor), c2: [] Cursor) -> bool {
@@ -3471,6 +3488,15 @@ remove_additional_cursors :: (editor: *Editor) {
     editor.cursor_moved = .refresh_only;
 }
 
+action_add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
+    add_cursors_to_line_starts(editor, buffer);
+}
+
+action_add_cursors_to_line_ends :: (editor: *Editor, buffer: Buffer) {
+    add_cursors_to_line_starts(editor, buffer);
+    move_cursors_end(editor, buffer);
+}
+
 add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     if buffer.bytes.count <= 0 return;
 
@@ -3497,12 +3523,7 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-add_cursors_to_line_ends :: (editor: *Editor, buffer: Buffer) {
-    add_cursors_to_line_starts(editor, buffer);
-    move_cursors_end(editor, buffer);
-}
-
-swap_selections :: (using editor: *Editor, buffer: *Buffer) {
+action_swap_selections :: (using editor: *Editor, buffer: *Buffer) {
     if cursors.count != 2 return;
 
     c1, c2 := *cursors[0], *cursors[1];
@@ -3531,7 +3552,7 @@ swap_selections :: (using editor: *Editor, buffer: *Buffer) {
     c2.sel = selection1.start - sel_offset0 - xx string_dif;
 }
 
-select_all :: (editor: *Editor, buffer: Buffer) {
+action_select_all :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = 0;
     cursor.pos = cast(s32) buffer.bytes.count;
@@ -4376,7 +4397,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
     editor.cursor_moved = .unimportant;
 }
 
-toggle_line_wrap :: (editor: *Editor) {
+action_toggle_line_wrap :: (editor: *Editor) {
     if line_wrap_is_active(editor) {
         editor.line_wrap = .to_disable;
     } else {
@@ -4385,7 +4406,7 @@ toggle_line_wrap :: (editor: *Editor) {
     redraw_requested = true;
 }
 
-toggle_line_numbers :: () {
+action_toggle_line_numbers :: () {
     redraw_requested = true;
 
     _, buffer := get_active_editor_and_buffer();
@@ -4400,7 +4421,7 @@ toggle_line_numbers :: () {
     config.settings.show_line_numbers = !config.settings.show_line_numbers;
 }
 
-copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
+action_copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
     file_path: string = copy_temporary_string(ifx buffer.has_file then buffer.file.full_path else "<in-memory-buffer>");
     path_overwrite_separators(file_path, PATH_SEPARATOR);  // match the system separator
     coords := offset_to_real_coords(buffer, cursors[main_cursor].pos);
