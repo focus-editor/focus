@@ -1470,24 +1470,6 @@ reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false
     refresh_all_editors_for_buffer(buffer_id);
 }
 
-user_reload_from_disk :: (buffer_id: s64) {
-    // The difference between this function and `refresh_buffer_from_disk_by_path` is that
-    // this function is invoked by user and it will force reload and will produce user messages,
-    // whereas the other one is automatic and is silent
-
-    buffer := *open_buffers[buffer_id];
-    if !buffer.has_file || !buffer.file.full_path {
-        add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
-        return;
-    }
-
-    reload_from_disk(buffer_id, force = true, show_user_messages = true);
-
-    add_success_message("File contents has been reloaded from\n%", buffer.file.full_path);
-
-    finder.need_to_refresh_results = true;
-}
-
 maybe_mark_buffer_as_deleted :: (path: string) {
     lock(*open_buffers_lock);
     defer unlock(*open_buffers_lock);
