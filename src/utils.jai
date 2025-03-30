@@ -531,10 +531,8 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T, finished: bool {
     t := (frame_time64 - (started_at + delay)) / duration;
 
     finished := false;
-    if t >= 1 {
-        t = 1;
-        finished = true;
-    }
+    if t >= 1 { t = 1; finished = true; }
+    if t <  0 { t = 0; }
 
     result: T;
     if #complete func == {

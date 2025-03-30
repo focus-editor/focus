@@ -4019,8 +4019,9 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
     for * scrollbar_fade_out_animations {
         if it.ui_id != ui_id continue;
         delayed := maybe_wait_for_delay(*it.anim);
-        fadeout_opacity = get_animation_value(it.anim);
-        if fadeout_opacity <= 0 remove it;
+        value, finished := get_animation_value(it.anim);
+        if finished remove it;
+        fadeout_opacity = value;
         if fadeout_opacity > 0 && !delayed then redraw_requested = true;  // only redraw when not delayed to avoid spinning while waiting
         fadeout_opacity = clamp(fadeout_opacity, config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity);
     }
