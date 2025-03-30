@@ -475,6 +475,18 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
+get_visible_editor_and_buffer :: () -> *Editor, *Buffer {
+    // This function returns the editor and buffer which are not necessarily active,
+    // but they would be active if the active global widget was .editors
+
+    editor_id := get_visible_editor_id(editors.active_pane);
+    if editor_id < 0 return null, null;
+
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+
+    return editor, buffer;
+}
 
 refresh_all_editors_for_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
