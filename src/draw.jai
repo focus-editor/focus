@@ -433,7 +433,7 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
 }
 
 should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
-    active_editor, active_buffer := get_active_editor_and_buffer();
+    active_editor, active_buffer := get_visible_editor_and_buffer();
     if !active_editor return false;
     if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(active_editor_id) return false;
     if active_buffer.readonly return false;
@@ -452,7 +452,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
-    active_editor_id := get_active_editor_id();
+    active_editor_id := get_visible_editor_id(editors.active_pane);
     if !should_draw_color_preview_panel(active_editor_id) return;
 
     if !color_preview_is_shown {
