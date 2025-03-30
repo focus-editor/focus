@@ -22,7 +22,7 @@ apply_selected_language :: (_: Editor_Placement) {
 
     if selected >= filtered.count return;
 
-    _, buffer := get_active_editor_and_buffer();
+    _, buffer := get_visible_editor_and_buffer();
     if !buffer return;
 
     result := filtered[selected];
@@ -39,8 +39,8 @@ language_dialog_on_show :: () {
 language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     using language_dialog;
 
-    editor, buffer := get_active_editor_and_buffer();
-    if !editor || !buffer then return;
+    editor, buffer := get_visible_editor_and_buffer();
+    if !editor || !buffer return;
 
     langs := #run get_available_language_list();
 
@@ -52,7 +52,7 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         entry.highlights = highlights;
         entry.sort_key = cast(u64) score;
 
-        // Sort current language on top when we first open the dialog
+        // When sorting, put the current language on top when we first open the dialog
         if !filter.full_string && lang.value == buffer.lang {
             lang.active = true;
             entry.sort_key |= cast(u64) 1 << 62;
