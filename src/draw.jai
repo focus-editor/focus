@@ -3493,7 +3493,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     bar_rect.x -= 2 * char_x_advance;
 
     _, buffer := get_active_editor_and_buffer();
-    if buffer && get_settings(buffer).status_bar_position == .top bar_rect.y -= status_bar_height;
+    if buffer && get_settings(buffer).status_bar_position == .top then bar_rect.y -= status_bar_height;
 
     maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
 
