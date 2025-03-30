@@ -73,7 +73,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
 #scope_file
 
 jump_to_line :: () {
-    editor, buffer := get_active_editor_and_buffer();
+    editor, buffer := get_visible_editor_and_buffer();
     if !editor || !buffer return;
 
     using go_to_line_dialog;

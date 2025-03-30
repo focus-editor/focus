@@ -466,7 +466,7 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
             }
         }
     } else if config.settings.save_current_buffer_on_build {
-        editor, buffer := get_active_editor_and_buffer();
+        editor, buffer := get_visible_editor_and_buffer();
         if editor && buffer.has_file save_buffer(buffer, editor.buffer_id);
     }
 
