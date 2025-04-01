@@ -782,9 +782,6 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     editor, buffer := get_active_editor_and_buffer();
     go_to_line(editor, buffer, build_error.line, build_error.col);
 
-    // TODO: !!!!!!!!!!!!
-    // if old_layout == .Single && editors.layout == .Double then editor.scroll_to_cursor = .yes_new_editor;
-
     if show_error {
         if #complete build_error.type == {
             case .error;    add_user_error(build_error.message, dismiss_in_seconds = 15, .build);
