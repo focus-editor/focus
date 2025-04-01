@@ -227,7 +227,6 @@ reload_workspace :: (automatic := false) {
     deinit_open_file_dialog();
     deinit_file_watcher();
     deinit_buffers();
-    editor_history.initted = false;
 
     // Reinit things
     init_file_watcher();

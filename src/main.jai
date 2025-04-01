@@ -410,11 +410,11 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_commands;                                    show_dialog(*commands_dialog);                      return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
-        case .cursor_go_back;                                   cursor_go_back();                                   return true;
-        case .cursor_go_forward;                                cursor_go_forward();                                return true;
+        case .cursor_go_back;                                   action_cursor_go_back();                            return true;
+        case .cursor_go_forward;                                action_cursor_go_forward();                         return true;
 
-        case .go_to_previous_buffer;                            go_to_previous_buffer(event);                       return true;
-        case .go_to_next_buffer;                                go_to_next_buffer(event);                           return true;
+        case .go_to_previous_buffer;                            action_go_to_previous_buffer(event);                return true;
+        case .go_to_next_buffer;                                action_go_to_next_buffer(event);                    return true;
 
         case .build_panel_toggle;                               build_panel_toggle();                               return true;
         case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
@@ -1010,6 +1010,7 @@ focus_allocator: Allocator;
 #load "meow_hash.jai";
 #load "user_messages.jai";
 #load "deferred_actions.jai";
+#load "history.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";
