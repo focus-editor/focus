@@ -1,87 +1,85 @@
 maybe_save_editor_history :: () {
-    // if editor_closing_id >= 0 return;
+    active_editor_id := get_visible_editor_id(editors.active_pane);
 
-    // using editor_history;
+    if last_seen_editor_id != active_editor_id {
+        save_history(last_seen_editor_id, force = true);
+        save_history(active_editor_id,    force = true);
+    } else {
+        save_history(active_editor_id);
+    }
 
-    // // Set the initial size and then handle potential editor history size changes in case someone edits the config
-    // if frames.count != config.settings.editor_history_size {
-    //     array_resize(*frames, config.settings.editor_history_size);
-    //     initted = false;
-    // }
-
-    // editor, buffer := get_active_editor_and_buffer();
-
-    // frame := Editor_History_Frame.{
-    //     editor_state = editors,
-    //     pos = ifx editor then editor.cursors[editor.main_cursor].pos else 0,
-    //     cursor_movement = ifx editor then editor.cursor_moved else .has_not_moved,
-    // };
-
-    // if !initted {
-    //     initted = true;
-    //     start, end, current = 0;
-    //     frames[current] = frame;
-    //     return;
-    // }
-
-    // if editor && editor.cursor_moved == .refresh_only || frames[current] == frame return;
-
-    // previous_index := current;
-    // current = next_history_index(current);
-    // num_previous_frames := ifx start <= current then current - start else frames.count - start + current;
-
-    // should_merge_frame := false;
-    // previous_frame := frames[previous_index];
-    // if frames_are_mergeable(frame, previous_frame) && num_previous_frames >= 2 {
-    //     // We want to keep the first frame of a move type, and then keep overwriting the second frame
-    //     // of that type. So, check if this is the third frame of that type.
-    //     previous_previous_frame := frames[previous_history_index(previous_index)];
-    //     if frames_are_mergeable(previous_previous_frame, previous_frame) then should_merge_frame = true;
-    // }
-
-    // // !!!!!!!
-    // // // When a pane closes it may result in two updates: the cursor moving over to the
-    // // // other pane and then the pane being closed.  In these cases we should overwrite the
-    // // // former with the latter so it is stored as a single step.
-    // // should_merge_frame |=
-    // //        previous_frame.layout == .Double && frame.layout == .Single
-    // //     && previous_frame.left   == frame.left
-    // //     && previous_frame.right  == frame.right;
-
-    // // !!!!!!!!
-    // // // If all editors are closed, we remember this state, but later override it
-    // // // (if we just didn't write anything to history when layout is None, we wouldn't be able
-    // // // to reopen the previous editor by going back in history without additional handling)
-    // // should_merge_frame |= previous_frame.layout == .None;
-
-    // if should_merge_frame {
-    //     current = previous_index;
-    // } else {
-    //     if end != previous_index && frame.editor_state == previous_frame.editor_state {
-    //         // We don't want to destroy the last frame when we've only moved the cursor after going back in history,
-    //         // so we'll keep the last frame unless the editor state has changed
-    //         new_end := next_history_index(current);
-    //         frames[new_end] = frames[end];
-    //         end = new_end;
-    //     } else {
-    //         end = current;
-    //     }
-    // }
-
-    // // Push the start point if we've looped around
-    // if end == previous_history_index(start) then start = next_history_index(start);
-
-    // // print("STORE: current: %, start: %, end: %. STATE: %\n", current, start, end, frame.editor_state);
-    // frames[current] = frame;
+    last_seen_editor_id = active_editor_id;
 }
 
 
-cursor_history_per_editor: Table(s64, [..] Editor_History_Frame);
-cursor_history_global: [..] Global_History_Frame;
+#scope_file
+
+save_history :: (editor_id: s64, force := false) {
+    if editor_id < 0 return;
+
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+    cursor := editor.cursors[editor.main_cursor];
+    defer last_seen_cursor = cursor;
+
+    editor_history := find_or_add(*editor_history_table, editor_id);
+
+    last_frame   := ifx editor_history.count > 0 then *editor_history.*[editor_history.count - 1] else null;
+    last_line    := ifx last_frame then offset_to_line(editor, buffer, last_frame.pos) else 0;
+    current_line := offset_to_line(editor, buffer, cursor.pos);
+    line_difference := abs(last_line - current_line);
+
+    // Maybe skip recording because the cursor has moved recently
+    if !force {
+        now := seconds_since_init();
+        if last_seen_cursor.pos != cursor.pos || last_seen_cursor.sel != cursor.sel then cursor_last_moved_at = now;
+        if ((now - cursor_last_moved_at) < IDLE_THRESHOLD_IN_SECONDS &&
+            (now - cursor_last_recorded) < TIME_THRESHOLD_IN_SECONDS &&
+             line_difference < MAX_LINE_THRESHOLD)
+            return;
+    }
+
+    if line_difference < MIN_LINE_THRESHOLD {
+        // The cursor hasn't moved far enough to justify a new entry
+        if !force return;
+
+        // Replace the last frame data with the new cursor position
+        if force && last_frame {
+            last_frame.pos = cursor.pos;
+            last_frame.sel = cursor.sel;
+            return;
+        }
+    }
+
+    // Clear any forward history because we're recording a new position
+    array_reset_keeping_memory(*forward_history);
+
+    // Record cursor position
+    array_add(editor_history, Editor_History_Frame.{ pos = cursor.pos, sel = cursor.sel });
+
+    last_global_frame := ifx global_history then *global_history[global_history.count - 1] else null;
+    if !last_global_frame || last_global_frame.editor_id != editor_id {
+        array_add(*global_history, Global_History_Frame.{ editor_id = editor_id, start_index = editor_history.count - 1 });
+    }
+}
+
+editor_history_table: Table(s64, [..] Editor_History_Frame);
+global_history:  [..] Global_History_Frame;
+forward_history: [..] Forward_History_Frame;
+
+last_seen_editor_id := -1;
+last_seen_cursor: Cursor;
+cursor_last_moved_at: float64;
+cursor_last_recorded: float64;
+
+IDLE_THRESHOLD_IN_SECONDS :: 1;     // for how long the cursor needs to stay in one place to be recorded
+TIME_THRESHOLD_IN_SECONDS :: 10;    // if we haven't recorded anything for this long, we do so even if we aren't idle
+MIN_LINE_THRESHOLD :: 5;            // how many lines the cursor needs to move by to qualify for recording
+MAX_LINE_THRESHOLD :: 100;          // if line difference is so big, we record an entry even if it happens the next frame
 
 Editor_History_Frame :: struct {
-    cursor_pos: s32;
-    cursor_sel: s32;
+    pos: s32;
+    sel: s32;
 }
 
 Global_History_Frame :: struct {
@@ -89,8 +87,10 @@ Global_History_Frame :: struct {
     start_index: s64;  // index within the editor history
 }
 
-
-
+Forward_History_Frame :: struct {
+    editor_id: s64;
+    frame: Editor_History_Frame;
+}
 
 /// ==============================================
 
