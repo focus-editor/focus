@@ -32,6 +32,10 @@ array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     array.count -= count;
 }
 
+array_view_to_end :: inline (array: [] $T, offset: s64) -> [] T {
+    return array_view(array, offset, array.count - offset);
+}
+
 to_bytes :: (src: string) -> [] u8 {
     result: [] u8;
     result.data = src.data;
