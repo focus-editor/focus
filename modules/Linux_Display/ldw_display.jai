@@ -224,6 +224,40 @@ wm_base_listener :: xdg_wm_base_listener.{
     }
 };
 
+seat_listener :: wl_seat_listener.{
+    capabilities = (data: *void, self: *wl_seat, capabilities: u32) -> void #c_call {
+        d: *Wayland_Display = data;
+
+        if capabilities & wl_seat.capability_pointer {
+            if d.pointer {
+                wl_pointer.release(d.pointer);
+                d.pointer = null;
+            }
+
+            d.pointer = wl_seat.get_pointer(d.seat);
+            wl_proxy_set_user_data(d.pointer, d);
+            wl_pointer.add_listener(d.pointer, *pointer_listener, d);
+        } else if d.pointer {
+            wl_pointer.release(d.pointer);
+            d.pointer = null;
+        }
+
+        if capabilities & wl_seat.capability_keyboard {
+            if d.keyboard {
+                wl_keyboard.release(d.keyboard);
+                d.keyboard = null;
+            }
+
+            d.keyboard = wl_seat.get_keyboard(d.seat);
+            wl_proxy_set_user_data(d.keyboard, d);
+            wl_keyboard.add_listener(d.keyboard, *keyboard_listenter, d);
+        } else if d.keyboard {
+            wl_keyboard.release(d.keyboard);
+            d.keyboard = null;
+        }
+    },
+};
+
 registry_listener :: wl_registry_listener.{
     global = (data: *void, registry: *wl_registry, id: u32, intf: *u8, version: u32) -> void #c_call {
         d: *Wayland_Display = data;
@@ -249,14 +283,7 @@ registry_listener :: wl_registry_listener.{
             }
             case "wl_seat"; {
                 wl_jext_bind(*d.seat, registry, id, version);
-
-                d.pointer = wl_seat.get_pointer(d.seat);
-                wl_proxy_set_user_data(d.pointer, d);
-                wl_pointer.add_listener(d.pointer, *pointer_listener, d);
-
-                d.keyboard = wl_seat.get_keyboard(d.seat);
-                wl_proxy_set_user_data(d.keyboard, d);
-                wl_keyboard.add_listener(d.keyboard, *keyboard_listenter, d);
+                wl_seat.add_listener(d.seat, *seat_listener, d);
 
                 maybe_init_data_device(d);
             }
