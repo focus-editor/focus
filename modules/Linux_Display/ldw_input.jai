@@ -94,12 +94,14 @@ BTN_FORWARD : u32 : 0x115;
 BTN_BACK    : u32 : 0x116;
 
 refresh_cursor :: (w: *Wayland_Window) {
-    wl_pointer.set_cursor(
-        w.display.pointer,
-        w.enter_serial,
-        w.cursor.surfaces[0],
-        xx w.cursor.native.images[0].hotspot_x,
-        xx w.cursor.native.images[0].hotspot_y);
+    if (w.display.pointer) {
+        wl_pointer.set_cursor(
+            w.display.pointer,
+            w.enter_serial,
+            w.cursor.surfaces[0],
+            xx w.cursor.native.images[0].hotspot_x,
+            xx w.cursor.native.images[0].hotspot_y);
+    }
 }
 
 pointer_listener :: wl_pointer_listener.{
