@@ -1347,6 +1347,9 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
 
         case "ini";             lang = .Ini;
 
+        case "diff";            lang = .Diff;
+        case "patch";           lang = .Diff;
+
         case;
             // Files named `.focus_config` are assumed to have no extension
             if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
@@ -3483,6 +3486,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         // No support for comments at all
         case .Plain_Text;        #through;
         case .Todo;              #through;
+        case .Diff;              #through;
         case .Focus_Build_Panel;
             return;
     }
@@ -3712,6 +3716,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         // No support for comments at all
         case .Plain_Text;        #through;
         case .Todo;              #through;
+        case .Diff;              #through;
         case .Focus_Build_Panel;
             return;
     }
