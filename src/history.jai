@@ -45,8 +45,6 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
     prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };
     print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.count, prev_cursor.pos);
 
-    last_seen_cursor = .{ editor_id = last_global_frame.editor_id, pos = prev_cursor.pos, sel = prev_cursor.sel };
-
     return true, last_global_frame.editor_id, prev_cursor;
 }
 
@@ -64,9 +62,41 @@ move_forward_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor
     frame := pop(*forward_history);
     next_cursor := Cursor.{ pos = frame.pos, sel = frame.sel };
 
-    last_seen_cursor = .{ editor_id = frame.editor_id, pos = frame.pos, sel = frame.sel };
-
     return true, frame.editor_id, next_cursor;
+}
+
+
+history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
+    editor, buffer := get_editor_and_buffer(editor_id);
+
+    pane, editor_index := editors_find_pane_with_editor(editor_id);
+    if !pane {
+        // Editor is not in the tree any more, check if there's an editor for the same buffer in the current pane first
+        found_in_active_pane := false;
+        for editors.active_pane.editor_ids {
+            if open_editors[it].buffer_id == editor.buffer_id {
+                found_in_active_pane = true;
+                editor_id = it;
+                break;
+            }
+        }
+
+        if !found_in_active_pane {
+            // Reopen the editor in the active pane
+            editors.active_pane.editor_index = editors.active_pane.editor_ids.count;
+            array_add(*editors.active_pane.editor_ids, editor_id);
+        }
+    }
+
+    make_editor_active(editor_id);
+
+    cursor := leave_only_main_cursor(editor);
+    cursor.* = new_cursor;
+    put_cursor_in_valid_spot(cursor, buffer);
+
+    last_seen_cursor = .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel };
+
+    editor.scroll_to_cursor = .yes;
 }
 
 
