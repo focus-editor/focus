@@ -340,7 +340,7 @@ main :: () {
 
         pointer_end_frame();
 
-        maybe_save_editor_history();
+        maybe_save_cursor_history();
 
         reset_temporary_storage();
 
