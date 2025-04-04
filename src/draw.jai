@@ -595,8 +595,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
 
     if ui.hot_last_frame == color_preview_ui_id {
         // Draw a tooltip with the correct color name
-        editor := *open_editors[editor_id];
-        buffer := *open_buffers[editor.buffer_id];
+        editor, buffer := get_editor_and_buffer(editor_id);
         text_rect := get_editor_subrects(editor_id, editor_rect, has_status_bar = false);
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
@@ -830,8 +829,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
 get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
-    editor := *open_editors[editor_id];
-    buffer := *open_buffers[editor.buffer_id];
+    editor, buffer := get_editor_and_buffer(editor_id);
     buffer_settings := get_settings(buffer);
 
     if buffer_settings.status_bar_position == .bottom {
@@ -2041,8 +2039,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
         max_folder_name_width = -1;
 
         for pane.editor_ids {
-            editor := *open_editors[it];
-            buffer := *open_buffers[editor.buffer_id];
+            editor, buffer := get_editor_and_buffer(it);
 
             _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name | .modified, dry_run = true);
             if max_file_name_width < pen.x then max_file_name_width = pen.x;
@@ -2112,9 +2109,8 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
     pen.y        += scroll_y;
 
     for pane.editor_ids {
-        editor := *open_editors[it];
-        buffer := *open_buffers[editor.buffer_id];
-
+        editor, buffer := get_editor_and_buffer(it);
+        
         if it_index == pane.editor_index {
             // Draw list cursor
             top_corners    := Corner_Rounding.none;

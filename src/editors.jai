@@ -470,8 +470,8 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     editor_id := get_active_editor_id();
     if editor_id < 0 return null, null;
 
-    editor := *open_editors[editor_id];
-    buffer := *open_buffers[editor.buffer_id];
+    editor, buffer := get_editor_and_buffer(editor_id);
+
     return editor, buffer;
 }
 
@@ -482,8 +482,7 @@ get_visible_editor_and_buffer :: () -> *Editor, *Buffer {
     editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id < 0 return null, null;
 
-    editor := *open_editors[editor_id];
-    buffer := *open_buffers[editor.buffer_id];
+    editor, buffer := get_editor_and_buffer(editor_id);
 
     return editor, buffer;
 }
@@ -780,14 +779,48 @@ editors_find_pane_by_number :: (number: s64) -> *Editor_Pane {
     return _find_by_number(editors.root, number);
 }
 
-editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> pane: *Editor_Pane {
-    if !current_pane return null;
-    if get_visible_editor_id(current_pane) == editor_id return current_pane;
-    pane := editors_find_pane_by_editor_id(editor_id, current_pane.child1);
-    if !pane then pane = editors_find_pane_by_editor_id(editor_id, current_pane.child2);
+editors_find_pane_with_editor :: (editor_id: s64) -> *Editor_Pane, editor_index: int {
+    pane, editor_index := _find_pane_with_editor_id(editor_id, editors.root);
     if pane then assert_leaf_pane(pane, "Only leaf panes can have editors. This is a bug.");
-    return pane;
+    return pane, editor_index;
 }
+
+// Returns the first one it sees
+editors_find_pane_with_buffer :: (buffer_id: s64) -> *Editor_Pane, editor_index: int {
+    pane, editor_index := _find_pane_with_buffer_id(buffer_id, editors.root);
+    if pane then assert_leaf_pane(pane, "Only leaf panes can have editors. This is a bug.");
+    return pane, editor_index;
+}
+
+#scope_file
+
+_find_pane_with_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> *Editor_Pane, editor_index := -1 {
+    if !current_pane return null;
+
+    found, editor_index := array_find(current_pane.editor_ids, editor_id);
+    if found return current_pane, editor_index;
+
+    pane:, editor_index = _find_pane_with_editor_id(editor_id, current_pane.child1);
+    if !pane then pane, editor_index = _find_pane_with_editor_id(editor_id, current_pane.child2);
+
+    return pane, editor_index;
+}
+
+_find_pane_with_buffer_id :: (buffer_id: s64, current_pane: *Editor_Pane) -> *Editor_Pane, editor_index := -1 {
+    if !current_pane return null;
+
+    for current_pane.editor_ids {
+        editor := *open_editors[it];
+        if buffer_id == editor.buffer_id return current_pane, it_index;
+    }
+
+    pane, editor_index := _find_pane_with_buffer_id(buffer_id, current_pane.child1);
+    if !pane then pane, editor_index = _find_pane_with_buffer_id(buffer_id, current_pane.child2);
+
+    return pane, editor_index;
+}
+
+#scope_export
 
 editors_show_existing_buffer :: (buffer_id: s64) {
     _find_by_buffer_id :: (pane: *Editor_Pane, buffer_id: s64) -> *Editor_Pane, editor_index: s64 = -1 {
@@ -1186,8 +1219,7 @@ get_unsaved_buffers_in_subtree :: (pane: *Editor_Pane, except: *Editor_Pane = nu
 
         if pane.layout == .single {
             for pane.editor_ids {
-                editor := *open_editors[it];
-                buffer := *open_buffers[editor.buffer_id];
+                editor, buffer := get_editor_and_buffer(it);
                 if is_unsaved(buffer) then array_add(results, editor.buffer_id);
             }
         } else {
@@ -1687,33 +1719,15 @@ action_go_to_previous_buffer :: (event: *Input.Event) {
 
 action_cursor_go_back :: () {
     moved, editor_id, prev_cursor := move_back_in_cursor_history();
-    if moved then _reopen_editor_and_set_cursor(editor_id, prev_cursor);
+    if moved then history_reopen_editor_and_set_cursor(editor_id, prev_cursor);
 }
 
 action_cursor_go_forward :: () {
     moved, editor_id, next_cursor := move_forward_in_cursor_history();
-    if moved then _reopen_editor_and_set_cursor(editor_id, next_cursor);
+    if moved then history_reopen_editor_and_set_cursor(editor_id, next_cursor);
 }
 
 #scope_file
-
-_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
-    // Find editor in the pane tree if it exists
-    pane := editors_find_pane_by_editor_id(editor_id, editors.root);
-    if !pane {
-        // Add editor to the active pane
-        array_add(*editors.active_pane.editor_ids, editor_id);
-    }
-
-    make_editor_active(editor_id);
-
-    editor, buffer := get_editor_and_buffer(editor_id);
-    cursor := leave_only_main_cursor(editor);
-    cursor.* = new_cursor;
-    put_cursor_in_valid_spot(cursor, buffer);
-
-    editor.scroll_to_cursor = .yes;
-}
 
 activate_show_pane_editors_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
     action := Lingering_Action.{
@@ -2135,16 +2149,22 @@ make_editor_active :: (editor_id: s64) {
     if is_build_panel(editor_id) {
         build_panel_grab_focus();
     } else {
-        pane := editors_find_pane_by_editor_id(editor_id, editors.root);
-        if pane then editors.active_pane = pane;
+        pane, editor_index := editors_find_pane_with_editor(editor_id);
+        if pane {
+            // Make the pane active
+            pane.editor_index = editor_index;
+            editors.active_pane = pane;
+        } else {
+            log_error("Attempting to make an editor active, but it's missing in the pane tree. This is probably a bug.");
+            return;
+        }
     }
 
-    buffer_id := open_editors[editor_id].buffer_id;
-    buffer := *open_buffers[buffer_id];
-    update_window_title(buffer_id);
-    update_most_recent_buffers(buffer_id);
+    editor, buffer := get_editor_and_buffer(editor_id);
+    update_window_title(editor.buffer_id);
+    update_most_recent_buffers(editor.buffer_id);
     maybe_detect_and_set_indentation(buffer);
-    maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
+    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
 }
 
 update_most_recent_buffers :: (buffer_id: s64) {
