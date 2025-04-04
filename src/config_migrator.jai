@@ -613,7 +613,7 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 7, "editors", "change_case_cycle",                           "Ctrl-U",              "Cmd-U"    },
 
     .{ 9, "editors", "revert_select_word_or_create_another_cursor", "Ctrl-R",              "Cmd-R"    },
-    .{ 9, "editors", "move_selection_to_next_word",                 "Ctrl-Y",              "Cmd-R"    },
+    .{ 9, "editors", "move_selection_to_next_word",                 "Ctrl-Y",              "Cmd-Y"    },
 
     .{ 10, "search dialog", "go_to_next_input",                     "Tab",                 "Tab"           },
     .{ 10, "search dialog", "go_to_previous_input",                 "Shift-Tab",           "Shift-Tab"     },
