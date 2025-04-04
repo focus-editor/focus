@@ -488,6 +488,12 @@ get_visible_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
+get_editor_and_buffer :: inline (editor_id: s64) -> *Editor, *Buffer {
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+    return editor, buffer;
+}
+
 refresh_all_editors_for_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
 
@@ -865,6 +871,10 @@ leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
     main_cursor = 0;
     cursors[0] = cursor;
     return *cursors[0];
+}
+
+get_main_cursor :: inline (using editor: Editor) -> Cursor {
+    return cursors[main_cursor];
 }
 
 organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = null) {
@@ -1676,38 +1686,34 @@ action_go_to_previous_buffer :: (event: *Input.Event) {
 }
 
 action_cursor_go_back :: () {
-    // using editor_history;
-    // // print("BACK: current: %, start: %, end: %\n", current, start, end);
-    // if current == start return;
-
-    // old_frame := frames[current];
-    // current = previous_history_index(current);
-    // if by_buffer {
-    //     while current != start && old_frame.editor_state == frames[current].editor_state {
-    //         current = previous_history_index(current);
-    //     }
-    // }
-    // move_to_editor_history_frame(frames[current], old_frame);
-    // // print("   -> current: %, start: %, end: %. RESTORE: %\n", current, start, end, frames[current]);
+    moved, editor_id, prev_cursor := move_back_in_cursor_history();
+    if moved then _reopen_editor_and_set_cursor(editor_id, prev_cursor);
 }
 
 action_cursor_go_forward :: () {
-    // using editor_history;
-    // // print("FORW: current: %, start: %, end: %\n", current, start, end);
-    // if current == end return;
-
-    // old_frame := frames[current];
-    // current = next_history_index(current);
-    // if by_buffer {
-    //     while current != end && old_frame.editor_state == frames[current].editor_state {
-    //         current = next_history_index(current);
-    //     }
-    // }
-    // move_to_editor_history_frame(frames[current], old_frame);
-    // // print("   -> current: %, start: %, end: %. RESTORE: %\n", current, start, end, frames[current]);
+    moved, editor_id, next_cursor := move_forward_in_cursor_history();
+    if moved then _reopen_editor_and_set_cursor(editor_id, next_cursor);
 }
 
 #scope_file
+
+_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
+    // Find editor in the pane tree if it exists
+    pane := editors_find_pane_by_editor_id(editor_id, editors.root);
+    if !pane {
+        // Add editor to the active pane
+        array_add(*editors.active_pane.editor_ids, editor_id);
+    }
+
+    make_editor_active(editor_id);
+
+    editor, buffer := get_editor_and_buffer(editor_id);
+    cursor := leave_only_main_cursor(editor);
+    cursor.* = new_cursor;
+    put_cursor_in_valid_spot(cursor, buffer);
+
+    editor.scroll_to_cursor = .yes;
+}
 
 activate_show_pane_editors_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
     action := Lingering_Action.{
