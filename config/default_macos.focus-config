@@ -149,6 +149,8 @@ draw_indent_guides:                                 false
 # Key combination                 Action
 
 Cmd-D                           select_word_or_create_another_cursor
+Cmd-R                           revert_select_word_or_create_another_cursor
+Cmd-Y                           move_selection_to_next_word
 Cmd-Shift-A                     select_all_occurrences
 
 Cmd-Shift-D                     duplicate_lines
