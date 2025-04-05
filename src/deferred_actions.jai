@@ -232,7 +232,7 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
         }
     }
 
-    if OS == .WINDOWS && config.settings.prefer_system_file_dialogs {
+    if (OS == .WINDOWS || OS == .MACOS) && config.settings.prefer_system_file_dialogs {
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
         if !success return .CANCEL;  // the user did not select a file
         return _save_to_file_path(buffer, buffer_id, file_path, is_move);
