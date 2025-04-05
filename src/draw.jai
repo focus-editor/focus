@@ -400,7 +400,7 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BACKGROUND_4, extra_draw_info = .{is_background = true});
+        draw_rect(title_bar_rect, Color.COLOR_PREVIEW_TITLE_BAR, extra_draw_info = .{is_background = true});
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -1326,7 +1326,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
-                    draw_rect(line_rect, Color.BACKGROUND_4, extra_draw_info = .{is_background = true});
+                    draw_rect(line_rect, Color.CURSOR_LINE_HIGHLIGHT, extra_draw_info = .{is_background = true});
                 }
             }
         }

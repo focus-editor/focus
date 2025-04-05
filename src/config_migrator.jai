@@ -581,6 +581,9 @@ ADDED_COLORS :: Added_Color.[
 
     .{ 8, "bracket_highlight",                "selection_highlight",    "E8FCFE30" },
     .{ 8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
+
+    .{ 17, "cursor_line_highlight",           "background4",            "21333FFF" },
+    .{ 17, "color_preview_title_bar",         "background4",            "21333FFF" },
 ];
 
 
