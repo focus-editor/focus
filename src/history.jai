@@ -2,20 +2,34 @@ maybe_save_cursor_history :: () {
     editor_id := get_visible_editor_id(editors.active_pane);
     editor := ifx editor_id >= 0 then *open_editors[editor_id] else null;
     cursor := ifx editor then get_main_cursor(editor) else NO_CURSOR;
+
+    editor_changed := editor_id  != last_seen_cursor.editor_id;
+    cursor_moved   := cursor.pos != last_seen_cursor.pos;
     now := seconds_since_init();
 
-    editor_changed := editor_id != last_seen_cursor.editor_id;
-    cursor_moved   := editor_changed || cursor.pos != last_seen_cursor.pos;
-    if !cursor_moved return;
+    if !editor_changed && !cursor_moved return;
 
     defer last_seen_cursor = .{ editor_id = editor_id, cursor = cursor, moved_at = now };
 
-    if !editor_changed && (now - last_seen_cursor.moved_at) < IDLE_THRESHOLD_IN_SECONDS return;  // cursor is actively moving, wait
-
     saved := false;
+
     if editor_changed {
-        saved = _maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
-    } else {
+        last_global_frame := ifx global_history then peek_pointer(global_history) else null;
+        if !last_global_frame {
+            // Always save the first valid editor we see when there's no history
+            // (e.g. when we just started or went all the way back in history)
+            editor_id_to_save := last_seen_cursor.editor_id;
+            cursor_to_save    := last_seen_cursor.cursor;
+            if last_seen_cursor.editor_id < 0 {
+                editor_id_to_save = editor_id;
+                cursor_to_save    = cursor;
+            }
+            saved = _maybe_save_cursor_position(editor_id_to_save, cursor_to_save);
+        } else if last_global_frame.editor_id == last_seen_cursor.editor_id {
+            saved = _maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
+        }
+    } else if cursor_moved {
+        if (now - last_seen_cursor.moved_at) < IDLE_THRESHOLD_IN_SECONDS return;  // cursor is actively moving, wait
         saved = _maybe_save_cursor_position(editor_id, last_seen_cursor.cursor);
     }
 
