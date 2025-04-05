@@ -40,25 +40,39 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
     if !global_history return false;
 
     // Save current cursor position in the forward history
+    current_line: s32;
+    editor: *Editor;
+    buffer: *Buffer;
     editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id >= 0 {
-        editor, buffer := get_editor_and_buffer(editor_id);
+        editor, buffer = get_editor_and_buffer(editor_id);
         cursor := get_main_cursor(editor);
         array_add(*forward_history, .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel });
+        current_line = offset_to_line(editor, buffer, cursor.pos);
     }
 
     // Find the previous cursor position
-    last_global_frame := peek_pointer(global_history);
-    editor_history := table_find_pointer(*editor_history_table, last_global_frame.editor_id);
-    assert(editor_history != null);
-    last_editor_frame := pop(editor_history);
-    if last_global_frame.start_index >= editor_history.count {
-        popped := pop(*global_history);
-        print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
-    }
-    prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };
-    print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.count, prev_cursor.pos);
+    // If there are similar positions in the history, skip them all
+    last_global_frame: *Global_History_Frame;
+    last_editor_frame: Editor_History_Frame;
+    while global_history {
+        last_global_frame = peek_pointer(global_history);
+        editor_history := table_find_pointer(*editor_history_table, last_global_frame.editor_id);
+        assert(editor_history != null);
 
+        last_editor_frame = pop(editor_history);
+        print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.count, last_editor_frame.pos);
+
+        if last_global_frame.start_index >= editor_history.count {
+            popped := pop(*global_history);
+            print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
+        }
+        if last_global_frame.editor_id != editor_id break;
+        if !editor break;
+        if editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos)) >= MIN_LINE_THRESHOLD break;
+    }
+
+    prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };
     return true, last_global_frame.editor_id, prev_cursor;
 }
 
@@ -126,15 +140,11 @@ _maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) 
     last_frame := ifx editor_history.count > 0 then peek_pointer(editor_history.*) else null;
     last_global_frame := ifx global_history then peek_pointer(global_history) else null;
     need_new_global_frame := !last_global_frame || last_global_frame.editor_id != editor_id;
-    overwrite := false;
 
-    if last_frame {
+    if !force && last_frame && !need_new_global_frame {
         last_line    := offset_to_line(editor, buffer, last_frame.pos);
         current_line := offset_to_line(editor, buffer, cursor.pos);
-        if abs(last_line - current_line) < MIN_LINE_THRESHOLD && !need_new_global_frame {
-            if !force return false;
-            overwrite = true;
-        }
+        if abs(last_line - current_line) < MIN_LINE_THRESHOLD return false;  // cursor hasn't moved far enough
     }
 
     // Add a new global frame if we're recording a frame for a new editor
@@ -143,15 +153,8 @@ _maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) 
         print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.count);
     }
 
-    // Add new or overwrite the top editor frame
-    if overwrite && last_frame {
-        last_frame.pos = cursor.pos;
-        last_frame.sel = cursor.sel;
-        print("==== EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.count - 1, cursor.pos);
-    } else {
-        print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.count, cursor.pos);
-        array_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
-    }
+    print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.count, cursor.pos);
+    array_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
 
     return true;
 }
