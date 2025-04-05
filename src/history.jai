@@ -48,7 +48,7 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
     }
 
     // Find the previous cursor position
-    last_global_frame := peek(global_history);
+    last_global_frame := peek_pointer(global_history);
     editor_history := table_find_pointer(*editor_history_table, last_global_frame.editor_id);
     assert(editor_history != null);
     last_editor_frame := pop(editor_history);
@@ -91,6 +91,7 @@ history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
             if open_editors[it].buffer_id == editor.buffer_id {
                 found_in_active_pane = true;
                 editor_id = it;
+                editor, buffer = get_editor_and_buffer(editor_id);
                 break;
             }
         }
