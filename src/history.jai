@@ -1,4 +1,6 @@
 maybe_save_cursor_history :: () {
+    apply_edit_notifications();
+
     editor_id := get_visible_editor_id(editors.active_pane);
     editor := ifx editor_id >= 0 then *open_editors[editor_id] else null;
     cursor := ifx editor then get_main_cursor(editor) else NO_CURSOR;
@@ -24,13 +26,13 @@ maybe_save_cursor_history :: () {
                 editor_id_to_save = editor_id;
                 cursor_to_save    = cursor;
             }
-            saved = _maybe_save_cursor_position(editor_id_to_save, cursor_to_save);
+            saved = maybe_save_cursor_position(editor_id_to_save, cursor_to_save);
         } else if last_global_frame.editor_id == last_seen_cursor.editor_id {
-            saved = _maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
+            saved = maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
         }
     } else if cursor_moved {
         if (now - last_seen_cursor.moved_at) < IDLE_THRESHOLD_IN_SECONDS return;  // cursor is actively moving, wait
-        saved = _maybe_save_cursor_position(editor_id, last_seen_cursor.cursor);
+        saved = maybe_save_cursor_position(editor_id, last_seen_cursor.cursor);
     }
 
     if saved then array_reset_keeping_memory(*forward_history);
@@ -84,7 +86,7 @@ move_forward_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor
     if editor_id {
         editor := *open_editors[editor_id];
         cursor := get_main_cursor(editor);
-        _maybe_save_cursor_position(editor_id, cursor);
+        maybe_save_cursor_position(editor_id, cursor);
     }
 
     frame := pop(*forward_history);
@@ -128,10 +130,14 @@ history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
     editor.scroll_to_cursor = .yes;
 }
 
+history_add_edit_notification_to_batch :: (notification: Buffer.Edit_Notification) {
+    array_add(*edit_notifications, notification);
+}
+
 
 #scope_file
 
-_maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -> saved: bool {
+maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -> saved: bool {
     if editor_id < 0 return false;
 
     editor, buffer := get_editor_and_buffer(editor_id);
@@ -159,6 +165,38 @@ _maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) 
     return true;
 }
 
+apply_edit_notifications :: () {
+    while edit_notifications {
+        buffer_id := edit_notifications[0].buffer_id;
+
+        for * editor, editor_id : open_editors {
+            if editor.buffer_id != buffer_id continue;
+            editor_history := table_find_pointer(*editor_history_table, editor_id);
+            if !editor_history continue;
+
+            for edit_notifications {
+                if buffer_id != it.buffer_id continue;
+                apply_edit_to_history(editor_history.*, it);
+            }
+
+            compress_editor_history_and_adjust_global_history(editor_history);
+        }
+
+        for edit_notifications { if buffer_id == it.buffer_id remove it; }
+    }
+}
+
+apply_edit_to_history :: (history: [] Editor_History_Frame, edit: Buffer.Edit_Notification) {
+    for * frame : history {
+        if frame.pos >= edit.offset then frame.pos = max(frame.pos + edit.delta, edit.offset);
+        if frame.sel >= edit.offset then frame.sel = max(frame.sel + edit.delta, edit.offset);
+    }
+}
+
+compress_editor_history_and_adjust_global_history :: (history: *[..] Editor_History_Frame) {
+    //
+}
+
 
 IDLE_THRESHOLD_IN_SECONDS :: 1;     // for how long the cursor needs to stay in one place to be recorded
 MIN_LINE_THRESHOLD :: 10;           // how many lines the cursor needs to move by to qualify for recording
@@ -168,6 +206,8 @@ NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
 editor_history_table: Table(s64, [..] Editor_History_Frame);
 global_history:  [..] Global_History_Frame;
 forward_history: [..] Forward_History_Frame;
+
+edit_notifications: [..] Buffer.Edit_Notification;
 
 last_seen_cursor: struct {
     editor_id: s64 = -1;
