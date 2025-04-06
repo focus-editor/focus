@@ -1638,21 +1638,28 @@ get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at
 Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
-    if num_editors_open < 2 return;
     editor_id := context.current_editor_id;
     if editor_id < 0 return;
+
     editor := *open_editors[editor_id];
     if buffer != *open_buffers[editor.buffer_id] {
         log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
         return;
     }
 
-    add(*buffer_edit_notifications, Buffer.Edit_Notification.{
+    notification := Buffer.Edit_Notification.{
         buffer_id = cast(s32) editor.buffer_id,
         editor_id = cast(s32) editor_id,
         offset    = cast(s32) (offset + min(old_count, new_count)),
         delta     = cast(s32) (new_count - old_count),
-    });
+    };
+
+    history_add_edit_notification_to_batch(notification);
+
+    if num_editors_open >= 2 {
+        // Notify other editors
+        add(*buffer_edit_notifications, notification);
+    }
 }
 
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
