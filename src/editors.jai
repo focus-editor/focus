@@ -478,7 +478,6 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
 get_visible_editor_and_buffer :: () -> *Editor, *Buffer {
     // This function returns the editor and buffer which are not necessarily active,
     // but they would be active if the active global widget was .editors
-
     editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id < 0 return null, null;
 
@@ -525,7 +524,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 
     // Clear applied notifications
     for buffer_edit_notifications {
-        if it.buffer_id == buffer_id  remove it;
+        if it.buffer_id == buffer_id remove it;
     }
 }
 
