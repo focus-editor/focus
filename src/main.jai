@@ -1011,6 +1011,7 @@ focus_allocator: Allocator;
 #load "user_messages.jai";
 #load "deferred_actions.jai";
 #load "history.jai";
+#load "ring_buffer.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";

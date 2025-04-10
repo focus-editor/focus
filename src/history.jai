@@ -62,10 +62,10 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         editor_history := table_find_pointer(*editor_history_table, last_global_frame.editor_id);
         assert(editor_history != null);
 
-        last_editor_frame = pop(editor_history);
+        has_editor_history:, last_editor_frame = ringbuffer_pop(editor_history);
         print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.count, last_editor_frame.pos);
 
-        if last_global_frame.start_index >= editor_history.count {
+        if last_global_frame.start_index >= editor_history.total || !has_editor_history {
             popped := pop(*global_history);
             print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
         }
@@ -143,7 +143,7 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
     editor, buffer := get_editor_and_buffer(editor_id);
     editor_history := find_or_add(*editor_history_table, editor_id);
 
-    last_frame := ifx editor_history.count > 0 then peek_pointer(editor_history.*) else null;
+    last_frame := ringbuffer_peek_pointer(editor_history);
     last_global_frame := ifx global_history then peek_pointer(global_history) else null;
     need_new_global_frame := !last_global_frame || last_global_frame.editor_id != editor_id;
 
@@ -160,7 +160,7 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
     }
 
     print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.count, cursor.pos);
-    array_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
+    ringbuffer_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
 
     return true;
 }
@@ -176,10 +176,9 @@ apply_edit_notifications :: () {
 
             for edit_notifications {
                 if buffer_id != it.buffer_id continue;
-                apply_edit_to_history(editor_history.*, it);
+                // !!!!!!!!!
+                // apply_edit_to_history(editor_history.*, it);
             }
-
-            compress_editor_history_and_adjust_global_history(editor_history);
         }
 
         for edit_notifications { if buffer_id == it.buffer_id remove it; }
@@ -193,17 +192,15 @@ apply_edit_to_history :: (history: [] Editor_History_Frame, edit: Buffer.Edit_No
     }
 }
 
-compress_editor_history_and_adjust_global_history :: (history: *[..] Editor_History_Frame) {
-    //
-}
-
 
 IDLE_THRESHOLD_IN_SECONDS :: 1;     // for how long the cursor needs to stay in one place to be recorded
 MIN_LINE_THRESHOLD :: 10;           // how many lines the cursor needs to move by to qualify for recording
 
 NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
 
-editor_history_table: Table(s64, [..] Editor_History_Frame);
+EDITOR_HISTORY_SIZE :: 512;
+
+editor_history_table: Table(s64, Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE));
 global_history:  [..] Global_History_Frame;
 forward_history: [..] Forward_History_Frame;
 
