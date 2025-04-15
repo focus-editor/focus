@@ -176,8 +176,7 @@ apply_edit_notifications :: () {
 
             for edit_notifications {
                 if buffer_id != it.buffer_id continue;
-                // !!!!!!!!!
-                // apply_edit_to_history(editor_history.*, it);
+                apply_edit_to_history(editor_history, it);
             }
         }
 
@@ -185,7 +184,7 @@ apply_edit_notifications :: () {
     }
 }
 
-apply_edit_to_history :: (history: [] Editor_History_Frame, edit: Buffer.Edit_Notification) {
+apply_edit_to_history :: (history: *Editor_History, edit: Buffer.Edit_Notification) {
     for * frame : history {
         if frame.pos >= edit.offset then frame.pos = max(frame.pos + edit.delta, edit.offset);
         if frame.sel >= edit.offset then frame.sel = max(frame.sel + edit.delta, edit.offset);
@@ -200,7 +199,9 @@ NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
 
 EDITOR_HISTORY_SIZE :: 512;
 
-editor_history_table: Table(s64, Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE));
+Editor_History :: Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE);
+
+editor_history_table: Table(s64, Editor_History);
 global_history:  [..] Global_History_Frame;
 forward_history: [..] Forward_History_Frame;
 
