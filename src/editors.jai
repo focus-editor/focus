@@ -136,6 +136,16 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                 case .switch_to_right_pane;         search_bar_open_selected_result(editor, buffer, .right);        return true;
                 case .switch_to_top_pane;           search_bar_open_selected_result(editor, buffer, .top);          return true;
                 case .switch_to_bottom_pane;        search_bar_open_selected_result(editor, buffer, .bottom);       return true;
+
+                case .switch_to_pane_1;             search_bar_open_selected_result_in_pane(editor, buffer, 1);     return true;
+                case .switch_to_pane_2;             search_bar_open_selected_result_in_pane(editor, buffer, 2);     return true;
+                case .switch_to_pane_3;             search_bar_open_selected_result_in_pane(editor, buffer, 3);     return true;
+                case .switch_to_pane_4;             search_bar_open_selected_result_in_pane(editor, buffer, 4);     return true;
+                case .switch_to_pane_5;             search_bar_open_selected_result_in_pane(editor, buffer, 5);     return true;
+                case .switch_to_pane_6;             search_bar_open_selected_result_in_pane(editor, buffer, 6);     return true;
+                case .switch_to_pane_7;             search_bar_open_selected_result_in_pane(editor, buffer, 7);     return true;
+                case .switch_to_pane_8;             search_bar_open_selected_result_in_pane(editor, buffer, 8);     return true;
+                case .switch_to_pane_9;             search_bar_open_selected_result_in_pane(editor, buffer, 9);     return true;
             }
         }
 
@@ -1500,16 +1510,56 @@ search_bar_open_selected_result :: (editor: *Editor, buffer: Buffer, placement: 
 
     editors_open_buffer(editor.buffer_id, placement);
 
-    // Select the search result
-    active_editor, active_buffer := get_active_editor_and_buffer();
-    match_start := min(result.offset,                xx active_buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.offset + result.count, xx active_buffer.bytes.count);
-    cursor := leave_only_original_cursor(active_editor);
+    jump_to_search_result(result);
+}
+
+search_bar_open_selected_result_in_pane :: (editor: *Editor, buffer: Buffer, number: s64) {
+    using editor.search_bar;
+    if results.count <= 0 {
+        // Don't do anything because there aren't even any results to open
+        // @Todo: should we deactivate it and move to the other open editor (as if it wasn't open)?
+        return;
+    }
+
+    target_pane := editors_find_pane_by_number(number);
+    if !target_pane {
+        add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
+        return;
+    }
+
+    active = false;  // close it immediately
+
+    result := results[selected_result];
+
+    if target_pane != editors.active_pane {
+        // Jump to original cursor in the current editor
+        cursor := leave_only_original_cursor(editor);
+        cursor.* = original_cursor_position;
+        editor.scroll_to_cursor = .yes;
+    }
+
+    editors_open_buffer_in_pane(editor.buffer_id, target_pane);
+
+    jump_to_search_result(result);
+}
+
+#scope_file
+
+jump_to_search_result :: (result: Text_Highlight) {
+    activate_editors();
+
+    editor, buffer := get_active_editor_and_buffer();
+    match_start := min(result.offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.offset + result.count, xx buffer.bytes.count);
+    cursor := leave_only_original_cursor(editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
 
-    active_editor.scroll_to_cursor = .yes;
+    editor.scroll_to_cursor = .yes;
 }
+
+
+#scope_export
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
