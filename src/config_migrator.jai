@@ -509,6 +509,8 @@ RENAMED_SETTINGS :: Renamed_Setting.[
     .{ 11, "insert_spaces_when_pressing_tab",     "indent_using",                         .[.{"true", "spaces"}, .{"false", "tabs"}], "options: spaces, tabs"},
     .{ 11, "show_cursors_off_screen",             "status_bar_show_cursors_off_screen",   .[], ""},
     .{ 11, "show_selected_text_length",           "status_bar_show_selected_text_length", .[], ""},
+
+    .{ 17, "editor_history_size", "", .[], "" },  // removed
 ];
 
 SETTING_VALUES_INDENT :: #run -> int {

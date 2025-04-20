@@ -488,7 +488,6 @@ apply_config :: () {
     old_tab_size = config.settings.tab_size;
 
     clamp_and_warn(*config.settings.line_height_scale_percent,  50,  1000,        "Line height scale clamped to % percent");
-    clamp_and_warn(*config.settings.editor_history_size,        4,   1024 * 1024, "Editor history size clamped to %");
     clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
     clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
 
@@ -641,7 +640,6 @@ Settings :: struct {
     save_current_buffer_on_build                            := false;   @v3
     save_all_file_backed_buffers_on_build                   := false;   @v3
     double_shift_to_search_in_workspace                     := false;   @v1
-    editor_history_size                                     := 1024;    @v1
     scrollbar_width_scale                                   := 1.0;     @v16
     scrollbar_min_opacity                                   := 0.0;     @v16
     scrollbar_max_opacity                                   := 1.0;     @v16
