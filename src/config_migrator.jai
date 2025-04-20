@@ -585,7 +585,7 @@ ADDED_COLORS :: Added_Color.[
     .{  8, "bracket_highlight",                "selection_highlight",    "E8FCFE30" },
     .{  8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
 
-    .{ 17, "active_pane_border",               "cursor_inactive",        "196666FF" },
+    .{ 17, "active_pane_border",               "cursor_inactive",        "19666688" },
 ];
 
 

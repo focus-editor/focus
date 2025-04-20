@@ -422,7 +422,7 @@ shadow_transparent:                     0E161C00
 text_input_label:                       3B4450FF
 char_under_cursor:                      FFFFFFFF
 bracket_highlight:                      E8FCFE30
-active_pane_border:                     196666FF
+active_pane_border:                     19666688
 
 ui_default:                             BFC9DBFF
 ui_dim:                                 87919DFF
