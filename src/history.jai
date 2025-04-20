@@ -63,11 +63,11 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         assert(editor_history != null);
 
         has_editor_history:, last_editor_frame = ringbuffer_pop(editor_history);
-        print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.total, last_editor_frame.pos);
+        history_debug_print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.total, last_editor_frame.pos);
 
         if last_global_frame.start_index >= editor_history.total || !has_editor_history {
             popped := pop(*global_history);
-            print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
+            history_debug_print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
         }
         if last_global_frame.editor_id != editor_id break;
         if !editor break;
@@ -127,7 +127,7 @@ history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
 
     last_seen_cursor = .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel };
 
-    editor.scroll_to_cursor = .yes;
+    editor.scroll_to_cursor = .yes_unless_visible;
 }
 
 history_add_edit_notification_to_batch :: (notification: Buffer.Edit_Notification) {
@@ -170,10 +170,10 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
     // Add a new global frame if we're recording a frame for a new editor
     if need_new_global_frame {
         array_add(*global_history, .{ editor_id = editor_id, start_index = editor_history.total });
-        print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.total);
+        history_debug_print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.total);
     }
 
-    print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.total, cursor.pos);
+    history_debug_print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.total, cursor.pos);
     ringbuffer_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
 
     return true;
@@ -243,3 +243,11 @@ Forward_History_Frame :: struct {
     editor_id: s64;
     using frame: Editor_History_Frame;
 }
+
+DEBUG_HISTORY :: false;
+
+history_debug_print :: (format_string: string, args: .. Any) {
+    #if DEBUG_HISTORY {
+        history_debug_print(format_string, ..args);
+    }
+} @PrintLike

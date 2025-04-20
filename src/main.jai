@@ -233,7 +233,7 @@ main :: () {
 
         for * editor : open_editors {
             using editor;
-            cursor_moved = .has_not_moved;
+            cursor_moved = false;
             if old_line_height != line_height {
                 // Adjust viewport position
                 lines_scrolled := viewport.top / old_line_height;
