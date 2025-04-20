@@ -1594,8 +1594,11 @@ switch_to_pane_by_number :: (number: s64) {
     if build_panel_is_active() then build_panel_lose_focus();
 
     target_pane := editors_find_pane_by_number(number);
-
-    activate_pane(target_pane);
+    if target_pane {
+        activate_pane(target_pane);
+    } else {
+        add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
+    }
 }
 
 action_duplicate_editor :: (placement: Editor_Placement) {
