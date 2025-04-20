@@ -705,6 +705,8 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
     assert_leaf_pane(target_pane, "Can't open an editor in a non-leaf pane. This is a bug.");
 
+    defer activate_pane(target_pane);
+
     // Is there an editor for this buffer already in this pane?
     for target_pane.editor_ids {
         editor := *open_editors[it];
@@ -737,8 +739,6 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     new_index := target_pane.editor_index + 1;
     array_insert_at(*target_pane.editor_ids, editor_id, new_index);
     target_pane.editor_index = new_index;
-
-    activate_pane(target_pane);
 
     return editor_id;
 }
