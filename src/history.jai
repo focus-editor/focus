@@ -63,7 +63,7 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         assert(editor_history != null);
 
         has_editor_history:, last_editor_frame = ringbuffer_pop(editor_history);
-        print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.count, last_editor_frame.pos);
+        print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.total, last_editor_frame.pos);
 
         if last_global_frame.start_index >= editor_history.total || !has_editor_history {
             popped := pop(*global_history);
@@ -71,7 +71,7 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         }
         if last_global_frame.editor_id != editor_id break;
         if !editor break;
-        if editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos)) >= MIN_LINE_THRESHOLD break;
+        if has_editor_history && editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos)) >= MIN_LINE_THRESHOLD break;
     }
 
     prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };
@@ -155,11 +155,11 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
 
     // Add a new global frame if we're recording a frame for a new editor
     if need_new_global_frame {
-        array_add(*global_history, .{ editor_id = editor_id, start_index = editor_history.count });
-        print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.count);
+        array_add(*global_history, .{ editor_id = editor_id, start_index = editor_history.total });
+        print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.total);
     }
 
-    print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.count, cursor.pos);
+    print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.total, cursor.pos);
     ringbuffer_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
 
     return true;
@@ -197,7 +197,7 @@ MIN_LINE_THRESHOLD :: 10;           // how many lines the cursor needs to move b
 
 NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
 
-EDITOR_HISTORY_SIZE :: 512;
+EDITOR_HISTORY_SIZE :: 128;  // per editor
 
 Editor_History :: Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE);
 
