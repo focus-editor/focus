@@ -217,6 +217,7 @@ map_name_to_color :: (name: string) -> Color {
         case "shadow_transparent";                      return .SHADOW_TRANSPARENT;
         case "text_input_label";                        return .TEXT_INPUT_LABEL;
         case "char_under_cursor";                       return .CHAR_UNDER_CURSOR;
+        case "active_pane_border";                      return .ACTIVE_PANE_BORDER;
 
         case "ui_default";                              return .UI_DEFAULT;
         case "ui_dim";                                  return .UI_DIM;

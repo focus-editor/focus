@@ -162,8 +162,8 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
     need_new_global_frame := !last_global_frame || last_global_frame.editor_id != editor_id;
 
     if !force && last_frame && !need_new_global_frame {
-        last_line    := offset_to_line(editor, buffer, last_frame.pos);
-        current_line := offset_to_line(editor, buffer, cursor.pos);
+        last_line    := offset_to_line(editor, buffer, last_frame.pos, safe = true);
+        current_line := offset_to_line(editor, buffer, cursor.pos, safe = true);
         if abs(last_line - current_line) < MIN_LINE_THRESHOLD return false;  // cursor hasn't moved far enough
     }
 
