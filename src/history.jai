@@ -1,5 +1,5 @@
 maybe_save_cursor_history :: () {
-    apply_edit_notifications();
+    defer apply_edit_notifications();
 
     editor_id := get_visible_editor_id(editors.active_pane);
     editor := ifx editor_id >= 0 then *open_editors[editor_id] else null;
@@ -134,6 +134,20 @@ history_add_edit_notification_to_batch :: (notification: Buffer.Edit_Notificatio
     array_add(*edit_notifications, notification);
 }
 
+history_reset_last_seen_cursor :: () {
+    // Occasionally we manually adjust cursor positions, e.g. after converting indentation to another type
+    // or stripping whitespace. In this case the cursor position might change, but we don't want to
+    // remember the previous one in that case because the perceived cursor position hasn't changed
+    editor_id := get_visible_editor_id(editors.active_pane);
+    if editor_id < 0 return;
+
+    editor := *open_editors[editor_id];
+    cursor := get_main_cursor(editor);
+
+    last_seen_cursor.editor_id = editor_id;
+    last_seen_cursor.cursor = cursor;
+}
+
 
 #scope_file
 
@@ -166,6 +180,7 @@ maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -
 }
 
 apply_edit_notifications :: () {
+    // @speed: measure speed and maybe optimise later, if large edit groups end up being a problem
     while edit_notifications {
         buffer_id := edit_notifications[0].buffer_id;
 
@@ -197,7 +212,7 @@ MIN_LINE_THRESHOLD :: 10;           // how many lines the cursor needs to move b
 
 NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
 
-EDITOR_HISTORY_SIZE :: 128;  // per editor
+EDITOR_HISTORY_SIZE :: 64;  // per editor
 
 Editor_History :: Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE);
 

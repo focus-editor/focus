@@ -1,4 +1,5 @@
-#add_context current_editor_id := -1;
+#add_context current_editor_id := -1;  // used in edit notifications
+#add_context current_buffer_id := -1;  // used in edit notifications when there's no editor set
 
 editors_handle_event :: (event: Input.Event) -> handled: bool {
     mods := event.modifier_flags;
@@ -82,7 +83,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         return false;
     }
 
-    context.current_editor_id = get_active_editor_id();  // used for edit notifications
+    context.current_editor_id = get_active_editor_id();
     defer context.current_editor_id = -1;
 
     shift_pressed := event.modifier_flags.shift_pressed;
@@ -360,7 +361,7 @@ active_editor_type_char :: (char: u32) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
-    context.current_editor_id = get_active_editor_id();  // used for edit notifications
+    context.current_editor_id = get_active_editor_id();
     defer context.current_editor_id = -1;
 
     if editor.search_bar.active {
