@@ -46,13 +46,23 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .focus_next_ui_element;      finder_go_to_next_input();                            return true;
             case .focus_previous_ui_element;  finder_go_to_previous_input();                        return true;
 
-            case .open_entry;               finder_open_selected_result(selected, .in_place);       return true;
-            case .open_entry_in_side_pane;  finder_open_selected_result(selected, .on_the_side);    return true;
+            case .open_entry;               finder_open_selected_result(.in_place);                 return true;
+            case .open_entry_in_side_pane;  finder_open_selected_result(.on_the_side);              return true;
 
-            case .switch_to_left_pane;      finder_open_selected_result(selected, .left);           return true;
-            case .switch_to_right_pane;     finder_open_selected_result(selected, .right);          return true;
-            case .switch_to_top_pane;       finder_open_selected_result(selected, .top);            return true;
-            case .switch_to_bottom_pane;    finder_open_selected_result(selected, .bottom);         return true;
+            case .switch_to_left_pane;      finder_open_selected_result(.left);                     return true;
+            case .switch_to_right_pane;     finder_open_selected_result(.right);                    return true;
+            case .switch_to_top_pane;       finder_open_selected_result(.top);                      return true;
+            case .switch_to_bottom_pane;    finder_open_selected_result(.bottom);                   return true;
+
+            case .switch_to_pane_1;         finder_open_selected_result_in_pane(1);                 return true;
+            case .switch_to_pane_2;         finder_open_selected_result_in_pane(2);                 return true;
+            case .switch_to_pane_3;         finder_open_selected_result_in_pane(3);                 return true;
+            case .switch_to_pane_4;         finder_open_selected_result_in_pane(4);                 return true;
+            case .switch_to_pane_5;         finder_open_selected_result_in_pane(5);                 return true;
+            case .switch_to_pane_6;         finder_open_selected_result_in_pane(6);                 return true;
+            case .switch_to_pane_7;         finder_open_selected_result_in_pane(7);                 return true;
+            case .switch_to_pane_8;         finder_open_selected_result_in_pane(8);                 return true;
+            case .switch_to_pane_9;         finder_open_selected_result_in_pane(9);                 return true;
         }
         return false;
 
@@ -181,19 +191,31 @@ finder_update :: () {
     if request.in_progress then redraw_requested = true;
 }
 
-finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement) {
+finder_open_selected_result :: (placement: Editor_Placement, selected_num := -1) {
     using finder;
     if request.in_progress return;
     if selected_num >= 0 then selected = selected_num;
     if selected >= results.count return;
 
-    activate_editors();
-
     result := results[selected];
-
     editors_open_buffer(result.buffer_id, placement);
+    jump_to_search_result(result);
+}
 
-    // Select the search result
+finder_open_selected_result_in_pane :: (number: s64) {
+    target_pane := editors_find_pane_by_number(number);
+    if !target_pane {
+        add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
+        return;
+    }
+
+    result := finder.results[finder.selected];
+    editors_open_buffer_in_pane(result.buffer_id, target_pane);
+    jump_to_search_result(result);
+}
+
+jump_to_search_result :: (result: Search_Result) {
+    activate_editors();
     editor, buffer := get_active_editor_and_buffer();
     match_start := min(result.match_offset,                      xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
     match_end   := min(result.match_offset + result.match_count, xx buffer.bytes.count);

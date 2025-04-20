@@ -3338,7 +3338,7 @@ draw_finder :: () {
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Color.LIST_CURSOR_LITE);
                 placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
                 if selected_by_mouse == entry_index && mouse.left.just_released {
-                    finder_open_selected_result(entry_index, placement);
+                    finder_open_selected_result(placement, entry_index);
                     redraw_requested = true;
                     break;  // don't finish drawing entries because we're opening selected result
                 }
