@@ -139,8 +139,8 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
                 redraw_requested = true;
             }
         }
-        if pane == editors.active_pane && active_global_widget == .editors {
-            draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.CURSOR_INACTIVE);
+        if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
+            draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
         }
         if just_dropped_files && is_hovering_over(pane_ui_id) {
             for path : just_dropped_files  editors_open_file_in_pane(path, pane);
@@ -183,10 +183,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
 
 draw_rect_border :: (rect: Rect, size: float, color: Color) {
     left, right, top, bottom := cut_left(rect, size), cut_right(rect, size), cut_top(rect, size), cut_bottom(rect, size);
-    // TODO:
-    // - don't overlap
-    // - add settings for fadeout
-    // - add new color
+
     draw_rect(left,   color);
     draw_rect(right,  color);
     draw_rect(top,    color);
@@ -821,7 +818,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     draw_editor(editor_id, build_output_rect, get_ui_id_from_loc(), has_status_bar = false);
 
     is_active := build_panel_is_active();
-    if is_active then draw_rect_border(build_output_rect, size = floor(3 * dpi_scale), color = Color.CURSOR_INACTIVE);
+    if is_active then draw_rect_border(build_output_rect, size = floor(3 * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
 
     return is_active, build_output_rect;
 }

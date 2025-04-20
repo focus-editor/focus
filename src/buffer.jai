@@ -159,9 +159,13 @@ get_real_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coord
     return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
 }
 
-offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32 {
+offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64, $safe := false) -> line_num: s32 {
     assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
-    assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
+    #if !safe {
+        assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
+    } else {
+        offset = clamp(offset, 0, xx buffer.bytes.count);
+    }
 
     line_starts := get_line_starts(editor, buffer);
     return search_line_num_by_offset(line_starts, offset);
