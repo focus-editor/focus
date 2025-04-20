@@ -644,7 +644,7 @@ Settings :: struct {
     scrollbar_min_opacity                                   := 0.0;     @v16
     scrollbar_max_opacity                                   := 1.0;     @v16
     scrollbar_fade_in_sensitivity                           := 10.0;    @v16
-    scrollbar_fade_out_delay_seconds                        := 2.0;     @v16
+    scrollbar_fade_out_delay_seconds                        := 1.0;     @v16
     status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
 
     // TODO

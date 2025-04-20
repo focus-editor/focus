@@ -91,7 +91,7 @@
         + `scrollbar_min_opacity` (defaults to 0.0). If you want the scrollbar to be always visible, set this to 1.0.
         + `scrollbar_max_opacity` (defaults to 1.0). Set to anything lower than 1.0 to reduce the default scrollbar visibility.
         + `scrollbar_fade_in_sensitivity` (defaults to 10.0). Controls when the scrollbar appears as the mouse pointer gets close.
-        + `scrollbar_fade_out_delay_seconds` (defaults to 2.0). How long the scrollbar stays visible after scrolling.
+        + `scrollbar_fade_out_delay_seconds` (defaults to 1.0). How long the scrollbar stays visible after scrolling.
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)

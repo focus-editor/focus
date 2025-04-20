@@ -496,7 +496,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 16, "scrollbar_min_opacity",                              "0.0   # if you want the scrollbar to be always visible, set this to 1.0" },
     .{ 16, "scrollbar_max_opacity",                              "1.0" },
     .{ 16, "scrollbar_fade_in_sensitivity",                      "10.0  # controls when the scrollbar appears as the mouse pointer gets close" },
-    .{ 16, "scrollbar_fade_out_delay_seconds",                   "2.0   # how long the scrollbar stays visible after scrolling" },
+    .{ 16, "scrollbar_fade_out_delay_seconds",                   "1.0   # how long the scrollbar stays visible after scrolling" },
     .{ 16, "scroll_behind_first_line",                           "false" },
 ];
 
@@ -1304,7 +1304,7 @@ scrollbar_width_scale:                           1.0
 scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
 scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
-scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
+scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 
 FOCUS_CONFIG
@@ -1421,7 +1421,7 @@ scrollbar_width_scale:                           1.0
 scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
 scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
-scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
+scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 
 FOCUS_CONFIG
@@ -1748,7 +1748,7 @@ scrollbar_width_scale:                           1.0
 scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
 scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
-scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
+scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 
 [[keymap]]
