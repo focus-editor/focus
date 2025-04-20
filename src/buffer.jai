@@ -239,6 +239,8 @@ restore_cursor_positions :: (buffer_id: s64, cursor_positions: [] Editor_Cursor_
         cursor.pos = real_coords_to_offset(buffer, pos);
         cursor.sel = real_coords_to_offset(buffer, sel);
     }
+
+    history_reset_last_seen_cursor();
 }
 
 search_line_num_by_offset :: (line_starts: [] s32, offset: s64) -> line_num: s32 {
@@ -1425,6 +1427,9 @@ refresh_buffer_from_disk_by_path :: (path: string) {
 }
 
 reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false) {
+    context.current_buffer_id = buffer_id;
+    defer context.current_buffer_id = -1;
+
     buffer := *open_buffers[buffer_id];
     assert(buffer.has_file && buffer.file.full_path);
 
@@ -1637,18 +1642,21 @@ get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at
 
 Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
-add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
+add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     editor_id := context.current_editor_id;
-    if editor_id < 0 return;
+    buffer_id := context.current_buffer_id;
 
-    editor := *open_editors[editor_id];
-    if buffer != *open_buffers[editor.buffer_id] {
-        log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
-        return;
+    if editor_id >= 0 {
+        editor := *open_editors[editor_id];
+        if buffer != *open_buffers[editor.buffer_id] || (buffer_id >= 0 && editor.buffer_id != buffer_id) {
+            log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
+            return;
+        }
+        buffer_id = editor.buffer_id;
     }
 
     notification := Buffer.Edit_Notification.{
-        buffer_id = cast(s32) editor.buffer_id,
+        buffer_id = cast(s32) buffer_id,
         editor_id = cast(s32) editor_id,
         offset    = cast(s32) (offset + min(old_count, new_count)),
         delta     = cast(s32) (new_count - old_count),
@@ -1656,7 +1664,7 @@ add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, ne
 
     history_add_edit_notification_to_batch(notification);
 
-    if num_editors_open >= 2 {
+    if buffer.num_editors_open >= 2 {
         // Notify other editors
         add(*buffer_edit_notifications, notification);
     }
