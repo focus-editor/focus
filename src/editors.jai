@@ -348,7 +348,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     }
     organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
-    if editor.cursor_moved != .has_not_moved {
+    if editor.cursor_moved {
         if !enabled_whole_words then editor.search_whole_words = false;
         editor.refresh_selection = true;  // update or remove highlights etc
         cursors_start_blinking();
@@ -439,7 +439,7 @@ active_editor_type_char :: (char: u32) {
     for * cursor : editor.cursors  cursor.col_wanted = -1;
 
     buffer.last_edit_time = frame_time64;
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
     cursors_start_blinking();
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
 }
@@ -864,7 +864,7 @@ action_move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     coords := Coords.{ line = xx (cursor_px_pos / line_height), col = 0 };
     cursor.pos = coords_to_offset(editor, buffer, coords);
     cursor.sel = cursor.pos;
-    editor.cursor_moved = .refresh_only;
+    editor.cursor_moved = true;
 }
 
 go_to_line :: (editor: *Editor, buffer: Buffer, line: s64, col: s32 = -1) {
@@ -882,7 +882,7 @@ go_to_line :: (editor: *Editor, buffer: Buffer, line: s64, col: s32 = -1) {
         cursor.sel = cursor.pos;
     }
     add_paste_animation(get_active_editor_id(), .{ line_start, line_end});
-    editor.cursor_moved = .jumped;
+    editor.cursor_moved = true;
     editor.scroll_to_cursor = .yes;
 }
 
@@ -2059,7 +2059,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
 
 select_lines :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors select_line(cursor, buffer);
-    editor.cursor_moved = .selection;
+    editor.cursor_moved = true;
 }
 
 select_line :: (cursor: *Cursor, buffer: Buffer) {
@@ -2254,7 +2254,7 @@ delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     }
     cursors.count -= 1;
     organise_cursors(editor);
-    cursor_moved = .refresh_only;
+    cursor_moved = true;
 }
 
 action_create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
@@ -2306,7 +2306,7 @@ action_create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { ab
 
     organise_cursors(editor);
 
-    cursor_moved = .refresh_only;
+    cursor_moved = true;
 }
 
 create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
@@ -2365,7 +2365,7 @@ create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
     main_cursor = cursors.count - 1;
     organise_cursors(editor);
 
-    cursor_moved = .refresh_only;
+    cursor_moved = true;
 }
 
 restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
@@ -2378,7 +2378,7 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 
-    editor.cursor_moved = .jumped;
+    editor.cursor_moved = true;
 }
 
 // @TODO: have another look at the code and at the very least avoid rescanning for each cursor.
@@ -2454,11 +2454,11 @@ align_cursors :: (using editor: *Editor, buffer: *Buffer) {
         offset_delta += str_before.count + str_after.count;
     }
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 select_word :: (editor: *Editor, buffer: Buffer) {
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
     for * editor.cursors {
         if has_selection(it) && editor.cursors.count > 1 continue;
         select_word(buffer, it);
@@ -2467,7 +2467,7 @@ select_word :: (editor: *Editor, buffer: Buffer) {
 }
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
-    editor.cursor_moved = .selection;
+    editor.cursor_moved = true;
 
     selected_text := get_selected_text_all_cursors(editor, buffer);
     if selected_text {
@@ -2548,7 +2548,7 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
         if main_cursor < 0 then main_cursor = cursors.count - 1;
         if original_cursor > old_main_cursor then original_cursor -= 1;
     }
-    cursor_moved = .selection;
+    cursor_moved = true;
 
     assert(main_cursor     < cursors.count);
     assert(original_cursor < cursors.count);
@@ -2585,7 +2585,7 @@ move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) {
 }
 
 select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := "") -> whole_words: bool {
-    editor.cursor_moved = .has_not_moved;
+    editor.cursor_moved = false;
 
     // If main_cursor don't have selection check if it can select a word
     if !search_str && !has_selection(cursors[main_cursor]) {
@@ -2748,7 +2748,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     add(*buffer.redos, edit_group);  // push onto the redo stack
     restore_cursor_state(editor, edit_group.cursors_before);
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 redo :: (editor: *Editor, buffer: *Buffer) {
@@ -2776,7 +2776,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     add(*buffer.undos, edit_group);  // push onto the undo stack
     restore_cursor_state(editor, edit_group.cursors_after);
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
@@ -2841,7 +2841,7 @@ is_a_move_action :: (action: Action_Editors) -> bool {
 // @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
     cursor.col_wanted = -1;
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 
     if has_selection(cursor) && !extend_selection {
         cursor.pos = get_selection(cursor).start;
@@ -2887,7 +2887,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type,
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
     cursor.col_wanted = -1;
 
     if has_selection(cursor) && !extend_selection {
@@ -2951,8 +2951,7 @@ move_cursors_vertically :: (editor: *Editor, using buffer: Buffer, delta: s32, e
         cursor.pos = coords_to_offset(editor, buffer, coords);
     }
 
-    if delta < 0  editor.cursor_moved = .moved_up;
-    else          editor.cursor_moved = .moved_down;
+    editor.cursor_moved = true;
 }
 
 move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
@@ -2973,8 +2972,7 @@ move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; 
         cursor.pos = real_coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
     }
 
-    if dir == .up  editor.cursor_moved = .moved_up;
-    else           editor.cursor_moved = .moved_down;
+    editor.cursor_moved = true;
 }
 
 move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
@@ -2992,8 +2990,7 @@ move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; 
         cursor.pos = coords_to_offset(editor, buffer, coords);
     }
 
-    if dir == .up  editor.cursor_moved = .moved_up;
-    else           editor.cursor_moved = .moved_down;
+    editor.cursor_moved = true;
 }
 
 move_cursors_home :: (editor: *Editor, buffer: Buffer) {
@@ -3013,7 +3010,7 @@ move_cursors_home :: (editor: *Editor, buffer: Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 move_cursors_end :: (editor: *Editor, buffer: Buffer) {
@@ -3023,21 +3020,21 @@ move_cursors_end :: (editor: *Editor, buffer: Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 move_to_file_start :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = 0;
     cursor.col_wanted = 0;
-    editor.cursor_moved = .jumped;
+    editor.cursor_moved = true;
 }
 
 move_to_file_end :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) buffer.bytes.count;
     cursor.col_wanted = -1;
-    editor.cursor_moved = .jumped;
+    editor.cursor_moved = true;
 }
 
 move_to_matching_bracket :: (using editor: *Editor, buffer: Buffer, keep_selection: bool) {
@@ -3058,7 +3055,7 @@ move_to_matching_bracket :: (using editor: *Editor, buffer: Buffer, keep_selecti
         if !keep_selection then cursor.sel = offset;
     }
 
-    editor.cursor_moved = .jumped;
+    editor.cursor_moved = true;
 }
 
 break_line :: (editor: *Editor, buffer: *Buffer) {
@@ -3097,7 +3094,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
@@ -3130,7 +3127,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
@@ -3163,7 +3160,7 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 delete_left :: (editor: *Editor, buffer: *Buffer, by: Movement_Type) {
@@ -3245,7 +3242,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
         offset_delta += (range.end - range.start);
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 delete_right_char :: (editor: *Editor, buffer: *Buffer) {
@@ -3279,7 +3276,7 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 indent_or_tab :: (editor: *Editor, buffer: *Buffer) {
@@ -3332,7 +3329,7 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer) -> [..] s32 /* tmp */, last_line_end_offset: s32 {
@@ -3390,7 +3387,7 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
     range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
     replace_range(buffer, range, new_str);
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 unindent_lines :: (editor: *Editor, buffer: *Buffer) {
@@ -3434,7 +3431,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 autoindent_region :: (editor: *Editor, buffer: *Buffer) {
@@ -3549,13 +3546,13 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 remove_additional_cursors :: (editor: *Editor) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = cursor.pos;
-    editor.cursor_moved = .refresh_only;
+    editor.cursor_moved = true;
 }
 
 action_add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
@@ -3590,7 +3587,7 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
     original_cursor = clamp(original_cursor, 0, cursors.count - 1);
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 action_swap_selections :: (using editor: *Editor, buffer: *Buffer) {
@@ -3703,7 +3700,7 @@ duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
         offset_delta += str.count;
     }
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 move_lines_up :: (editor: *Editor, buffer: *Buffer) {
@@ -3727,7 +3724,7 @@ move_lines_up :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = .moved_up_with_edit;
+    editor.cursor_moved = true;
 }
 
 move_lines_down :: (editor: *Editor, buffer: *Buffer) {
@@ -3751,7 +3748,7 @@ move_lines_down :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = .moved_down_with_edit;
+    editor.cursor_moved = true;
 }
 
 
@@ -3818,7 +3815,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         }
     }
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
@@ -3847,7 +3844,7 @@ delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
         offset_delta += str.count;
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer, copy_to_clipboard := false) {
@@ -4007,7 +4004,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
             cursor.sel = cursor.pos;
             offset_delta += selection.end - selection.start;
         }
-        editor.cursor_moved = .refresh_only;
+        editor.cursor_moved = true;
     }
 }
 
@@ -4079,7 +4076,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = .large_edit;
+    editor.cursor_moved = true;
 }
 
 toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
@@ -4212,7 +4209,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         cursor.sel = cursor.pos;
         cursor.col_wanted = -1;
 
-        editor.cursor_moved = .unimportant;
+        editor.cursor_moved = true;
 
         return;
     }
@@ -4301,7 +4298,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
@@ -4464,7 +4461,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         }
     }
 
-    editor.cursor_moved = .unimportant;
+    editor.cursor_moved = true;
 }
 
 action_toggle_line_wrap :: (editor: *Editor) {
@@ -4520,26 +4517,11 @@ Editor :: struct {
 
     last_width_in_chars: s32 = S32_MAX;
 
-    scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
+    scroll_to_cursor: enum u8 { no; yes; yes_unless_visible; }  // trigger a scroll so that the cursor is in the center vertically
     line_wrap:        enum u8 { off; to_enable; to_disable; on; };
     refresh_selection  := false;
     search_whole_words := false;  // used when creating new cursors
-    cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
-}
-
-Cursor_Movement :: enum u8 {
-    has_not_moved;
-    moved_up;
-    moved_down;
-    moved_up_with_edit;
-    moved_down_with_edit;
-    unimportant;  // don't move this one, it's a boundary
-
-    // movements above here can be merged in history
-    jumped;
-    large_edit;
-    selection;
-    refresh_only;
+    cursor_moved       := false; // this may trigger a scroll so that the cursor is within acceptable bounds
 }
 
 Viewport :: struct {

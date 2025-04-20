@@ -995,7 +995,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             }
 
             // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-            if !mouse_pointer_is_within(shrink(rect, char_size)) then cursor_moved = .refresh_only;
+            if !mouse_pointer_is_within(shrink(rect, char_size)) then cursor_moved = true;
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
 
@@ -1152,7 +1152,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 top = new_target;
                 viewport_remember_glue_point(editor, buffer);
             }
-        } else if cursor_moved != .has_not_moved {
+        } else if cursor_moved || scroll_to_cursor == .yes_unless_visible {
             // Detect if cursor is off screen and start scrolling to it
             bounds := shrink_x(rect, text_offset.x + char_x_advance * min_visible_chars);
             bounds  = shrink_y(bounds, -text_offset.y + line_height * min_visible_chars);
@@ -1188,15 +1188,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                     }
                 }
             }
+
+            if scroll_to_cursor != .no {
+                scroll_to_cursor = .no;
+                cursors_start_blinking();
+            }
+
         } else if scroll_to_cursor != .no {
             using editor.viewport;
 
-            // Use the target editor width (not current width) when a new editor is appearing
-            editor_width := ifx scroll_to_cursor == .yes_new_editor then total_editor_area.w / 2 else rect.w;
-
             cursor_pos_from_left := cursor_coords[main_cursor].pos.col  * char_x_advance + text_offset.x;
             cursor_pos_from_top  := cursor_coords[main_cursor].pos.line * line_height;
-            left_target          := cast(s32) max(cursor_pos_from_left - editor_width + char_x_advance * 3, 0);
+            left_target          := cast(s32) max(cursor_pos_from_left - rect.w + char_x_advance * 3, 0);
             top_target           := cast(s32) max(cursor_pos_from_top  - rect.h / 2,  -scroll_behind_height);
             if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
             if top_target  != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
@@ -2110,7 +2113,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
 
     for pane.editor_ids {
         editor, buffer := get_editor_and_buffer(it);
-        
+
         if it_index == pane.editor_index {
             // Draw list cursor
             top_corners    := Corner_Rounding.none;

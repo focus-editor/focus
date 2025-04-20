@@ -755,7 +755,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         cursor.pos = build_error.file_path_location.end;
         if buffer.dirty then rescan_for_lines(buffer);
         select_line(cursor, buffer);
-        editor.cursor_moved = .jumped;
+        editor.cursor_moved = true;
     }
 
     // Try to open the file, maybe by prepending the build dir and removing the "./" at the start

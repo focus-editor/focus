@@ -64,7 +64,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
         cursor := leave_only_original_cursor(editor);
         add_paste_animation(get_active_editor_id(), get_selection(cursor));
         cursor.sel = cursor.pos;
-        editor.cursor_moved = .jumped;
+        editor.cursor_moved = true;
         editor.scroll_to_cursor = .yes;
     }
 }
