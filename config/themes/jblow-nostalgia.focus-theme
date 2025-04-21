@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
 
 [colors]
 
@@ -91,3 +91,6 @@ code_header6:                           E0AD82FF
 ruler:                                  161616FF
 bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
+
+# Added after migration to version [17]
+active_pane_border:                     161616FF

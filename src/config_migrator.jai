@@ -392,11 +392,18 @@ DONE
                             for RENAMED_COLORS {
                                 code := #string JAI
                                     case "%1";
-                                        padding  := get_tmp_spaces(COLOR_VALUES_INDENT - "%2".count - 1);
-                                        new_line := tprint("%2:%%1%%2\n", padding, color_value);
-                                        offset_difference += replace_line(*modified_data, line_start_offset, new_line);
+                                        if valid_version(%3, config_info.version) {
+                                            force_value_from := "%4";
+                                            if force_value_from {
+                                                source_value, success := table_find(*config_info.colors_present, force_value_from);
+                                                if success && source_value then color_value = source_value;
+                                            }
+                                            padding  := get_tmp_spaces(COLOR_VALUES_INDENT - "%2".count - 1);
+                                            new_line := tprint("%2:%%1%%2\n", padding, color_value);
+                                            offset_difference += replace_line(*modified_data, line_start_offset, new_line);
+                                        }
                                 JAI
-                                print_to_builder(*b, code, it.old_name, it.new_name);
+                                print_to_builder(*b, code, it.old_name, it.new_name, it.version, it.value_from);
                             }
                             append(*b, "}\n");
                             return builder_to_string(*b);
@@ -522,13 +529,15 @@ SETTING_VALUES_INDENT :: #run -> int {
 }
 
 RENAMED_COLORS :: Renamed_Color.[
-    .{ 2, "background",           "background0" },
-    .{ 2, "background_dark",      "background1" },
-    .{ 2, "background_highlight", "background2" },
-    .{ 2, "background_light",     "background3" },
-    .{ 2, "background_bright",    "background4" },
+    .{ 2,  "background",           "background0", "" },
+    .{ 2,  "background_dark",      "background1", "" },
+    .{ 2,  "background_highlight", "background2", "" },
+    .{ 2,  "background_light",     "background3", "" },
+    .{ 2,  "background_bright",    "background4", "" },
 
-    .{ 4, "code_string",          "code_string_literal" },
+    .{ 4,  "code_string",          "code_string_literal", "" },
+
+    .{ 17, "splitter",             "splitter",    "background1" },  // force replace value from background1
 ];
 
 
@@ -643,26 +652,26 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "editors", "move_editor_top",                            "Ctrl-Alt-S ArrowUp",           "Ctrl-Cmd-S ArrowUp"   },
     .{ 17, "editors", "move_editor_bottom",                         "Ctrl-Alt-S ArrowDown",         "Ctrl-Cmd-S ArrowDown" },
 
-    .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Shift-1",                 "Cmd-Shift-1" },
-    .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Shift-2",                 "Cmd-Shift-2" },
-    .{ 17, "editors", "switch_to_left_pane",                        "Ctrl-Alt-Shift-ArrowLeft",     "Cmd-Opt-Shift-ArrowLeft"  },
-    .{ 17, "editors", "switch_to_right_pane",                       "Ctrl-Alt-Shift-ArrowRight",    "Cmd-Opt-Shift-ArrowRight" },
-    .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Alt-Shift-ArrowUp",       "Cmd-Opt-Shift-ArrowUp"    },
-    .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Alt-Shift-ArrowDown",     "Cmd-Opt-Shift-ArrowDown"  },
-    .{ 17, "editors", "switch_to_pane_1",                           "Ctrl-1",                       "Cmd-1" },
-    .{ 17, "editors", "switch_to_pane_2",                           "Ctrl-2",                       "Cmd-2" },
-    .{ 17, "editors", "switch_to_pane_3",                           "Ctrl-3",                       "Cmd-3" },
-    .{ 17, "editors", "switch_to_pane_4",                           "Ctrl-4",                       "Cmd-4" },
-    .{ 17, "editors", "switch_to_pane_5",                           "Ctrl-5",                       "Cmd-5" },
-    .{ 17, "editors", "switch_to_pane_6",                           "Ctrl-6",                       "Cmd-6" },
-    .{ 17, "editors", "switch_to_pane_7",                           "Ctrl-7",                       "Cmd-7" },
-    .{ 17, "editors", "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
-    .{ 17, "editors", "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
-
     .{ 17, "editors", "split_left",                                 "Ctrl-Alt-X ArrowLeft",         "Cmd-Opt-X ArrowLeft"  },
     .{ 17, "editors", "split_right",                                "Ctrl-Alt-X ArrowRight",        "Cmd-Opt-X ArrowRight" },
     .{ 17, "editors", "split_top",                                  "Ctrl-Alt-X ArrowUp",           "Cmd-Opt-X ArrowUp"    },
     .{ 17, "editors", "split_bottom",                               "Ctrl-Alt-X ArrowDown",         "Cmd-Opt-X ArrowDown"  },
+
+    .{ 17, "common",  "switch_to_top_pane",                         "Ctrl-Shift-1",                 "Cmd-Shift-1" },
+    .{ 17, "common",  "switch_to_bottom_pane",                      "Ctrl-Shift-2",                 "Cmd-Shift-2" },
+    .{ 17, "common",  "switch_to_left_pane",                        "Ctrl-Alt-Shift-ArrowLeft",     "Cmd-Opt-Shift-ArrowLeft"  },
+    .{ 17, "common",  "switch_to_right_pane",                       "Ctrl-Alt-Shift-ArrowRight",    "Cmd-Opt-Shift-ArrowRight" },
+    .{ 17, "common",  "switch_to_top_pane",                         "Ctrl-Alt-Shift-ArrowUp",       "Cmd-Opt-Shift-ArrowUp"    },
+    .{ 17, "common",  "switch_to_bottom_pane",                      "Ctrl-Alt-Shift-ArrowDown",     "Cmd-Opt-Shift-ArrowDown"  },
+    .{ 17, "common",  "switch_to_pane_1",                           "Ctrl-1",                       "Cmd-1" },
+    .{ 17, "common",  "switch_to_pane_2",                           "Ctrl-2",                       "Cmd-2" },
+    .{ 17, "common",  "switch_to_pane_3",                           "Ctrl-3",                       "Cmd-3" },
+    .{ 17, "common",  "switch_to_pane_4",                           "Ctrl-4",                       "Cmd-4" },
+    .{ 17, "common",  "switch_to_pane_5",                           "Ctrl-5",                       "Cmd-5" },
+    .{ 17, "common",  "switch_to_pane_6",                           "Ctrl-6",                       "Cmd-6" },
+    .{ 17, "common",  "switch_to_pane_7",                           "Ctrl-7",                       "Cmd-7" },
+    .{ 17, "common",  "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
+    .{ 17, "common",  "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -698,8 +707,8 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
     .{ 17, "editors",   "move_editor_to_the_left",          "" },  // removed
     .{ 17, "editors",   "move_editor_to_the_right",         "" },  // removed
-    .{ 17, "editors",   "switch_to_left_editor",            "switch_to_left_pane"  },
-    .{ 17, "editors",   "switch_to_right_editor",           "switch_to_right_pane" },
+    .{ 17, "editors",   "switch_to_left_editor",            "" },  // removed
+    .{ 17, "editors",   "switch_to_right_editor",           "" },  // removed
     .{ 17, "editors",   "switch_to_other_editor",           "switch_to_side_pane" },
 
     .{ 17, "editors",   "move_to_next_buffer",              "go_to_next_buffer" },
@@ -708,11 +717,10 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "editors",   "move_to_previous_editor_history",  "cursor_go_back" },
 
     .{ 17, "editors",   "create_new_file_on_the_side",      "create_new_file_in_side_pane" },
-    .{ 17, "editors",   "open_entry_in_place",              "open_entry" },
-    .{ 17, "editors",   "open_entry_on_the_side",           "open_entry_in_side_pane" },
+    .{ 17, "",          "open_entry_in_place",              "open_entry" },
+    .{ 17, "",          "open_entry_on_the_side",           "open_entry_in_side_pane" },
 
     .{ 17, "common",    "go_to_next_build_error_on_the_side",       "go_to_next_build_error_in_side_pane" },
-    .{ 17, "common",    "go_to_previous_build_error_on_the_side",   "go_to_previous_build_error_in_side_pane" },
     .{ 17, "common",    "go_to_previous_build_error_on_the_side",   "go_to_previous_build_error_in_side_pane" },
 ];
 
@@ -892,6 +900,7 @@ Renamed_Color :: struct {
     version:   int;
     old_name:  string;
     new_name:  string;
+    value_from: string;
 }
 
 Added_Keybind :: struct {
@@ -1256,13 +1265,34 @@ F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 {Shift}-Ctrl-M              jump_to_matching_bracket
 Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
+Ctrl-Shift-W                close_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
+Ctrl-Shift-Alt-W            close_other_panes
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
 
 [[settings]]
 
@@ -1374,13 +1404,34 @@ Ctrl-Tab                    switch_between_open_files
 # Added after migration to version [!latest!]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 {Shift}-Ctrl-M              jump_to_matching_bracket
 Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
+Ctrl-Shift-W                close_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
+Ctrl-Shift-Alt-W            close_other_panes
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
 
 [[settings]]
 
@@ -1473,13 +1524,34 @@ F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 {Shift}-Ctrl-M              jump_to_matching_bracket
 Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
+Ctrl-Shift-W                close_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
+Ctrl-Shift-Alt-W            close_other_panes
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
 
 [[settings]]
 
@@ -1579,6 +1651,7 @@ code_header6:                           E0AD82FF
 ruler:                                  FCEDFC26
 bracket_highlight:                      FF000026
 indent_guide:                           FF000026
+active_pane_border:                     19666688
 
 FOCUS_CONFIG
 
@@ -1602,6 +1675,8 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
+cursor_inactive:                        AABBCCFF
+
 FOCUS_CONFIG
 
 COLORS_2_EXPECTED :: #string FOCUS_CONFIG
@@ -1622,6 +1697,8 @@ background4:                            21333FFF
 
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
+
+cursor_inactive:                        AABBCCFF
 
 # Added after migration to version [!latest!]
 region_heredoc:                         10191FFF
@@ -1648,9 +1725,10 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  FCEDFC26
+ruler:                                  AABBCCFF
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
+active_pane_border:                     AABBCCFF
 
 FOCUS_CONFIG
 
@@ -1813,6 +1891,7 @@ code_header6:                           E0AD82FF
 ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
+active_pane_border:                     19666688
 
 FOCUS_CONFIG
 
@@ -1846,6 +1925,10 @@ Alt-F4                      quit
 Escape                      remove_additional_cursors
 Ctrl-Escape                 remove_additional_cursors
 Alt-F1                      do_nothing
+
+Ctrl-1                      switch_to_left_editor
+Ctrl-2                      switch_to_right_editor
+Ctrl-,                      switch_to_other_editor
 
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
@@ -1926,6 +2009,7 @@ code_header6:                           E0AD82FF
 ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
+active_pane_border:                     19666688
 
 [[keymap]]
 
@@ -1936,6 +2020,8 @@ indent_guide:                           FCEDFC26
 Alt-F4                      quit
 Escape                      escape
 Ctrl-Escape                 remove_additional_cursors
+
+Ctrl-,                      switch_to_side_pane
 
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
@@ -1951,6 +2037,14 @@ Ctrl-Y                      move_selection_to_next_word
 {Shift}-Meta-ArrowRight     move_right_through_word
 {Shift}-Meta-Backspace      delete_left_through_word
 {Shift}-Meta-Delete         delete_right_through_word
+Ctrl-Alt-S ArrowLeft        move_editor_left
+Ctrl-Alt-S ArrowRight       move_editor_right
+Ctrl-Alt-S ArrowUp          move_editor_top
+Ctrl-Alt-S ArrowDown        move_editor_bottom
+Ctrl-Alt-X ArrowLeft        split_left
+Ctrl-Alt-X ArrowRight       split_right
+Ctrl-Alt-X ArrowUp          split_top
+Ctrl-Alt-X ArrowDown        split_bottom
 
 [open file dialog]
 Tab                         open_directory
@@ -1972,13 +2066,34 @@ F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 {Shift}-Ctrl-M              jump_to_matching_bracket
 Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
+Ctrl-Shift-W                close_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
+Ctrl-Shift-Alt-W            close_other_panes
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
 
 FOCUS_CONFIG
 
@@ -2054,13 +2169,34 @@ Ctrl-Alt-P                  switch_to_project
 # Added after migration to version [!latest!]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 {Shift}-Ctrl-M              jump_to_matching_bracket
 Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
+Ctrl-Shift-W                close_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
+Ctrl-Shift-Alt-W            close_other_panes
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
 
 [search dialog]
 Enter                       open_entry
@@ -2150,6 +2286,7 @@ code_header6:                           E0AD82FF
 ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
+active_pane_border:                     19666688
 
 FOCUS_CONFIG
 
@@ -2245,7 +2382,7 @@ scrollbar_background:                   CDAA7D11
 cursor:                                 40FF40FF
 cursor_inactive:                        40FF4011
 paste_animation:                        0100CDFF
-splitter:                               CDAA7D19
+splitter:                               141414FF
 splitter_hover:                         CDAA7D4C
 letter_highlight:                       B8860BFF
 list_cursor_lite:                       CDAA7D19
@@ -2319,5 +2456,6 @@ code_header6:                           CDAA7DFF
 ruler:                                  40FF4011
 bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
+active_pane_border:                     40FF4011
 
 FOCUS_CONFIG

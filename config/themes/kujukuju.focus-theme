@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
 
 [colors]
 background0:                            141824FF
@@ -23,7 +23,7 @@ selection_inactive:                     1A3B497F
 selection_highlight:                    FCEDFC26
 search_result_active:                   8E772EFF
 search_result_inactive:                 FCEDFC26
-scrollbar:                              3093CB19
+scrollbar:                              080B14FF
 scrollbar_hover:                        309ECB4C
 scrollbar_background:                   10161F4C
 cursor:                                 26B2B2FF
@@ -101,3 +101,5 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+# Added after migration to version [17]
+active_pane_border:                     196666FF

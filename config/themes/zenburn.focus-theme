@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
 
 # Based on the original Zenburn Vim theme:
 # https://github.com/jnurmine/Zenburn/blob/master/colors/zenburn.vim
@@ -92,3 +92,6 @@ code_header6:                           E0AD82FF
 ruler:                                  8FAF9FFF
 bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
+
+# Added after migration to version [17]
+active_pane_border:                     8FAF9FFF

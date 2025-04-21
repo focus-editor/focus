@@ -182,7 +182,9 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
 }
 
 draw_rect_border :: (rect: Rect, size: float, color: Color) {
-    left, right, top, bottom := cut_left(rect, size), cut_right(rect, size), cut_top(rect, size), cut_bottom(rect, size);
+    left, right := cut_left(rect, size), cut_right(rect, size);
+    rect_x := shrink_x(rect, size);
+    top, bottom := cut_top(rect_x, size), cut_bottom(rect_x, size);
 
     draw_rect(left,   color);
     draw_rect(right,  color);
@@ -1149,7 +1151,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 top = new_target;
                 viewport_remember_glue_point(editor, buffer);
             }
-        } else if cursor_moved || scroll_to_cursor == .yes_unless_visible {
+        } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
             bounds := shrink_x(rect, text_offset.x + char_x_advance * min_visible_chars);
             bounds  = shrink_y(bounds, -text_offset.y + line_height * min_visible_chars);
@@ -1185,12 +1187,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                     }
                 }
             }
-
-            if scroll_to_cursor != .no {
-                scroll_to_cursor = .no;
-                cursors_start_blinking();
-            }
-
         } else if scroll_to_cursor != .no {
             using editor.viewport;
 
