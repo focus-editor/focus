@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
 
 # Based on Casey Muratori's emacs theme used on Handmade Hero series
 
@@ -94,3 +94,6 @@ code_header6:                           E0AD82FF
 ruler:                                  40FF4011
 bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
+
+# Added after migration to version [17]
+active_pane_border:                     40FF4011

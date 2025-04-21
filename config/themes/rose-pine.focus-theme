@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
       # (https://rosepinetheme.com/)
 
 [colors]
@@ -91,3 +91,5 @@ code_header6:                           31748FFF
 ruler:                                  524F67FF
 bracket_highlight:                      403D52FF
 indent_guide:                           26233AFF
+# Added after migration to version [17]
+active_pane_border:                     524F67FF

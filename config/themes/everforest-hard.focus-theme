@@ -1,4 +1,4 @@
-[16]  # Version number. Do not delete.
+[17]  # Version number. Do not delete.
 
 # Based on Everforest Hard colors from https://github.com/sainnhe/everforest.
 
@@ -92,3 +92,6 @@ code_header6:                           7A8478FF
 ruler:                                  A7C08022
 bracket_highlight:                      A7C08022
 indent_guide:                           272E33FF
+
+# Added after migration to version [17]
+active_pane_border:                     A7C080FF

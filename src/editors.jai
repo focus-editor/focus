@@ -4570,7 +4570,7 @@ Editor :: struct {
 
     last_width_in_chars: s32 = S32_MAX;
 
-    scroll_to_cursor: enum u8 { no; yes; yes_unless_visible; }  // trigger a scroll so that the cursor is in the center vertically
+    scroll_to_cursor: enum u8 { no; yes; }  // trigger a scroll so that the cursor is in the center vertically
     line_wrap:        enum u8 { off; to_enable; to_disable; on; };
     refresh_selection  := false;
     search_whole_words := false;  // used when creating new cursors

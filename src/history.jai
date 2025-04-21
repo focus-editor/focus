@@ -127,7 +127,7 @@ history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
 
     last_seen_cursor = .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel };
 
-    editor.scroll_to_cursor = .yes_unless_visible;
+    editor.scroll_to_cursor = .yes;
 }
 
 history_add_edit_notification_to_batch :: (notification: Buffer.Edit_Notification) {
