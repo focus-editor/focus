@@ -205,7 +205,7 @@ open_file_dialog_open_entry_in_pane :: (selected: s64, number: s64) {
     entry := entries.filtered[selected];
 
     if entry.type == .file {
-        editors_open_buffer_in_pane(entry.buffer_id , target_pane);
+        editors_open_buffer_in_pane(entry.buffer_id, target_pane);
         activate_pane(target_pane);
         close_open_file_dialog(.SELECTED_PATH, entry.full_path);
     }

@@ -208,14 +208,31 @@ base_commands := #run -> [] Command {
         cmd( "Switch To Bottom Pane",             .switch_to_bottom_pane,            .Multi  ),
         cmd( "Switch To Side Pane",               .switch_to_side_pane,              .Multi  ),
 
+        cmd( "Switch To Pane 1",                  .switch_to_pane_1,                 .Multi  ),
+        cmd( "Switch To Pane 2",                  .switch_to_pane_2,                 .Multi  ),
+        cmd( "Switch To Pane 3",                  .switch_to_pane_3,                 .Multi  ),
+        cmd( "Switch To Pane 4",                  .switch_to_pane_4,                 .Multi  ),
+        cmd( "Switch To Pane 5",                  .switch_to_pane_5,                 .Multi  ),
+        cmd( "Switch To Pane 6",                  .switch_to_pane_6,                 .Multi  ),
+        cmd( "Switch To Pane 7",                  .switch_to_pane_7,                 .Multi  ),
+        cmd( "Switch To Pane 8",                  .switch_to_pane_8,                 .Multi  ),
+        cmd( "Switch To Pane 9",                  .switch_to_pane_9,                 .Multi  ),
+
+        cmd( "Split Left",                        .split_left,                       .Single ),
+        cmd( "Split Right",                       .split_right,                      .Single ),
+        cmd( "Split Top",                         .split_top,                        .Single ),
+        cmd( "Split Bottom",                      .split_bottom,                     .Single ),
+
         cmd( "Duplicate Editor",                  .duplicate_editor,                 .Single ),
         cmd( "Duplicate Editor Left",             .duplicate_editor_left,            .Single ),
         cmd( "Duplicate Editor Right",            .duplicate_editor_right,           .Single ),
         cmd( "Duplicate Editor Top",              .duplicate_editor_top,             .Single ),
         cmd( "Duplicate Editor Bottom",           .duplicate_editor_bottom,          .Single ),
 
-        cmd( "Move Editor Left",                  .move_editor_left,                 .Multi  ),
-        cmd( "Move Editor Right",                 .move_editor_right,                .Multi  ),
+        cmd( "Move Editor Left",                  .move_editor_left,                 .Single ),
+        cmd( "Move Editor Right",                 .move_editor_right,                .Single ),
+        cmd( "Move Editor Top" ,                  .move_editor_top,                  .Single ),
+        cmd( "Move Editor Bottom",                .move_editor_bottom,               .Single ),
 
         cmd( "Rotate Panes Clockwise",            .rotate_panes_clockwise,           .Multi  ),
         cmd( "Rotate Panes Counterclockwise",     .rotate_panes_counterclockwise,    .Multi  ),
