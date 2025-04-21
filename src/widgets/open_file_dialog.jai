@@ -196,7 +196,10 @@ open_file_dialog_open_entry_in_pane :: (selected: s64, number: s64) {
     if mode == .save || mode == .move return;
 
     target_pane := editors_find_pane_by_number(number);
-    if !target_pane return;
+    if !target_pane {
+        add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
+        return;
+    }
 
     if selected >= entries.filtered.count  return;
     entry := entries.filtered[selected];
