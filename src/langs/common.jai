@@ -230,6 +230,15 @@ parse_number_c_like :: (using tokenizer: *Tokenizer, token: *$Token) {
             }
             } else if  t.* == #char "u" || t.* == #char "U" {     // u
                 t += 1;
+                if t >= max_t return;
+
+                if t.* == #char "l" || t.* == #char "L" {         // ul
+                    t += 1;
+                    if t >= max_t return;
+                    if t.* == #char "l" || t.* == #char "L" {     // ull
+                        t += 1;
+                    }
+                }
             }
         }
     } else if start_char == #char "0" {
