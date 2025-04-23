@@ -1317,7 +1317,15 @@ close_pane :: (pane: *Editor_Pane) {
 
     // We will replace the target pane's parent with its sibling
     assert(!parent.editor_ids);
-    sibling := ifx parent.child1 == pane then parent.child2 else parent.child1;
+    sibling: *Editor_Pane;
+    sibling_is_child1: bool;
+    if parent.child1 == pane {
+        sibling = parent.child2;
+        sibling_is_child1 = false;
+    } else {
+        sibling = parent.child1;
+        sibling_is_child1 = true;
+    }
 
     parents_parent := parent.parent;
     parent.* = sibling.*;
@@ -1330,7 +1338,7 @@ close_pane :: (pane: *Editor_Pane) {
     // Any pane numbers after the one we're closing need to be decremented
     shift_pane_numbers(pane.number);
 
-    if pane == editors.active_pane then activate_pane(parent);
+    if pane == editors.active_pane then activate_closest_single_pane(parent, prefer_child1 = !sibling_is_child1);
     if sibling == editors.active_pane then editors.active_pane = parent;
 
     for pane.editor_ids {
@@ -1626,9 +1634,20 @@ action_move_editor :: (placement: Editor_Placement) {
 
 activate_pane :: (pane: *Editor_Pane) {
     if !pane return;
+    assert(pane.layout == .single, "Trying to activate a non-leaf pane. This is a bug.");
     editor_id := get_visible_editor_id(pane);
     if editor_id >= 0 then make_editor_active(editor_id);
     editors.active_pane = pane;
+}
+
+activate_closest_single_pane :: (pane: *Editor_Pane, prefer_child1: bool) {
+    if !pane return;
+    if pane.layout == .single {
+        activate_pane(pane);
+    } else {
+        child := ifx prefer_child1 then pane.child1 else pane.child2;
+        activate_closest_single_pane(child, prefer_child1);
+    }
 }
 
 switch_to_pane :: (placement: Editor_Placement) {
