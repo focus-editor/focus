@@ -505,6 +505,8 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 16, "scrollbar_fade_in_sensitivity",                      "10.0  # controls when the scrollbar appears as the mouse pointer gets close" },
     .{ 16, "scrollbar_fade_out_delay_seconds",                   "1.0   # how long the scrollbar stays visible after scrolling" },
     .{ 16, "scroll_behind_first_line",                           "false" },
+    .{ 18, "active_pane_border_width",                           "1.0   # set the width to 0.0 to disable" },
+    .{ 18, "inactive_pane_dim_overlay_opacity",                  "0.3   # controls how dim the inactive panes should be" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -595,6 +597,8 @@ ADDED_COLORS :: Added_Color.[
     .{  8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
 
     .{ 17, "active_pane_border",               "cursor_inactive",        "19666688" },
+
+    .{ 18, "inactive_pane_dim_overlay",        "background1",            "10191FFF" },
 ];
 
 
@@ -1343,6 +1347,8 @@ scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
+active_pane_border_width:                        1.0   # set the width to 0.0 to disable
+inactive_pane_dim_overlay_opacity:               0.3   # controls how dim the inactive panes should be
 
 FOCUS_CONFIG
 
@@ -1481,6 +1487,8 @@ scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
+active_pane_border_width:                        1.0   # set the width to 0.0 to disable
+inactive_pane_dim_overlay_opacity:               0.3   # controls how dim the inactive panes should be
 
 FOCUS_CONFIG
 
@@ -1657,6 +1665,7 @@ ruler:                                  FCEDFC26
 bracket_highlight:                      FF000026
 indent_guide:                           FF000026
 active_pane_border:                     19666688
+inactive_pane_dim_overlay:              10191FFF
 
 FOCUS_CONFIG
 
@@ -1734,6 +1743,7 @@ ruler:                                  AABBCCFF
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     AABBCCFF
+inactive_pane_dim_overlay:              10191FFF
 
 FOCUS_CONFIG
 
@@ -1835,6 +1845,8 @@ scrollbar_max_opacity:                           1.0
 scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
+active_pane_border_width:                        1.0   # set the width to 0.0 to disable
+inactive_pane_dim_overlay_opacity:               0.3   # controls how dim the inactive panes should be
 
 [[keymap]]
 # ...
@@ -1897,6 +1909,7 @@ ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
+inactive_pane_dim_overlay:              FF191FFF
 
 FOCUS_CONFIG
 
@@ -2015,6 +2028,7 @@ ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
+inactive_pane_dim_overlay:              10191FFF
 
 [[keymap]]
 
@@ -2296,6 +2310,7 @@ ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
+inactive_pane_dim_overlay:              10191FFF
 
 FOCUS_CONFIG
 
@@ -2466,5 +2481,6 @@ ruler:                                  40FF4011
 bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
 active_pane_border:                     40FF4011
+inactive_pane_dim_overlay:              141414FF
 
 FOCUS_CONFIG

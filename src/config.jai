@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
-CURRENT_CONFIG_VERSION :: 17;
+CURRENT_CONFIG_VERSION :: 18;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -646,6 +646,8 @@ Settings :: struct {
     scrollbar_fade_in_sensitivity                           := 10.0;    @v16
     scrollbar_fade_out_delay_seconds                        := 1.0;     @v16
     status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
+    active_pane_border_width                                := 1.0;     @v18
+    inactive_pane_dim_overlay_opacity                       := 0.3;     @v18
 
     // TODO
     // load_last_session_on_start:         true

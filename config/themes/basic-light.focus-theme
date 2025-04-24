@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
 
 [colors]
 background0:                            FFFFFFFF
@@ -94,3 +94,6 @@ indent_guide:                           E5E5E5FF
 
 # Added after migration to version [17]
 active_pane_border:                     196666FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              E5E5E5FF

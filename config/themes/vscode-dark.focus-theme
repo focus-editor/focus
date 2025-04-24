@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
       # Based on VSCode Dark theme
 
 [colors]
@@ -93,3 +93,6 @@ bracket_highlight:                      3A3D41FF
 indent_guide:                           3C3C3CFF
 # Added after migration to version [17]
 active_pane_border:                     A0A0A0FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              252526FF

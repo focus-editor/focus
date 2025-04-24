@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
       # (https://github.com/rebelot/kanagawa.nvim)
 
 [colors]
@@ -93,3 +93,6 @@ bracket_highlight:                      2D4F67FF
 indent_guide:                           363646FF
 # Added after migration to version [17]
 active_pane_border:                     54546DFF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              16161DFF

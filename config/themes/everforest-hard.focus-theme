@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
 
 # Based on Everforest Hard colors from https://github.com/sainnhe/everforest.
 
@@ -95,3 +95,6 @@ indent_guide:                           272E33FF
 
 # Added after migration to version [17]
 active_pane_border:                     A7C080FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              272E33FF

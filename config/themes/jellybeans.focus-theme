@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
       # (https://github.com/nanotech/jellybeans.vim)
 
 [colors]
@@ -93,3 +93,6 @@ bracket_highlight:                      3D4070FF
 indent_guide:                           303030FF
 # Added after migration to version [17]
 active_pane_border:                     606060FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              1C1C1CFF

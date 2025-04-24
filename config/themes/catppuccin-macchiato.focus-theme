@@ -1,4 +1,4 @@
-[17]  # Version number. Do not delete.
+[18]  # Version number. Do not delete.
       # (https://github.com/catppuccin/catppuccin)
 
 [colors]
@@ -93,3 +93,6 @@ bracket_highlight:                      494D64FF
 indent_guide:                           363A4FFF
 # Added after migration to version [17]
 active_pane_border:                     5B6078FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              1E2030FF
