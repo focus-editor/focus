@@ -89,6 +89,9 @@ scrollbar_max_opacity:                              1.0
 scrollbar_fade_in_sensitivity:                      10.0  # controls when the scrollbar appears as the mouse pointer gets close
 scrollbar_fade_out_delay_seconds:                   1.0   # how long the scrollbar stays visible after scrolling
 
+active_pane_border_width:                           1.0   # set the width to 0.0 to disable
+inactive_pane_dim_overlay_opacity:                  0.3   # controls how dim the inactive panes should be
+
 # NOTE: some settings can be specified for a subset of files, based on their language or a wildcard,
 # for example:
 # [file: <wildcard1>, <wildcard2>, ...]
@@ -443,6 +446,7 @@ text_input_label:                       3B4450FF
 char_under_cursor:                      FFFFFFFF
 bracket_highlight:                      E8FCFE30
 active_pane_border:                     19666688
+inactive_pane_dim_overlay:              10191FFF
 
 ui_default:                             BFC9DBFF
 ui_dim:                                 87919DFF

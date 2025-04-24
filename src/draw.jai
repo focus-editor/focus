@@ -140,11 +140,21 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             }
         }
         if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
-            draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
+            size := floor(config.settings.active_pane_border_width * dpi_scale);
+            if !pane.editor_ids && size <= 0 then size = floor(1 * dpi_scale);  // draw a border around empty panes because otherwise it's not clear which one is selected
+            draw_rect_border(rect, size = size, color = Color.ACTIVE_PANE_BORDER);
         }
-        if pane != editors.active_pane && !pane.editor_ids {
-            // Draw a border around empty panes because otherwise they might not be visible
-            draw_rect_border(rect, size = floor(1 * dpi_scale), color = Color.BACKGROUND_0);
+        if pane != editors.active_pane {
+            if !pane.editor_ids {
+                // Draw a border around empty panes because otherwise they might not be visible
+                draw_rect_border(rect, size = floor(1 * dpi_scale), color = Color.BACKGROUND_0);
+            }
+            if config.settings.inactive_pane_dim_overlay_opacity > 0 {
+                // Dim inactive panes
+                dim_color := map_color_to_vec4(Color.INACTIVE_PANE_DIM_OVERLAY);
+                dim_color.w = config.settings.inactive_pane_dim_overlay_opacity;
+                draw_rect_with_raw_color(rect, dim_color);
+            }
         }
         if just_dropped_files && is_hovering_over(pane_ui_id) {
             for path : just_dropped_files  editors_open_file_in_pane(path, pane);
@@ -824,7 +834,9 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     draw_editor(editor_id, build_output_rect, get_ui_id_from_loc(), has_status_bar = false);
 
     is_active := build_panel_is_active();
-    if is_active then draw_rect_border(build_output_rect, size = floor(3 * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
+    if is_active && config.settings.active_pane_border_width > 0 {
+        draw_rect_border(build_output_rect, size = floor(config.settings.active_pane_border_width * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
+    }
 
     return is_active, build_output_rect;
 }
