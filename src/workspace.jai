@@ -227,6 +227,7 @@ reload_workspace :: (automatic := false) {
     deinit_open_file_dialog();
     deinit_file_watcher();
     deinit_buffers();
+    deinit_editors();
 
     // Reinit things
     init_file_watcher();
@@ -234,64 +235,65 @@ reload_workspace :: (automatic := false) {
     for project_files  free(it);
     array_reset_keeping_memory(*project_files);
     init_workspace();
+    init_editors();
     init_buffers();
 
     // !!!!!!!! Get rid of this and instead preserve project editors
-    // // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
-    // new_open_editors: [..] Editor;
-    // new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
-    // new_most_recent_buffers: [..] s64;
+    // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
+    new_open_editors: [..] Editor;
+    new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
+    new_most_recent_buffers: [..] s64;
 
-    // editor_id_map: Table(s64, s64);
-    // editor_id_map.allocator = temp;
+    editor_id_map: Table(s64, s64);
+    editor_id_map.allocator = temp;
 
-    // buffers_to_refresh_from_disk: [..] s64;
-    // buffers_to_refresh_from_disk.allocator = temp;
+    buffers_to_refresh_from_disk: [..] s64;
+    buffers_to_refresh_from_disk.allocator = temp;
 
-    // for * buffer, old_buffer_id : open_buffers {
-    //     buffer := *open_buffers[old_buffer_id];
-    //     if should_keep_buffer_when_reloading_workspace(buffer) {
-    //         new_buffer_id := new_open_buffers.count;
+    for * buffer, old_buffer_id : open_buffers {
+        buffer := *open_buffers[old_buffer_id];
+        if should_keep_buffer_when_reloading_workspace(buffer) {
+            new_buffer_id := new_open_buffers.count;
 
-    //         if buffer.has_file {
-    //             table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
-    //             start_watching_file_if_not_already(buffer.file.full_path);
-    //             buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
-    //             array_add(*buffers_to_refresh_from_disk, new_buffer_id);
-    //         }
-    //         recalculate_settings(buffer);
+            if buffer.has_file {
+                table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
+                start_watching_file_if_not_already(buffer.file.full_path);
+                buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
+                array_add(*buffers_to_refresh_from_disk, new_buffer_id);
+            }
+            recalculate_settings(buffer);
 
-    //         bucket_array_add(*new_open_buffers, buffer.*);
+            bucket_array_add(*new_open_buffers, buffer.*);
 
-    //         if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
-    //             array_add(*new_most_recent_buffers, new_buffer_id);
-    //         }
+            if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
+                array_add(*new_most_recent_buffers, new_buffer_id);
+            }
 
-    //         // @speed: O(n*m) here. Hopefully OK because people don't create as many editors as there are buffers
-    //         for editor, old_editor_id : open_editors {
-    //             if editor.buffer_id != old_buffer_id continue;
+            // @speed: O(n*m) here. Hopefully OK because people don't create as many editors as there are buffers
+            for editor, old_editor_id : open_editors {
+                if editor.buffer_id != old_buffer_id continue;
 
-    //             new_editor := editor;
-    //             new_editor.buffer_id = new_buffer_id;
-    //             new_editor_id := new_open_editors.count;
-    //             array_add(*new_open_editors, new_editor);
+                new_editor := editor;
+                new_editor.buffer_id = new_buffer_id;
+                new_editor_id := new_open_editors.count;
+                array_add(*new_open_editors, new_editor);
 
-    //             table_add(*editor_id_map, old_editor_id, new_editor_id);
-    //         }
+                table_add(*editor_id_map, old_editor_id, new_editor_id);
+            }
 
-    //     } else {
-    //         free_buffer(buffer);
-    //     }
-    // }
+        } else {
+            free_buffer(buffer);
+        }
+    }
 
-    // array_reset(*open_editors);
-    // open_editors = new_open_editors;
+    array_reset(*open_editors);
+    open_editors = new_open_editors;
 
-    // array_reset(*most_recent_buffers);
-    // most_recent_buffers = new_most_recent_buffers;
+    array_reset(*most_recent_buffers);
+    most_recent_buffers = new_most_recent_buffers;
 
-    // bucket_array_reset(*open_buffers);
-    // open_buffers = new_open_buffers;
+    bucket_array_reset(*open_buffers);
+    open_buffers = new_open_buffers;
 
     // // Reopen visible editors, if any of them are preserved
     // if editors.layout != .None {
