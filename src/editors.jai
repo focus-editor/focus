@@ -2012,7 +2012,9 @@ init_editors :: () {
 }
 
 deinit_editors :: () {
-    // !!!!!!!!!!! TODO: do on workspace reload?
+    _free_pane_tree(editors.root);
+    editors.root = null;
+    editors.active_pane = null;
 }
 
 init_buffers :: () {
@@ -2030,6 +2032,7 @@ deinit_buffers :: () {
         free(buffer_path);
     }
     deinit(*buffers_table);
+    array_reset_keeping_memory(*most_recent_buffers);
 }
 
 get_lang_from_path :: (full_path: string) -> Buffer.Lang {
