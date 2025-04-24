@@ -657,6 +657,11 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "editors", "split_top",                                  "Ctrl-Alt-X ArrowUp",           "Cmd-Opt-X ArrowUp"    },
     .{ 17, "editors", "split_bottom",                               "Ctrl-Alt-X ArrowDown",         "Cmd-Opt-X ArrowDown"  },
 
+    .{ 17, "editors", "duplicate_editor_left",                      "Ctrl-Alt-D ArrowLeft",         "Cmd-Opt-D ArrowLeft"  },
+    .{ 17, "editors", "duplicate_editor_right",                     "Ctrl-Alt-D ArrowRight",        "Cmd-Opt-D ArrowRight" },
+    .{ 17, "editors", "duplicate_editor_top",                       "Ctrl-Alt-D ArrowUp",           "Cmd-Opt-D ArrowUp"    },
+    .{ 17, "editors", "duplicate_editor_bottom",                    "Ctrl-Alt-D ArrowDown",         "Cmd-Opt-D ArrowDown"  },
+
     .{ 17, "common",  "switch_to_top_pane",                         "Ctrl-Shift-1",                 "Cmd-Shift-1" },
     .{ 17, "common",  "switch_to_bottom_pane",                      "Ctrl-Shift-2",                 "Cmd-Shift-2" },
     .{ 17, "common",  "switch_to_left_pane",                        "Ctrl-Alt-Shift-ArrowLeft",     "Cmd-Opt-Shift-ArrowLeft"  },
@@ -2045,6 +2050,10 @@ Ctrl-Alt-X ArrowLeft        split_left
 Ctrl-Alt-X ArrowRight       split_right
 Ctrl-Alt-X ArrowUp          split_top
 Ctrl-Alt-X ArrowDown        split_bottom
+Ctrl-Alt-D ArrowLeft        duplicate_editor_left
+Ctrl-Alt-D ArrowRight       duplicate_editor_right
+Ctrl-Alt-D ArrowUp          duplicate_editor_top
+Ctrl-Alt-D ArrowDown        duplicate_editor_bottom
 
 [open file dialog]
 Tab                         open_directory

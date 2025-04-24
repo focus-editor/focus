@@ -215,6 +215,11 @@ Cmd-Opt-X ArrowRight            split_right
 Cmd-Opt-X ArrowUp               split_top
 Cmd-Opt-X ArrowDown             split_bottom
 
+Cmd-Opt-D ArrowLeft             duplicate_editor_left
+Cmd-Opt-D ArrowRight            duplicate_editor_right
+Cmd-Opt-D ArrowUp               duplicate_editor_top
+Cmd-Opt-D ArrowDown             duplicate_editor_bottom
+
 Cmd-Shift-,                     duplicate_editor
 
 Cmd-N                           create_new_file
