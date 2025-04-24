@@ -142,6 +142,10 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
         if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
             draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
         }
+        if pane != editors.active_pane && !pane.editor_ids {
+            // Draw a border around empty panes because otherwise they might not be visible
+            draw_rect_border(rect, size = floor(1 * dpi_scale), color = Color.BACKGROUND_0);
+        }
         if just_dropped_files && is_hovering_over(pane_ui_id) {
             for path : just_dropped_files  editors_open_file_in_pane(path, pane);
             just_dropped_files = .[];
