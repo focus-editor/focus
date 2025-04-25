@@ -233,6 +233,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "move_editor_top",
     "move_editor_bottom",
 
+    "reopen_closed_editor",
+
     "rotate_panes_clockwise",
     "rotate_panes_counterclockwise",
 ]);

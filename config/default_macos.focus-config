@@ -225,6 +225,8 @@ Cmd-Opt-D ArrowDown             duplicate_editor_bottom
 
 Cmd-Shift-,                     duplicate_editor
 
+Cmd-Shift-T                     reopen_closed_editor
+
 Cmd-N                           create_new_file
 Cmd-Shift-N                     create_new_file_in_side_pane
 

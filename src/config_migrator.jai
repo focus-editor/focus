@@ -681,6 +681,8 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "common",  "switch_to_pane_7",                           "Ctrl-7",                       "Cmd-7" },
     .{ 17, "common",  "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
     .{ 17, "common",  "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
+
+    .{ 18, "editors", "reopen_closed_editor",                       "Ctrl-Shift-T",                 "Cmd-Shift-T"  },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -2068,6 +2070,7 @@ Ctrl-Alt-D ArrowLeft        duplicate_editor_left
 Ctrl-Alt-D ArrowRight       duplicate_editor_right
 Ctrl-Alt-D ArrowUp          duplicate_editor_top
 Ctrl-Alt-D ArrowDown        duplicate_editor_bottom
+Ctrl-Shift-T                reopen_closed_editor
 
 [open file dialog]
 Tab                         open_directory

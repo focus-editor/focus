@@ -97,27 +97,7 @@ move_forward_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor
 
 
 history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
-    editor, buffer := get_editor_and_buffer(editor_id);
-
-    pane, editor_index := editors_find_pane_with_editor(editor_id);
-    if !pane {
-        // Editor is not in the tree any more, check if there's an editor for the same buffer in the current pane first
-        found_in_active_pane := false;
-        for editors.active_pane.editor_ids {
-            if open_editors[it].buffer_id == editor.buffer_id {
-                found_in_active_pane = true;
-                editor_id = it;
-                editor, buffer = get_editor_and_buffer(editor_id);
-                break;
-            }
-        }
-
-        if !found_in_active_pane {
-            // Reopen the editor in the active pane
-            editors.active_pane.editor_index = editors.active_pane.editor_ids.count;
-            array_add(*editors.active_pane.editor_ids, editor_id);
-        }
-    }
+    editor, buffer := reopen_editor_by_id(editor_id);
 
     make_editor_active(editor_id);
 
