@@ -751,6 +751,9 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     array_insert_at(*target_pane.editor_ids, editor_id, new_index);
     target_pane.editor_index = new_index;
 
+    // In case we've just opened a previously closed editor, remove it from the closed list
+    array_ordered_remove_by_value(*recently_closed_editors, editor_id);
+
     return editor_id;
 }
 
@@ -1122,6 +1125,9 @@ close_editor_by_id :: (editor_id: s64) {
     if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 then close_buffer(buffer_id);
 
     close_search_bar(editor);
+
+    array_ordered_remove_by_value(*recently_closed_editors, editor_id);
+    array_add(*recently_closed_editors, editor_id);
 }
 
 close_buffer :: (buffer_id: s64) {
@@ -1670,6 +1676,48 @@ switch_to_pane_by_number :: (number: s64) {
     } else {
         add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
     }
+}
+
+action_reopen_closed_editor :: () {
+    if !recently_closed_editors {
+        add_user_warning("No recently closed editors", dismiss_in_seconds = 3);
+        return;
+    }
+
+    editor_id := pop(*recently_closed_editors);
+
+    reopen_editor_by_id(editor_id);
+
+    make_editor_active(editor_id);
+}
+
+reopen_editor_by_id :: (editor_id: s64) -> *Editor, *Buffer {
+    editor, buffer := get_editor_and_buffer(editor_id);
+
+    pane, editor_index := editors_find_pane_with_editor(editor_id);
+    if !pane {
+        // Editor is not in the tree any more, check if there's an editor for the same buffer in the current pane first
+        found_in_active_pane := false;
+        for editors.active_pane.editor_ids {
+            if open_editors[it].buffer_id == editor.buffer_id {
+                found_in_active_pane = true;
+                editor_id = it;
+                editor, buffer = get_editor_and_buffer(editor_id);
+                break;
+            }
+        }
+
+        if !found_in_active_pane {
+            // Insert next to the visible editor in the active pane
+            active_pane := editors.active_pane;
+            array_insert_at(*active_pane.editor_ids, editor_id, active_pane.editor_index + 1);
+            active_pane.editor_index += 1;
+        }
+    }
+
+    assert(editor != null && buffer != null, "Tried to reopen an editor which doesn't exist. This is a bug.");
+
+    return editor, buffer;
 }
 
 action_duplicate_editor :: (placement: Editor_Placement) {
@@ -4786,6 +4834,8 @@ editor_smooth_scroll: struct {
 
 
 #scope_file
+
+recently_closed_editors: [..] s64;
 
 cursor_blink_start: Apollo_Time;
 cursors_blinking := false;

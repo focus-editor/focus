@@ -242,6 +242,8 @@ Ctrl-Alt-D ArrowDown        duplicate_editor_bottom
 
 Ctrl-Shift-,                duplicate_editor
 
+Ctrl-Shift-T                reopen_closed_editor
+
 Ctrl-N                      create_new_file
 Ctrl-Shift-N                create_new_file_in_side_pane
 

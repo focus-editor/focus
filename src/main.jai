@@ -443,6 +443,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .split_top;                                        split_active_pane(.top);                            return true;
         case .split_bottom;                                     split_active_pane(.bottom);                         return true;
 
+        case .reopen_closed_editor;                             action_reopen_closed_editor();                      return true;
+
         case .rotate_panes_clockwise;                           rotate_panes(editors.root, .clockwise);             return true;
         case .rotate_panes_counterclockwise;                    rotate_panes(editors.root, .counterclockwise);      return true;
 
