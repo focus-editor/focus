@@ -1124,7 +1124,9 @@ close_editor_by_id :: (editor_id: s64) {
 
     if num_editors_for_buffer_in_the_tree(buffer_id) <= 0 then close_buffer(buffer_id);
 
+    // Since the editor is closed we don't want the updates to the buffer to trigger expensive adjustments
     close_search_bar(editor);
+    leave_only_main_cursor(editor);
 
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
     array_add(*recently_closed_editors, editor_id);
