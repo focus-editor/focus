@@ -163,8 +163,7 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
                     if entry.buffer_id >= 0 {
                         editors_open_buffer(entry.buffer_id, placement);
                     } else {
-                        path := entry.full_path;
-                        editors_open_file(path, placement);
+                        editors_open_file(entry.full_path, placement);
                     }
                 }
             }
@@ -205,7 +204,11 @@ open_file_dialog_open_entry_in_pane :: (selected: s64, number: s64) {
     entry := entries.filtered[selected];
 
     if entry.type == .file {
-        editors_open_buffer_in_pane(entry.buffer_id, target_pane);
+        if entry.buffer_id >= 0 {
+            editors_open_buffer_in_pane(entry.buffer_id, target_pane);
+        } else {
+            editors_open_file_in_pane(entry.full_path, target_pane);
+        }
         activate_pane(target_pane);
         close_open_file_dialog(.SELECTED_PATH, entry.full_path);
     }
