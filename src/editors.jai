@@ -700,6 +700,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
 
     target_pane := get_adjacent_editor_pane(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
+    if !target_pane return;
 
     editors_open_buffer_in_pane(buffer_id, target_pane);
 
@@ -1611,6 +1612,7 @@ action_move_editor :: (placement: Editor_Placement) {
 
     target_pane := get_adjacent_editor_pane(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
+    if !target_pane return;
 
     replaced_existing := false;
     for target_pane.editor_ids {
@@ -1679,6 +1681,7 @@ action_duplicate_editor :: (placement: Editor_Placement) {
 
     target_pane := get_adjacent_editor_pane(editors.active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
+    if !target_pane return;
 
     duplicated_editor_id := editors_open_buffer_in_pane(open_editors[active_editor_id].buffer_id, target_pane);
     duplicated_editor := *open_editors[duplicated_editor_id];
@@ -1698,6 +1701,21 @@ action_duplicate_editor :: (placement: Editor_Placement) {
 split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
     active_pane := editors.active_pane;
     assert_leaf_pane(active_pane, "Cannot split a non-leaf pane. This is a bug");
+
+    // Limit editor tree depth
+    {
+        MAX_DEPTH :: 8;
+        depth := 1;
+        pane  := active_pane;
+        while pane.parent != null {
+            depth += 1;
+            pane = pane.parent;
+        }
+        if depth >= MAX_DEPTH {
+            add_user_error("Can't split this pane any further", dismiss_in_seconds = 3);
+            return null;
+        }
+    }
 
     new_pane, other_pane: *Editor_Pane;
 
