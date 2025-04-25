@@ -226,6 +226,7 @@ reload_workspace :: (automatic := false) {
     deinit_color_preview();
     deinit_open_file_dialog();
     deinit_file_watcher();
+    deinit_cursor_history();
     deinit_buffers();
     deinit_editors();
 
