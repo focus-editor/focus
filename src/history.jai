@@ -1,3 +1,14 @@
+deinit_cursor_history :: () {
+    array_reset(*forward_history);
+    array_reset(*global_history);
+    array_reset(*edit_notifications);
+    table_reset(*editor_history_table);
+
+    last_seen_cursor.editor_id = -1;
+    last_seen_cursor.cursor = .{};
+    last_seen_cursor.moved_at = 0;
+}
+
 maybe_save_cursor_history :: () {
     defer apply_edit_notifications();
 
