@@ -331,12 +331,12 @@ reload_workspace :: (automatic := false) {
 
     init_build_system();  // must do after we've cleared editors and buffers
 
-    // TODO:
-    // if editors.layout == .None {
-    //     update_window_title();
-    // } else {
-    //     make_editor_active(editors.active);
-    // }
+    if editors_get_layout() == .None {
+        update_window_title();
+    } else {
+        // TODO: when we're able to preserve layouts, make sure to run this to update the window title etc
+        // make_editor_active(editors.active);
+    }
 
     start_workspace_scan();
 
