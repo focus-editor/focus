@@ -1428,9 +1428,11 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 
     old_top := top;
     glue_point.buffer_pos = clamp(glue_point.buffer_pos, 0, cast(s32)max(0, buffer.bytes.count-1));
-    line := offset_to_line(editor, buffer, glue_point.buffer_pos);
-    top = line * cast(s32) line_height + glue_point.offset_within_line;
-    scroll_y.target = top;
+    if top >= 0 {
+        line := offset_to_line(editor, buffer, glue_point.buffer_pos);
+        top = line * cast(s32) line_height + glue_point.offset_within_line;
+        scroll_y.target = top;
+    }
     return top != old_top;
 }
 
