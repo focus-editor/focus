@@ -96,4 +96,4 @@ indent_guide:                           ffffff20
 active_pane_border:                     4000ffa0
 
 # Added after migration to version [18]
-inactive_pane_dim_overlay:              000000ff
+inactive_pane_dim_overlay:              050505FF
