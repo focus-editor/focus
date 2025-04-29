@@ -217,17 +217,17 @@ parse_number_c_like :: (using tokenizer: *Tokenizer, token: *$Token) {
             if t.* == #char "l" || t.* == #char "L" {             // l
                 t += 1;
                 if t >= max_t return;
-
+                
                 if t.* == #char "l" || t.* == #char "L" {         // ll
                     t += 1;
                     if t >= max_t return;
 
                     if t.* == #char "u" || t.* == #char "U" {     // llu
+                        t += 1;
+                    }
+                } else if t.* == #char "u" || t.* == #char "U" {  // lu
                     t += 1;
                 }
-            } else if t.* == #char "u" || t.* == #char "U" {      // lu
-                t += 1;
-            }
             } else if  t.* == #char "u" || t.* == #char "U" {     // u
                 t += 1;
                 if t >= max_t return;
