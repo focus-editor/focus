@@ -1025,8 +1025,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // Handle editor scrolling here because we only know the layout at this point.
         num_editor_lines := get_max_line_num(editor, buffer);
         content_height := (num_editor_lines + 2) * line_height;
-        if buffer_settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
+        scroll_behind_height := 0.0;
+        scroll_behind_lines: s32 = 12;
+        if config.settings.scroll_behind_first_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
+        if config.settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then scroll_behind_height = (scroll_behind_lines * line_height);
 
+        min_y_scroll := cast(s32) -scroll_behind_height;
         max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
 
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
@@ -1036,7 +1040,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             // the first visible line. Thus we need to "resolve" vertical scrolling before we can
             // properly handle horizontal scrolling.
             using editor.viewport;
-            new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
+            new_target := clamp(scroll_y.target - mouse.scroll_y_delta, min_y_scroll, max_y_scroll);
             if mouse.smooth_scroll {
                 start_animation(*scroll_y, top, new_target);
             } else {
@@ -1063,7 +1067,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 if top   < screen_pos.y  then offset.y = screen_pos.y - top;
 
                 left_target := max(viewport.left  + cast(s32) offset.x, 0);
-                top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
+                top_target  := clamp(viewport.top - cast(s32) offset.y, min_y_scroll, max_y_scroll);
 
                 if left_target != viewport.scroll_x.target {
                     if buffer_settings.disable_viewport_chasing_cursor_near_the_edge && abs(left_target - viewport.scroll_x.target) < cast(s32) (2 * char_x_advance) {
@@ -1089,7 +1093,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             cursor_pos_from_left := cursor_coords[main_cursor].pos.col  * char_x_advance + text_offset.x;
             cursor_pos_from_top  := cursor_coords[main_cursor].pos.line * line_height;
             left_target          := cast(s32) max(cursor_pos_from_left - editor_width + char_x_advance * 3, 0);
-            top_target           := cast(s32) max(cursor_pos_from_top  - rect.h / 2,  0);
+            top_target           := cast(s32) max(cursor_pos_from_top  - rect.h / 2,  -scroll_behind_height);
             if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
             if top_target  != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
 
@@ -1187,7 +1191,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 case .up;    new_scroll_y -= time_elapsed * speed;
                 case .down;  new_scroll_y += time_elapsed * speed;
             }
-            scroll_y_target := clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
+            scroll_y_target := clamp(cast(s32) new_scroll_y, min_y_scroll, max_y_scroll);
             snap_viewport_top_to_target(editor, buffer, scroll_y_target);
         }
 
@@ -1208,7 +1212,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
         // Do it after we've handled cursor_moved AND after calculating the next scroll_y animation value, because it uses viewport.top
-        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             snap_viewport_top_to_target(editor, buffer, new_scroll_target);
@@ -1513,7 +1517,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
 
         // Draw scrollbar and scrollbar marks
-        draw_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
+        draw_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id, as_build_panel);
 
         if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
             Simp.set_shader_for_color(enable_blend = true);
@@ -1717,7 +1721,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 // Scrollbar
                 content_height := results.count * entry_height;
                 max_y_scroll := max(cast(s32)(content_height - results_rect.h), 0);
-                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
+                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, search_scrollbar_id);
                 if new_scroll_target != scroll_anim.target {
                     scroll_y = new_scroll_target;
                     scroll_anim.target = new_scroll_target;
@@ -1763,7 +1767,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
 
                 // The above operations could've updated scrollbar position, so drawing it here
-                draw_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
+                draw_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, search_scrollbar_id);
             }
 
             visible_start := clamp(cast(s32) (scroll_y / entry_height), 0, results.count);
@@ -2301,7 +2305,7 @@ draw_open_file_dialog :: () {
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
-            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -2347,7 +2351,7 @@ draw_open_file_dialog :: () {
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -2552,7 +2556,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := max(cast(s32)(content_height - entries_rect.h), 0);
-            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -2598,7 +2602,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            draw_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -3020,7 +3024,7 @@ draw_finder :: () {
         // Scrollbar
         content_height := results.count * entry_height;
         max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
-        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
         if new_scroll_target != scroll_anim.target {
             scroll_y = new_scroll_target;
             scroll_anim.target = new_scroll_target;
@@ -3196,7 +3200,7 @@ draw_finder :: () {
         }
 
         // Drawing the scrollbar here so that scopes don't cover it
-        draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+        draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
 
         if !is_empty(finder.input.text) && !results {
             label := "Searching…";
@@ -3763,16 +3767,16 @@ draw_bottom_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.immediate_quad(x, y, x + w, y - size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
-get_new_scroll_target_from_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
-    return draw_scrollbar(main_rect, content_height, scroll, scroll_target, max_scroll, ui_id, draw = false);
+get_new_scroll_target_from_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, min_scroll: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
+    return draw_scrollbar(main_rect, content_height, scroll, scroll_target, min_scroll, max_scroll, ui_id, draw = false);
 }
 
-draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
-    scroll_target = clamp(scroll_target, 0, max_scroll);
+draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, min_scroll: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
+    scroll_target = clamp(scroll_target, min_scroll, max_scroll);
 
     if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id);
 
-    if max_scroll <= 0 return scroll_target;
+    if max_scroll <= min_scroll return scroll_target;
 
     area := cut_right(main_rect, scrollbar_width);  // the scrollbar area of the main rect
     scrollbar := area;  // handle
@@ -3819,7 +3823,7 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
     color = color_hover;
     separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
     #if draw draw_rect(separator_rect, color_bg, opacity = opacity);
-    scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
+    scrollbar.y += (cast(float) (max_scroll - scroll) / (max_scroll - min_scroll)) * scroll_zone_size;
     scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);
     if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
@@ -3838,11 +3842,11 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
         }
         new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - scrollbar_grab_point - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
-        scroll_target = cast(s32) (max_scroll * new_scroll_percentage);
+        scroll_target = cast(s32) ((max_scroll - min_scroll) * new_scroll_percentage);
         start_scrollbar_fade_out_animation(ui_id, initial_value = opacity);
     }
 
-    return clamp(scroll_target, 0, max_scroll);
+    return clamp(scroll_target, min_scroll, max_scroll);
 }
 
 draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, button_id := Ui_Id.none, outline := false, outline_color := Color.UI_DEFAULT, outline_background_color := Color.BACKGROUND_0, loc := #caller_location) -> pressed: bool, width: float {

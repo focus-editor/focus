@@ -660,6 +660,7 @@ Settings :: struct {
     highlight_matching_brackets                             := false;                                               @v5  @overridable
     strip_trailing_whitespace_on_save                       := Strip_Trailing_Whitespace.except_lines_with_cursor;  @v6  @overridable
     insert_final_newline_on_save                            := false;                                               @v4  @overridable
+    scroll_behind_first_line                                := false;                                               @v16 @overridable
     scroll_beyond_last_line                                 := true;                                                @v2  @overridable
     max_editor_width                                        := -1;                                                  @v1  @overridable
     line_wrap_is_on_by_default                              := false;                                               @v1  @overridable
