@@ -647,7 +647,7 @@ Settings :: struct {
     scrollbar_fade_out_delay_seconds                        := 1.0;     @v16
     status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
     active_pane_border_width                                := 1.0;     @v18
-    inactive_pane_dim_overlay_opacity                       := 0.3;     @v18
+    inactive_pane_dim_overlay_opacity                       := 0.1;     @v18
 
     // TODO
     // load_last_session_on_start:         true

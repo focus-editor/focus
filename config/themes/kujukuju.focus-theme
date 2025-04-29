@@ -105,4 +105,4 @@ code_header6:                           E0AD82FF
 active_pane_border:                     196666FF
 
 # Added after migration to version [18]
-inactive_pane_dim_overlay:              080B14FF
+inactive_pane_dim_overlay:              050505FF
