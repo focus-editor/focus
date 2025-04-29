@@ -1027,8 +1027,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         content_height := (num_editor_lines + 2) * line_height;
         scroll_behind_height := 0.0;
         scroll_behind_lines: s32 = 12;
-        if config.settings.scroll_behind_first_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
-        if config.settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then scroll_behind_height = (scroll_behind_lines * line_height);
+        if buffer_settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
+        if buffer_settings.scroll_behind_first_line && !as_build_panel && !is_color_preview_panel(editor_id) then scroll_behind_height = (scroll_behind_lines * line_height);
 
         min_y_scroll := cast(s32) -scroll_behind_height;
         max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
