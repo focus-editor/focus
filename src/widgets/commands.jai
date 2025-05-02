@@ -67,7 +67,7 @@ commands_refresh_after_config_change :: () {
     for config.build.commands {
         array_add(*commands, Command.{
             action = cast(u16) (it_index + 1),
-            name = sprint("Build: %", it.name),
+            name = sprint("Build Command: %", it.name),
             is_build_command = true,
         });
     }
