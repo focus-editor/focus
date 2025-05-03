@@ -126,7 +126,7 @@ runtime_support_default_logger :: (message: string, data: *void, info: Log_Info)
 
 c_style_strlen :: (str: *u8) -> s64 #no_context {
     p := str;
-    while << p  { p += 1; }
+    while p.*  { p += 1; }
     return p - str;
 }
 
@@ -271,9 +271,10 @@ __arithmetic_overflow :: (left: s64, right: s64, type_code: u16, line_number: s6
     write_nonnegative_number(size, to_standard_error = true);
     write_string(", but the result does not fit into this type.\n", to_standard_error = true);
 
-    if fatal report_arithmetic_overflow_more_visibly(line_number, filename);
-
-    if fatal my_panic();
+    if fatal {
+        report_arithmetic_overflow_more_visibly(line_number, filename);
+        my_panic();
+    }
 }
 
 write_string_unsynchronized :: (s: string, to_standard_error := false) #no_context {
@@ -385,29 +386,25 @@ __panic_due_to_runtime_call_of_compile_time_procedure :: (line_number: s64, file
 #if DEFINE_INITIALIZATION {
     // TEMPORARY_STORAGE_SIZE is defined by the compiler based on Build_Options.
 
-    first_thread_context: Context;
+    first_thread_context: #Context;
     first_thread_temporary_storage: Temporary_Storage;
     first_thread_temporary_storage_data: [TEMPORARY_STORAGE_SIZE] u8 #align 64;
 
     #scope_export
     #program_export
-    __jai_runtime_init :: (argc: s32, argv: **u8) -> *Context #c_call {
+    __jai_runtime_init :: (argc: s32, argv: **u8) -> *#Context #c_call {
         __command_line_arguments.count = argc;
         __command_line_arguments.data  = argv;
 
+        // We don't need this initializer_of call, but we're leaving it in a comment, in case there are
+        // compiler bugs in Context init and you want to work around them by re-enabling it.
+        // @Temporary: Putting it back for a bit since there is a bug exhibiting on Mac that might
+        // also cause first_thread_context not to be fully filled out...
+        initializer_of(#Context)(*first_thread_context);
+
         ts := *first_thread_temporary_storage;
         set_initial_data(ts, TEMPORARY_STORAGE_SIZE, first_thread_temporary_storage_data.data);
-
         first_thread_context.temporary_storage = ts;
-
-        first_thread_context.base.context_info = type_info(Context);
-
-        dummy_context: Context;
-        dummy_context.base.context_info = type_info(Context);
-        push_context dummy_context {
-            // Allocator should not rely on a good context for STARTUP. For other modes, it's fine.
-            first_thread_context.allocator.data = runtime_support_default_allocator_proc(.STARTUP, 0, 0, null, null);
-        }
 
         return *first_thread_context;
     }
@@ -472,6 +469,8 @@ debug_break :: () #no_context {
             #asm { int 0x41; }
         } else #if CPU == .X64 {
             #asm { int3; }
+        } else #if CPU == .ARM64 {
+            #bytes .[0x20, 0x00, 0b001_0_0000, 0b1101_0100]; // BRK 0x01: 11 bit instruction, 16 bit immediate, 5 bit unused.
         } else #if OS == .WASM {
             wasm_debug_break :: () #foreign; // You will need to provide this function as JS code in your WASM environment. :JaiWasm:
             wasm_debug_break();
@@ -497,12 +496,12 @@ one_time_init :: (synch_value: *s32, to_insert: Code) #expand {
         // The goal here is just to avoid the overhead of spamming the compare_and_swap.
         if synch_value.* == 2  break;
 
-        old := lock_cmpxchg(synch_value, 0, 1);
+        success, old := compare_and_swap(synch_value, 0, 1);
         if old == {
           case 0;
             #insert to_insert;
 
-            if lock_cmpxchg(synch_value, 1, 2) != 1  debug_break();  // Should not happen!
+            if !compare_and_swap(synch_value, 1, 2)  debug_break();  // Should not happen!
           case 1;
             // Maybe some exponential fall offy thing here?
             #if CPU == .X64 {
@@ -522,9 +521,7 @@ one_time_init :: (synch_value: *s32, to_insert: Code) #expand {
 // if you make an error of some kind, even a simple one like an undeclared identifier,
 // you won't get a helpful error message.
 Context_Base :: struct {
-    // @Incomplete: Initialize this to type_of(Context) to make sure it is not null when someone creates a default context!
-    // :InitContextInfo
-    context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them.
+    context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them. Will always be initialized to type_of(Context).
 
     thread_index   : u32;
 
@@ -537,17 +534,14 @@ Context_Base :: struct {
 
     temporary_storage: *Temporary_Storage;
 
-    // Currently, for simplicity we don't #if this out right now when _STACK_TRACE is false;
-    // initially an implementation detail prevented us from doing this, but now that's gone,
-    // but to be conservative we aren't changing this yet (but may later). It is probably
-    // convenient to let runtime code be able to check context.stack_trace to see if it is
-    // null in some cases, rather than needing all that to be #iffed as well. We will see.
+    // Currently, for simplicity we don't #if this out right now when _STACK_TRACE is false
+    // (but may later). It is probably convenient to let runtime code be able
+    // to check context.stack_trace to see if it is null in some cases,
+    // rather than needing all that to be #iffed as well. We will see.
     stack_trace: *Stack_Trace_Node;
 
     assertion_failed := runtime_support_assertion_failed;
     handling_assertion_failure := false;  // Used to avoid assert() infinite loops. Do not mess with this value.
-
-    program_print_plugin: *void;  // This is a dumb field that will go away when we have a better alternative.
 
     default_allocator :: Allocator.{runtime_support_default_allocator_proc, null};
 }
@@ -580,9 +574,6 @@ set_initial_data :: (ts: *Temporary_Storage, count: s64, data: *u8) #no_context 
     ts.original_data = data;
     ts.original_size = count;
 }
-
-#add_context using base: Context_Base;
-
 
 #scope_module
 
@@ -658,7 +649,7 @@ init_synchronization :: () #no_context {
 
             // Retry to acquire the lock until we got it.
             while true {
-                if lock_cmpxchg(futex_lock, 0, 1) == 0 {
+                if compare_and_swap(futex_lock, 0, 1) {
                     // The mutex was free and is now acquired.
                     return;
                 }
@@ -684,7 +675,7 @@ init_synchronization :: () #no_context {
         }
 
         runtime_support_release :: (futex_lock: *s32) #no_context {
-            lock_cmpxchg(futex_lock, 1, 0); // lock_xchg would be enough, but we don’t have that intrinsic
+            compare_and_swap(futex_lock, 1, 0); // lock_xchg would be enough, but we don’t have that intrinsic
             futex(futex_lock, FUTEX_WAKE | FUTEX_PRIVATE_FLAG, 1);
         }
 
@@ -692,11 +683,11 @@ init_synchronization :: () #no_context {
             #if CPU == .X64 {
                 SYS_futex :: 202;
                 #asm SYSCALL_SYSRET {
-                    mov.q call: gpr === a, SYS_futex;
-                    mov.q uaddr: gpr === di, futex_lock;
+                    mov.q call:     gpr === a, SYS_futex;
+                    mov.q uaddr:    gpr === di, futex_lock;
                     mov.q futex_op: gpr === si, op;
-                    mov.q value: gpr === d, val;
-                    mov.q timeout: gpr === 10, 0;
+                    mov.q value:    gpr === d, val;
+                    mov.q timeout:  gpr === 10, 0;
 
                     syscall t1:, t2:, call;
                 }
@@ -792,7 +783,7 @@ report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string)
 }
 
 report_error_in_yer_face_no_ctx :: (message: string, args: .. Any) #no_context {
-    ctx: Context;
+    ctx: #Context;
     push_context ctx { report_error_in_yer_face(message, ..args, from_no_context = true); }
 }
 
@@ -846,7 +837,7 @@ report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := f
         W :: #import "Windows";
         W_Utf8 :: #import "Windows_Utf8";
         W.ShowCursor(1);
-        W.MessageBoxW(null, W_Utf8.utf8_to_wide_new(formatted_message,, allocator = temp), W_Utf8.utf8_to_wide_new("Fatal Error",, allocator = temp), W.MB_OK);
+        W.MessageBoxW(null, W_Utf8.utf8_to_wide(formatted_message,, allocator = temp), W_Utf8.utf8_to_wide("Fatal Error",, allocator = temp), W.MB_OK);
     }
 }
 

@@ -194,7 +194,7 @@ get_mouse_pointer_position :: inline (right_handed := false) -> x: int, y: int, 
 #scope_file
 
 macos_create_app_delegate_exists :: () -> bool { // :DecoupleWindowCreationAndInput:
-    info := type_info(Context);
+    info := type_info(type_of(context));
     for info.members {
         if it.name == "_macos_create_app_delegate" {
             return true;
@@ -205,7 +205,7 @@ macos_create_app_delegate_exists :: () -> bool { // :DecoupleWindowCreationAndIn
 }
 
 macos_create_window_delegate_exists :: () -> bool { // :DecoupleWindowCreationAndInput:
-    info := type_info(Context);
+    info := type_info(type_of(context));
     for info.members {
         if it.name == "_macos_create_window_delegate" {
             return true;

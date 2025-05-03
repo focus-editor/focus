@@ -368,7 +368,7 @@ Tag :: struct {
     type: Token_Type;
 }
 
-tags :: #run -> [] Tag {
+tags :: #run,stallable -> [] Tag {
     tags: [..] Tag;
     array_add(*tags, .{"<sub>", "</sub>", .number} );
     array_add(*tags, .{"<sup>", "</sup>", .number} );

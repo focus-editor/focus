@@ -238,7 +238,7 @@ create_objc_class_member_stub :: (class_name: string, framework_name: string) ->
     Basic.assert(super != null, "Couldn’t get Objective-C superclass of \"%\"", class_name);
     super_size := cast(s64) class_getInstanceSize(super);
     // log("%: % super: %", class_name, instance_size, super_size);
-    return Basic.sprint("_%_data: [%] u8; // size of % minus size of parent class", String.to_lower_copy_new(class_name,, temp), instance_size - super_size, class_name);
+    return Basic.sprint("_%_data: [%] u8; // size of % minus size of parent class", String.to_lower_copy(class_name,, temp), instance_size - super_size, class_name);
 }
 
 
@@ -612,7 +612,7 @@ type_check_objc_method_type :: (ty: *Type_Info_Procedure) {
 // This is an exerpt from the Gamepad module on how one might setup a block:
 /*
 game_controller_pause_handler_block_func :: (block: *Objective_C_Block_Basic, controller: *GCController) #c_call {
-    ctx: Context;
+    ctx: #Context;
     push_context ctx {
         if controller == game_controller {
             _game_controller_paused_pressed = true;

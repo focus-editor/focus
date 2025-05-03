@@ -321,8 +321,10 @@ settings_info: struct {
             array_add(*link_command, crt_lib_to_static(it));
         for m.system_libraries
             array_add(*link_command, crt_lib_to_static(it));
-        for m.user_libraries
-            array_add(*link_command, it);
+        for m.user_libraries {
+            if ends_with(it, "freetype.lib")  array_add(*link_command, "modules/freetype/windows/freetype.lib");
+            else  array_add(*link_command, it);
+        }
 
         print("Running custom link command: %\n", get_quoted_command_string(link_command));
         result := run_command(..link_command);
@@ -336,7 +338,7 @@ settings_info: struct {
 
     // https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
     crt_lib_to_static :: (original: string) -> string {
-        original_lower := to_lower_copy_new(original);
+        original_lower := to_lower_copy(original);
         translated := original;
         if original_lower == {
             // UCRT

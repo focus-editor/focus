@@ -56,7 +56,7 @@ match_nfa :: (prog: *Prog, text: string, ctx: string, ctx_offset: int, anchor_in
 			// This is a no-op the first time around the loop because runq is empty.
 			id := step(*nfa, runq, nextq, c, text, ctx, ctx_offset, pos);
 			assert(runq.count == 0);
-			nextq, runq = swap(nextq, runq);
+			nextq, runq = nextq, runq;
 
 			if id != 0 {
 				// We're done: full match ahead.

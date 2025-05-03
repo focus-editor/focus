@@ -681,7 +681,7 @@ App_Delegate :: struct {
     #as using delegate: NSApplicationDelegate;
 
     applicationShouldTerminate :: (using self: *App_Delegate, _sel: Selector, sender: id) -> NSApplicationTerminateReply #c_call {
-        jai_context: Context;
+        jai_context: #Context;
         push_context jai_context {
             event: Event;
             event.type = .QUIT;
@@ -704,7 +704,7 @@ App_Delegate :: struct {
     } @selector(applicationDidBecomeActive:)
 
     applicationDidFinishLaunching :: (self: *App_Delegate, _sel: Selector, app: *NSApplication) #c_call {
-        ctx: Context;
+        ctx: #Context;
         push_context ctx {
             NSApplication.setActivationPolicy(NSApp, NSApplicationActivationPolicyRegular);
             NSApplication.activateIgnoringOtherApps(NSApp, YES);
@@ -713,7 +713,7 @@ App_Delegate :: struct {
     }
 
     applicationOpenFiles :: (self: *App_Delegate, _sel: Selector, sender: *NSApplication, nsfiles: *NSArray(*NSString)) #c_call {
-        ctx: Context;
+        ctx: #Context;
         push_context ctx {
             count := nsfiles.count(nsfiles);
 
@@ -752,7 +752,7 @@ Window_Delegate :: struct {
     using #as nsobject: NSObject;
 
     windowShouldClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) -> BOOL #c_call {
-        jai_context: Context;
+        jai_context: #Context;
         push_context jai_context {
             event: Event;
             event.type = .QUIT;
@@ -762,7 +762,7 @@ Window_Delegate :: struct {
     } @selector(windowShouldClose:)
 
     windowWillClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        jai_context: Context;
+        jai_context: #Context;
         push_context jai_context {
             // win := NSNotification.object(notification);
 
@@ -792,7 +792,7 @@ Window_Delegate :: struct {
     */
 
     windowDidResize :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        jai_context: Context;
+        jai_context: #Context;
         push_context jai_context {
             my_window := cast(*NSWindow) notification.object(notification);
             view := NSWindow.contentView(my_window);
@@ -806,7 +806,7 @@ Window_Delegate :: struct {
 
     windowDidChangeScreen :: (self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
         // The backing scale factor might change when the window changes screen so we need to re-compute the width and height of the window. :MacHighResDisplays
-        jai_context: Context;
+        jai_context: #Context;
         push_context jai_context {
             objc_msgSend(self, selector("windowDidResize:"), notification);
         }
@@ -831,7 +831,7 @@ Window_Delegate :: struct {
     } @selector(prepareForDragOperation:)
 
     performDragOperation :: (using self: *Window_Delegate, _sel: Selector, sender: id /*id<NSDraggingInfo>*/) -> BOOL #c_call {
-        ctx: Context;
+        ctx: #Context;
         push_context ctx {
             pasteboard := NSDraggingInfo.draggingPasteboard(sender);
             classes := NSArray(Class).arrayWithObject(class(NSURL));

@@ -1,4 +1,5 @@
-create_window :: (width: int, height: int, window_name: string, window_x := -1, window_y := -1, parent: HWND = null, background_color_rgb := DEFAULT_WINDOW_CREATION_COLOR) -> HWND {
+// wanted_msaa is IGNORED on Windows! It only exists for API compatibility with Linux.
+create_window :: (width: int, height: int, window_name: string, window_x := -1, window_y := -1, parent: Window_Type = null, background_color_rgb := DEFAULT_WINDOW_CREATION_COLOR, wanted_msaa := false) -> HWND {
     if !window_class_initted {
         init_window_class(background_color_rgb);
     }
@@ -32,8 +33,8 @@ create_window :: (width: int, height: int, window_name: string, window_x := -1, 
     // CW_USEDEFAULT :: 0x8000_0000;
 
     hwnd := CreateWindowExW(0,
-                            utf8_to_wide_new(WINDOW_CLASS_NAME,, allocator = temp),
-                            utf8_to_wide_new(window_name,, allocator = temp),
+                            utf8_to_wide(WINDOW_CLASS_NAME,, temp),
+                            utf8_to_wide(window_name,, temp),
                             style,
                             xx window_x, xx window_y,
                             xx client_width,
@@ -156,31 +157,9 @@ init_window_class :: (background_color_rgb: [3] float) {
     // @LanguageSemantics: Maybe we want to change the relative precedence of << and | so that this does not happen:
     brush := CreateSolidBrush((b << 16) | (g << 8) | r);
 
-    //
-    // windows_windowproc_exists is only called at compile-time.
-    // (We could use a compiler feature to mark procedures as being compile-time-only!)
-    // It looks through Context for a member called _windows_windowproc. If that member
-    // exists, it means some other module provides a WindowProc for us to register
-    // in the window class. If not, we put an empty proc there. Why? Well, in Windows
-    // you can't just ask for events on a window, they have to dispatch through
-    // a WindowProc that is registered at creation time. But we want our input handler
-    // to be in a different module, and we want that module and this module to be
-    // interchangeable with other things. We didn't want this dumb constraint imposed
-    // by Windows to control how our code can be factored. The line must be drawn here!!!!
-    //
-    // So this was our solution for now. We'll see how this evolves.
-    //        -jblow, 14 November 2021.
-    //
-    #if #run windows_windowproc_exists() {
-        WindowProc :: Context._windows_windowproc;
-    } else {
-        WindowProc :: DefWindowProcW;
-    }
-
     wc: WNDCLASSEXW;
     wc.cbSize = size_of(WNDCLASSEXW);
     wc.style                = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wc.lpfnWndProc          = xx WindowProc;
     wc.cbClsExtra           = 0;
     wc.cbWndExtra           = 0;
     wc.hInstance            = hInstance;
@@ -189,7 +168,19 @@ init_window_class :: (background_color_rgb: [3] float) {
     wc.hbrBackground        = brush;  // cast(HBRUSH) GetStockObject(WHITE_BRUSH);
 
     wc.lpszMenuName         = null;
-    wc.lpszClassName        = utf8_to_wide_new(WINDOW_CLASS_NAME,, allocator = temp);
+    wc.lpszClassName        = utf8_to_wide(WINDOW_CLASS_NAME,, temp);
+
+
+    // We used to do windows_windowproc_exists at compile-time, but since #Context can change
+    // and we can't control when the #run happens, we have changed this..
+    WindowProc: type_of(WNDCLASSEXW.lpfnWndProc);
+    proc := windows_windowproc_exists();
+    if proc {
+        wc.lpfnWndProc          = proc;
+    } else {
+        wc.lpfnWndProc          = xx DefWindowProcW;
+    }
+
 
     // Register the window class.
     if RegisterClassExW(*wc) == 0 {
@@ -200,26 +191,44 @@ init_window_class :: (background_color_rgb: [3] float) {
     window_class_initted = true;
 }
 
-windows_windowproc_exists :: () -> bool {
-    info := type_info(Context);
+windows_windowproc_exists :: () -> *void {
+    info := type_info(#Context);
     for info.members {
         if it.name == "_windows_windowproc" {
-            return true;
+            address: *u8;
+            if it.offset_into_constant_storage < 0 {
+                address = (cast(*u8)*context) + it.offset_in_bytes;
+            } else {
+                address = info.constant_storage.data + it.offset_into_constant_storage;
+            }
+
+            return (cast(**void)address).*;
         }
     }
 
-    return false;
+    return null;
 }
 
 #scope_export
 
 get_dimensions :: (hwnd: HWND, right_handed: bool) -> (x: s32, y: s32, width: s32, height: s32, success := true) {
-    rect: RECT;
-    success := GetClientRect(hwnd, *rect);
+    local\_rect: RECT;
+    screen_rect: RECT;
+
+    success := GetWindowRect(hwnd, *screen_rect);
     if !success  return 0, 0, 0, 0, false;
 
-    y := ifx right_handed then rect.bottom else rect.top;
-    return rect.left, y, rect.right - rect.left, rect.bottom - rect.top;
+    success  = GetClientRect(hwnd, *local_rect);
+    if !success  return 0, 0, 0, 0, false;
+
+    dx := local_rect.right  - local_rect.left;
+    dy := local_rect.bottom - local_rect.top;
+    x0 := screen_rect.left;
+    if right_handed {
+        return x0 + local_rect.left, screen_rect.top + local_rect.bottom, dx, dy;
+    } else {
+        return x0 + local_rect.left, screen_rect.top + local_rect.top, dx, dy;
+    }
 }
 
 // Mouse pointer
@@ -229,9 +238,11 @@ get_mouse_pointer_position :: (hwnd: HWND, right_handed: bool) -> (x: int, y: in
     win_success := GetCursorPos(*p);
     if !win_success return 0, 0, false;
 
-    ClientToScreen :: (hwnd: HWND, lpPoint: *POINT) -> s32 #foreign user32;
-    ScreenToClient :: (hwnd: HWND, p: *POINT) -> s32 #foreign user32;
-    GetClientRect  :: (hwnd: HWND, rect: *RECT) -> s32 #foreign user32;
+    // These are defined in Windows.jai. Maybe we were trying to avoid
+    // importing that?
+    // ClientToScreen :: (hwnd: HWND, lpPoint: *POINT) -> s32 #foreign user32;
+    // ScreenToClient :: (hwnd: HWND, p: *POINT) -> s32 #foreign user32;
+    // GetClientRect  :: (hwnd: HWND, rect: *RECT) -> s32 #foreign user32;
 
     win_success = ScreenToClient(hwnd, *p);
     if win_success && right_handed {
