@@ -4580,25 +4580,39 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
     } else {
         comment_total_length := cast(s32)(comment_start.count + comment_end.count);
 
-        for * cursor : editor.cursors {
-            move_count := cast(s32)it_index * comment_total_length;
+        ranges_to_comment_out : [..]Offset_Range;
+        ranges_to_comment_out.allocator = temp;
 
-            selection := get_selection(cursor);
+        array_resize(*ranges_to_comment_out, editor.cursors.count);
+
+        // Precalculate line start offsets when using block comments as a fallback
+        // for commenting out single line with multiple cursors. This way we don't
+        // need to run rescan_for_lines() after each comment block is inserted.
+        for * cursor : editor.cursors {
+            range := get_selection(cursor);
 
             // If it's a fallback we want to comment out lines entirely, not just selection (as we do in toggle_comment)
             if is_fallback {
-                selection_start_line_index := offset_to_real_line(buffer, selection.start);
-                selection_end_line_index   := offset_to_real_line(buffer, selection.end);
+                selection_start_line_index := offset_to_real_line(buffer, range.start);
+                selection_end_line_index   := offset_to_real_line(buffer, range.end);
 
-                selection.start = get_real_line_start_offset(buffer, selection_start_line_index);
-                selection.end   = get_real_line_end_offset(buffer, selection_end_line_index);
+                range.start = get_real_line_start_offset(buffer, selection_start_line_index);
+                range.end   = get_real_line_end_offset(buffer, selection_end_line_index);
             }
 
-            start_pos := selection.start + move_count;
-            end_pos   := selection.end   + move_count + cast(s32) comment_start.count;
+            ranges_to_comment_out[it_index] = range;
+        }
+
+        for * cursor : editor.cursors {
+            move_count := cast(s32)it_index * comment_total_length;
+
+            range     := ranges_to_comment_out[it_index];
+            start_pos := range.start + move_count;
+            end_pos   := range.end + move_count + cast(s32)comment_start.count;
 
             insert_string_at_offset(buffer, start_pos, comment_start);
             insert_string_at_offset(buffer, end_pos,   comment_end);
+
             cursor.pos += cast(s32)comment_start.count + move_count;
             cursor.sel += cast(s32)comment_start.count + move_count;
         }
