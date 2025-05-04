@@ -3,7 +3,7 @@
 + New features:
     + ...
 + Bug fixes:
-    + ...
+    + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)
