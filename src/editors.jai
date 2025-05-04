@@ -1423,8 +1423,13 @@ action_escape :: (editor: *Editor) {
         return;
     }
 
-    reset_search_results(*editor.search_bar);
-    editor.refresh_selection = true;
+    if !is_empty(editor.search_bar.results) {
+        reset_search_results(*editor.search_bar);
+        editor.refresh_selection = true;
+        return;
+    }
+
+    remove_additional_cursors(editor);  // this will clear selection
 }
 
 close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, jump_to_selected_result := false) {
