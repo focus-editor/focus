@@ -1736,7 +1736,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     }
 
     // Draw search bar
-    if active_global_widget != .editors then search_bar.active = false;
+    if active_global_widget != .editors && !(active_global_widget == .build_panel && as_build_panel) {
+        search_bar.active = false;
+    }
 
     if search_bar_is_open(editor) {
         using search_bar;
@@ -2024,7 +2026,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     }
 
     // Draw status bar
-    if !as_build_panel && has_status_bar {
+    if has_status_bar {
         status_bar_bg_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, status_bar_bg_color, extra_draw_info = .{is_background = true});
         if #complete buffer_settings.status_bar_position == {
