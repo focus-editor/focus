@@ -22,7 +22,7 @@ tokenize_d :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buf
 
         prev_token.* = token;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -434,8 +434,7 @@ parse_tilde :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     union {
         keyword:        Keyword;

@@ -394,7 +394,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
             append(*b, "}\n");
             return builder_to_string(*b);
         }
-        add_highlight(parser, 0, line.count, .header);
+        add_highlight(parser, 0, line.count, .header1);
 
         if active_section == .style then result.config.offsets.style_section = line_start_offset;
 
@@ -1065,6 +1065,15 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
         for setting : type_info(Settings).members {
             print_to_builder(*b, "    case \"%\";\n", setting.name);
             if setting.type.type == {
+                case .STRING;
+                    // Nothing to parse
+                    code := construct_parse_code(
+                        setting.name,
+                        "val, success := trim(value), true;",
+                        "\"\"",
+                    );
+                    append(*b, code);
+
                 case .BOOL;
                     code := construct_parse_code(
                         setting.name,

@@ -7,7 +7,7 @@ tokenize_yang :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
 
         using tokenizer;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -147,8 +147,7 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

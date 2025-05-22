@@ -380,13 +380,24 @@ refresh_entries :: (clear_input := true) {
         }
         entry.name_highlights = name_highlights;
         entry.path_highlights = path_highlights;
-        // NOTE: there's space left in the sort key in case we need to add more parameters
-        score_part:      u64 = (cast,trunc(u64) score)                              << 22;
-        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 16;
-        length_part:     u64 = (cast,trunc(u64) (400 - buffer_name.count))          <<  8;
-        times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
+
+        // Sort open editors on top
+        // @speed: could become slow if too many open buffers
+        _, most_recent_buffer_index := array_find(most_recent_buffers, buffer_id);
+        if most_recent_buffer_index >= 0 {
+            most_recent_buffer_index = most_recent_buffers.count - most_recent_buffer_index;
+        } else {
+            most_recent_buffer_index = 0;
+        }
+
+        score_part:      u64 = (cast,trunc(u64) score)                              << 32;
+        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 24;
+        length_part:     u64 = (cast,trunc(u64) (400 - buffer_name.count))          << 16;
+        // TODO: put it after score but before other things
+        opened_part:     u64 = (cast,trunc(u64) (most_recent_buffer_index + 1))     <<  0;
+
         if !filter.full_string then length_part = 0;  // don't sort by length when no filtering is applied
-        entry.sort_key = dir_id_part | score_part | length_part | times_open_part;
+        entry.sort_key = dir_id_part | score_part | length_part | opened_part;
 
         if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
@@ -492,6 +503,7 @@ refresh_entries :: (clear_input := true) {
             }
 
         case .search;
+            // When there's text in the filter input, search in all workspace buffers
             for buffer, buffer_id : open_buffers {
                 maybe_add_a_buffer_entry(buffer, buffer_id);
             }

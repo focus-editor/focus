@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
-CURRENT_CONFIG_VERSION :: 18;
+CURRENT_CONFIG_VERSION :: 19;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -87,11 +87,16 @@ refresh_config :: (path: string) {
     old_ignore_list.allocator = temp;
     for config.workspace.ignore array_add(*old_ignore_list, copy_temporary_string(it));
 
-    // Remember old file associations
     old_file_associations: [..] File_Association;
     old_file_associations.allocator = temp;
     for config.workspace.file_associations array_add(*old_file_associations, .{ copy_temporary_string(it.wildcard), it.lang });
 
+    old_comment_highlight_words1 := copy_temporary_string(config.settings.comment_highlight_words1);
+    old_comment_highlight_words2 := copy_temporary_string(config.settings.comment_highlight_words2);
+    old_comment_highlight_words3 := copy_temporary_string(config.settings.comment_highlight_words3);
+    old_comment_highlight_words4 := copy_temporary_string(config.settings.comment_highlight_words4);
+
+    // Load new config
     if platform_path_equals(path, global_config.path) {
         success, changed, there_were_warnings := load_global_config();
         if success && changed && !there_were_warnings {
@@ -175,15 +180,26 @@ refresh_config :: (path: string) {
             if lang != buffer.lang {
                 buffer.lang = lang;
                 recalculate_settings(buffer);
-                retokenize(buffer);
+                buffer.needs_tokenizing = true;
             }
         }
         add_success_message("File associations have been refreshed", dismiss_in_seconds = 3);
     }
 
+    if old_comment_highlight_words1 != config.settings.comment_highlight_words1 ||
+       old_comment_highlight_words2 != config.settings.comment_highlight_words2 ||
+       old_comment_highlight_words3 != config.settings.comment_highlight_words3 ||
+       old_comment_highlight_words4 != config.settings.comment_highlight_words4
+    {
+        for * buffer : open_buffers {
+            buffer.needs_tokenizing = true;
+        }
+    }
+
     // If indentation rules changed, refresh them for all open editors
     for editor : open_editors {
         buffer := *open_buffers[editor.buffer_id];
+
         maybe_detect_and_set_indentation(buffer);
     }
 
@@ -508,8 +524,9 @@ apply_config :: () {
     build_panel_height_anim.target = build_panel_height;
     build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
 
+    process_comment_highlight_words();
+
     // NOTE: this is potentially expensive, and apply_config as it's currently set up could be called 3 times
-    // However, we expect to fix it soon
     for * open_buffers  recalculate_settings(it);
 
     // Must do after the validation
@@ -521,8 +538,42 @@ apply_config :: () {
                                                        //       keep pointers to old keymaps when the config is reloaded
 }
 
+
 old_tab_size := 0;  // used to detect when tab size is changed in the config
 
+
+process_comment_highlight_words :: () {
+    // config.comment_highlights.allocator = focus_allocator;
+    // array_reset_keeping_memory(*config.comment_highlights);
+
+    highlight_words_settings := string.[
+        config.settings.comment_highlight_words1,
+        config.settings.comment_highlight_words2,
+        config.settings.comment_highlight_words3,
+        config.settings.comment_highlight_words4,
+    ];
+    token_types := Token_Type.[
+        .comment_highlight1,
+        .comment_highlight2,
+        .comment_highlight3,
+        .comment_highlight4,
+    ];
+
+    words: [..] Highlight_Word;
+    words.allocator = temp;
+
+    for setting : highlight_words_settings {
+        word_list  := split(setting, ",",, temp);
+        token_type := token_types[it_index];
+        for word_list {
+            word := trim(it);
+            if word then array_add(*words, .{ word, token_type });
+        }
+    }
+
+    free(*config.comment_words_automaton);
+    config.comment_words_automaton = build_aho_corasick_automaton(words);
+}
 
 load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; }) -> Loaded_Font, success: bool {
     if name == "default" {
@@ -573,6 +624,8 @@ Config :: struct {
     style:     Style;
     build:     Build_Config;
     linux:     Linux_Config;
+
+    comment_words_automaton: Aho_Corasick_Automaton;
 }
 
 Style :: struct {
@@ -648,6 +701,10 @@ Settings :: struct {
     status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
     active_pane_border_width                                := 1.0;     @v18
     inactive_pane_dim_overlay_opacity                       := 0.1;     @v18
+    comment_highlight_words1                                := "";      @v19
+    comment_highlight_words2                                := "";      @v19
+    comment_highlight_words3                                := "";      @v19
+    comment_highlight_words4                                := "";      @v19
 
     // TODO
     // load_last_session_on_start:         true
@@ -691,6 +748,7 @@ Settings :: struct {
             case .INTEGER;  type_name = "int";
             case .FLOAT;    type_name = "float";
             case .BOOL;     type_name = "bool";
+            case .STRING;   type_name = "string";
             case .ENUM;     type_name = (cast(*Type_Info_Enum) setting.type).name;
             case;           compiler_report(tprint("Found an overridable setting '%' of an unsupported type", setting.name));
         }

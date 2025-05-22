@@ -1,7 +1,8 @@
 # Main Git Branch
 
 + New features:
-    + ...
+    + TODO: add everything related to the multi-pane support here
+    + It is now possible to specify words which will be highlighted in comments
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
 + Other changes:

@@ -507,6 +507,11 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 16, "scroll_behind_first_line",                           "false" },
     .{ 18, "active_pane_border_width",                           "1.0   # set the width to 0.0 to disable" },
     .{ 18, "inactive_pane_dim_overlay_opacity",                  "0.1   # controls how dim the inactive panes should be" },
+
+    .{ 19, "comment_highlight_words1",                           "TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`" },
+    .{ 19, "comment_highlight_words2",                           "# words to highlight using `code_comment_highlight2`" },
+    .{ 19, "comment_highlight_words3",                           "# words to highlight using `code_comment_highlight3`" },
+    .{ 19, "comment_highlight_words4",                           "# words to highlight using `code_comment_highlight4`" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -540,6 +545,8 @@ RENAMED_COLORS :: Renamed_Color.[
     .{ 4,  "code_string",          "code_string_literal", "" },
 
     .{ 17, "splitter",             "splitter",    "background1" },  // force replace value from background1
+
+    .{ 19, "code_header",          "code_header1", "" },
 ];
 
 
@@ -599,6 +606,11 @@ ADDED_COLORS :: Added_Color.[
     .{ 17, "active_pane_border",               "cursor_inactive",        "19666688" },
 
     .{ 18, "inactive_pane_dim_overlay",        "",                       "050505FF" },
+
+    .{ 19, "code_comment_highlight1",           "code_note",              "E67D74FF" },
+    .{ 19, "code_comment_highlight2",          "code_error",             "FF0000FF" },
+    .{ 19, "code_comment_highlight3",          "code_keyword",           "E0AD82FF" },
+    .{ 19, "code_comment_highlight4",          "code_value"  ,           "D699B5FF" },
 ];
 
 
@@ -1351,6 +1363,10 @@ scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar 
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
 inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
+comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
+comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
+comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
 
 FOCUS_CONFIG
 
@@ -1491,6 +1507,10 @@ scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar 
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
 inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
+comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
+comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
+comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
 
 FOCUS_CONFIG
 
@@ -1657,7 +1677,7 @@ code_builtin_function:                  E0AD82FF
 code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
@@ -1668,6 +1688,10 @@ bracket_highlight:                      FF000026
 indent_guide:                           FF000026
 active_pane_border:                     19666688
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF
 
 FOCUS_CONFIG
 
@@ -1735,7 +1759,7 @@ code_builtin_function:                  E0AD82FF
 code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
@@ -1746,6 +1770,10 @@ bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     AABBCCFF
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF
 
 FOCUS_CONFIG
 
@@ -1849,6 +1877,10 @@ scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar 
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
 inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
+comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
+comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
+comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
 
 [[keymap]]
 # ...
@@ -1901,7 +1933,7 @@ code_builtin_function:                  E0AD82FF
 code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
@@ -1912,6 +1944,10 @@ bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF
 
 FOCUS_CONFIG
 
@@ -2020,7 +2056,7 @@ code_builtin_function:                  E0AD82FF
 code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
@@ -2031,6 +2067,10 @@ bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF
 
 [[keymap]]
 
@@ -2303,7 +2343,7 @@ code_builtin_function:                  E0AD82FF
 code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
@@ -2314,6 +2354,10 @@ bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 active_pane_border:                     19666688
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF
 
 FOCUS_CONFIG
 
@@ -2474,7 +2518,7 @@ code_builtin_function:                  CDAA7DFF
 code_builtin_exception:                 CDAA7DFF
 code_directive:                         B8860BFF
 code_directive_modifier:                B8860BFF
-code_header:                            B8860BFF
+code_header1:                           B8860BFF
 code_header2:                           CDAA7DFF
 code_header3:                           CDAA7DFF
 code_header4:                           CDAA7DFF
@@ -2485,5 +2529,9 @@ bracket_highlight:                      FCEDFC26
 indent_guide:                           FCEDFC26
 active_pane_border:                     40FF4011
 inactive_pane_dim_overlay:              050505FF
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                B8860BFF
+code_comment_highlight4:                6B8E23FF
 
 FOCUS_CONFIG

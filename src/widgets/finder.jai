@@ -471,7 +471,7 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_so
             offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
         }
         if offset < 0 break;
-        if whole_word && !match_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
+        if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
 
         result := *results[num_results];
         result.buffer_id    = buffer_id;

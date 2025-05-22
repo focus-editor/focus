@@ -911,8 +911,7 @@ eat_white_space_no_newline :: (using tokenizer: *Tokenizer) {
 
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

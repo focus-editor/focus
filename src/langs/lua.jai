@@ -16,7 +16,7 @@ tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         if token.type == .identifier && (prev.type == .keyword && prev.keyword == .kw_function) {
             memset(tokens.data + token.start, xx Token_Type.function, token.len);
         } else {
-            memset(tokens.data + token.start, xx token.type, token.len);
+            highlight_token(buffer, token);
         }
 
         tokenizer.last_token = token;
@@ -420,8 +420,7 @@ Lua_Tokenizer :: struct {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

@@ -7,7 +7,7 @@ tokenize_json :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -169,8 +169,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     union {
         keyword:            Keyword;

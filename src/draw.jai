@@ -2448,7 +2448,7 @@ draw_open_file_dialog :: () {
 
     if #complete mode == {
         case .search;
-            label := ifx finder.initted then " Search files by name" else " Scanning the workspace. Please wait...";
+            label := ifx finder.initted then " Search files in workspace" else " Scanning the workspace. Please wait...";
             draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
             if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
 

@@ -1,4 +1,4 @@
-[18]  # Version number. Do not delete.
+[19]  # Version number. Do not delete.
       # Based on VSCode Dark theme
 
 [colors]
@@ -96,3 +96,9 @@ active_pane_border:                     A0A0A0FF
 
 # Added after migration to version [18]
 inactive_pane_dim_overlay:              050505FF
+
+# Added after migration to version [19]
+code_comment_highlight1:                6A9955FF
+code_comment_highlight2:                F48771FF
+code_comment_highlight3:                569CD6FF
+code_comment_highlight4:                B5CEA8FF

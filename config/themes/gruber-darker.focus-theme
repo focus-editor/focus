@@ -1,4 +1,4 @@
-[18]  # Version number. Do not delete.
+[19]  # Version number. Do not delete.
 
 # Based on the gruber darker theme by Jason Blevins
 # https://github.com/rexim/gruber-darker-theme
@@ -98,3 +98,9 @@ active_pane_border:                     FFDD3311
 
 # Added after migration to version [18]
 inactive_pane_dim_overlay:              050505FF
+
+# Added after migration to version [19]
+code_comment_highlight1:                E0AD82FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                FFDD33FF
+code_comment_highlight4:                E4E4EFFF

@@ -18,7 +18,7 @@ tokenize_swift :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
 
         last_token = token;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return tokenizer.regions;
@@ -524,8 +524,7 @@ Swift_Tokenizer :: struct {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     union {
         keyword:     Keyword;

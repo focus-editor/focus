@@ -5,7 +5,7 @@ tokenize_uxntal :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [
         token := get_next_token(*tokenizer);
         if token.type == .eof then break;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -107,8 +107,7 @@ OPCODES :: string.[
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     union {
         punctuation: Punctuation;

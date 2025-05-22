@@ -18,10 +18,6 @@ ringbuffer_pop :: (using ring_buffer: *Ring_Buffer($T, $Size)) -> success: bool,
     return true, item;
 }
 
-ringbuffer_get_pointer :: (using ring_buffer: *Ring_Buffer($T, $Size), index: s64) -> *T {
-
-}
-
 ringbuffer_peek_pointer :: (using ring_buffer: *Ring_Buffer($T, $Size)) -> *T {
     if total <= 0 || count <= 0 return null;
 

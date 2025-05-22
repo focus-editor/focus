@@ -1936,7 +1936,7 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
             offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
         }
         if offset < 0 break;
-        if whole_word && !match_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
+        if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
 
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;

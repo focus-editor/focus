@@ -88,7 +88,7 @@ tokenize_odin :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         tokenizer.last_tokens[1] = tokenizer.last_tokens[0];
         tokenizer.last_tokens[0] = token;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -714,8 +714,7 @@ Odin_Tokenizer :: struct {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

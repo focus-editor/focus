@@ -1,4 +1,4 @@
-[18]  # Version number. Do not delete.
+[19]  # Version number. Do not delete.
 
 [colors]
 background0:                            1A1B26FF
@@ -97,3 +97,9 @@ active_pane_border:                     8A91B1FF
 
 # Added after migration to version [18]
 inactive_pane_dim_overlay:              050505FF
+
+# Added after migration to version [19]
+code_comment_highlight1:                89DDFFFF
+code_comment_highlight2:                F7768EFF
+code_comment_highlight3:                BB9AF7FF
+code_comment_highlight4:                FF9E64FF

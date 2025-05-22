@@ -92,6 +92,11 @@ scrollbar_fade_out_delay_seconds:                   1.0   # how long the scrollb
 active_pane_border_width:                           1.0   # set the width to 0.0 to disable
 inactive_pane_dim_overlay_opacity:                  0.1   # controls how dim the inactive panes should be
 
+comment_highlight_words1:                           TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
+comment_highlight_words2:                           # words to highlight using `code_comment_highlight2`
+comment_highlight_words3:                           # words to highlight using `code_comment_highlight3`
+comment_highlight_words4:                           # words to highlight using `code_comment_highlight4`
+
 # NOTE: some settings can be specified for a subset of files, based on their language or a wildcard,
 # for example:
 # [file: <wildcard1>, <wildcard2>, ...]
@@ -504,9 +509,14 @@ code_builtin_exception:                 E0AD82FF
 code_directive:                         E67D74FF
 code_directive_modifier:                E67D74FF
 
-code_header:                            E67D74FF
+code_header1:                           E67D74FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+
+code_comment_highlight1:                E67D74FF
+code_comment_highlight2:                FF0000FF
+code_comment_highlight3:                E0AD82FF
+code_comment_highlight4:                D699B5FF

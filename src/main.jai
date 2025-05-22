@@ -990,7 +990,6 @@ cpu_info: Cpu_X86;
 focus_allocator: Allocator;
 
 
-#load "array.jai";
 #load "actions.jai";
 #load "layout.jai";
 #load "editors.jai";
@@ -999,7 +998,6 @@ focus_allocator: Allocator;
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
-#load "utils.jai";
 #load "files.jai";
 #load "workspace.jai";
 #load "config.jai";
@@ -1013,7 +1011,12 @@ focus_allocator: Allocator;
 #load "user_messages.jai";
 #load "deferred_actions.jai";
 #load "history.jai";
-#load "ring_buffer.jai";
+
+#load "utils/array.jai";
+#load "utils/aho_corasick.jai";
+#load "utils/fifo_queue.jai";
+#load "utils/ring_buffer.jai";
+#load "utils/utils.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";

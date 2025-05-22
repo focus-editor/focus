@@ -28,7 +28,7 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
         tokenizer.last_tokens[1] = token;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -676,8 +676,7 @@ Jai_Tokenizer :: struct {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type = .invalid;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

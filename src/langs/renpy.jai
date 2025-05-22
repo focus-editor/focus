@@ -18,7 +18,7 @@ tokenize_renpy :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
 
         last_token = token;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -375,8 +375,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #c
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 
     // Additional info to distinguish between keywords/punctuation
     union {

@@ -8,7 +8,7 @@ tokenize_markdown ::  (using buffer: *Buffer, start_offset := -1, count := -1) -
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -358,8 +358,7 @@ Markdown_Tokenizer :: struct {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type = .invalid;
+    using #as base: Base_Token;
 }
 
 Tag :: struct {

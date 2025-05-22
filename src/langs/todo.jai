@@ -5,7 +5,7 @@ tokenize_todo :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        memset(tokens.data + token.start, xx token.type, token.len);
+        highlight_token(buffer, token);
     }
 
     return .[];
@@ -61,7 +61,7 @@ parse_current_task_line :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_header :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .header;
+    token.type = .header1;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -75,6 +75,5 @@ parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 Token :: struct {
-    start, len: s32;
-    type: Token_Type;
+    using #as base: Base_Token;
 }

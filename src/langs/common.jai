@@ -255,6 +255,22 @@ parse_number_c_like :: (using tokenizer: *Tokenizer, token: *$Token) {
     }
 }
 
+highlight_token :: (using buffer: *Buffer, token: Base_Token) {
+    memset(tokens.data + token.start, xx token.type, token.len);
+
+    // Maybe highlight words in comments
+    {
+        if token.type != .comment && token.type != .multiline_comment  return;
+
+        comment_str := cast(string) to_view(buffer.bytes, token.start, token.len);
+
+        output_words := find_whole_words(*config.comment_words_automaton, comment_str);
+        for output_words {
+            memset(buffer.tokens.data + token.start + it.offset, cast(u8) it.token_type, it.len);
+        }
+    }
+}
+
 get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
     lowercase_name := to_lower_copy(lang_name,, temp);
     if lowercase_name == {
@@ -313,6 +329,11 @@ Tokenizer :: struct {
     had_white_space_to_skip := false;  // to indicate whether any white space was on the left of the current token
 }
 
+Base_Token :: struct {
+    start, len: s32;
+    type: Token_Type = .invalid;
+}
+
 Code_Highlight :: struct {
     offset: s32;
     count: s32;
@@ -341,6 +362,11 @@ Token_Type :: enum u8 {
     comment;
     multiline_comment;
 
+    comment_highlight1;
+    comment_highlight2;
+    comment_highlight3;
+    comment_highlight4;
+
     operation;
     punctuation;
 
@@ -360,7 +386,7 @@ Token_Type :: enum u8 {
     directive;
     directive_modifier;
 
-    header;
+    header1;
     header2;
     header3;
     header4;

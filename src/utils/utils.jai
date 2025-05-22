@@ -264,7 +264,7 @@ contains_uppercase_ascii :: (s: string) -> bool {
     return false;
 }
 
-match_whole_word :: (s: string, offset: int, count: int) -> bool {
+is_whole_word :: (s: string, offset: int, count: int) -> bool {
     word_ends_on_the_left  := offset <= 0               || !is_word_char(s[offset - 1])     || !is_word_char(s[offset]);
     word_ends_on_the_right := offset + count >= s.count || !is_word_char(s[offset + count]) || !is_word_char(s[offset + count - 1]);
 
