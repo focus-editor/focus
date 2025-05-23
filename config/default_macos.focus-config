@@ -56,6 +56,7 @@ hide_mouse_when_typing:                             false
 draw_indent_guides:                                 false
 auto_surround_with_brackets_and_quotes:             false
 auto_close_brackets:                                false
+prefer_system_file_dialogs:                         false
 persist_local_search_results:                       false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
 load_most_recent_project_on_start:                  true
 projects_sorting_order:                             most_recent_first
