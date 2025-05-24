@@ -367,6 +367,8 @@ set_newline_is_whitespace :: (it_is: bool) {
     char_type_table[#char "\n"] = ifx it_is then .space else .other;
 }
 
+#scope_file
+
 #insert -> string {
     builder : String_Builder;
     append(*builder, "char_type_table := Char_Type.[");
@@ -374,6 +376,8 @@ set_newline_is_whitespace :: (it_is: bool) {
     append(*builder, "];");
     return builder_to_string(*builder);
 }
+
+#scope_export
 
 scan_through_similar_chars_on_the_left :: (bytes: [] u8, line_start_offset: s32, offset: s32, char_type := Char_Type.none, skip_one_space := true) -> offset: s32, moved_through: Char_Type  {
     if !bytes  return 0, .none;
