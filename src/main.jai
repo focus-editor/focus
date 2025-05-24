@@ -171,6 +171,8 @@ main :: () {
 
     if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
 
+    repetition_tester();  // used for development. No-op in production
+
     // Requires the session to be created and the configs to be loaded
     start_workspace_scan();
 
@@ -995,7 +997,6 @@ focus_allocator: Allocator;
 #load "editors.jai";
 #load "buffer.jai";
 #load "build_system.jai";
-#load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
 #load "files.jai";
@@ -1014,9 +1015,11 @@ focus_allocator: Allocator;
 
 #load "utils/array.jai";
 #load "utils/aho_corasick.jai";
+#load "utils/char.jai";
 #load "utils/fifo_queue.jai";
 #load "utils/ring_buffer.jai";
 #load "utils/utils.jai";
+#load "utils/unicode.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";
@@ -1064,6 +1067,8 @@ focus_allocator: Allocator;
 #load "langs/batch.jai";
 #load "langs/swift.jai";
 #load "langs/ini.jai";
+
+#load "repetition_tester.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
