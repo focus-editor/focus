@@ -70,7 +70,7 @@ eat_until_newline :: (using tokenizer: *Tokenizer) {
 
 eat_white_space :: (using tokenizer: *Tokenizer) {
     t_old := t;
-    while t < max_t && is_white_space(t.*) {
+    while t < max_t && ascii_is_space(t.*) {
         t += 1;
     }
     had_white_space_to_skip = t != t_old;
@@ -91,12 +91,14 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
     result : u32 = ---;
 
     // Should be in register, not immediate
-    white_spaces : u64 = (#char " "  <<  0)  // space.
+    WHITE_SPACES : u64 : (#char " "  <<  0)  // space.
                        | (#char "\t" <<  8)  // horizontal tab.
                        | (#char "\n" << 16)  // line feed.
                        | (#char "\r" << 24)  // carriage return.
                        | (0x0C       << 32)  // form feed.    "\f" is not supported in jai at the time of writing
                        | (0x0B       << 40); // vertical tab. "\v" is not supported in jai at the time of writing
+
+    white_spaces := WHITE_SPACES;
 
     #asm {
         chars  : vec === 0;
