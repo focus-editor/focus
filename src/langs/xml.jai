@@ -77,7 +77,8 @@ get_xml_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> 
     tokenizer.buf       = to_string(bytes);
     tokenizer.max_t     = bytes.data + bytes.count;
     tokenizer.t         = bytes.data;
-    tokenizer.html_mode = buffer.lang == .Html;
+    tokenizer.html_mode = buffer.lang == .Html || buffer.lang == .Vue;
+    tokenizer.vue_mode  = buffer.lang == .Vue;
 
     if start_offset >= 0 {
         start_offset = clamp(start_offset, 0, bytes.count - 1);
@@ -391,6 +392,12 @@ parse_html_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token
         return;
     }
 
+    if vue_mode {
+        attribute_value_is_js   = t.* == #char ":";
+        attribute_value_is_js ||= t.* == #char "@";
+        attribute_value_is_js ||= t + 1 < max_t && t.* == #char "v" && (t + 1).* == #char "-";
+    }
+
     t += 1;
 
     while t < max_t {
@@ -412,6 +419,29 @@ parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         token.type = .attribute_string_value;
         t += 1;
         eat_until(tokenizer, char);
+
+        if attribute_value_is_js {
+            start := last_token.start + 2; // Skip the leading "
+            end   := cast(s32) (t - buf.data);
+
+            t_start := buf.data + start;
+            count   := ifx t >= max_t then t - t_start - 1 else t - t_start;
+            script  := string.{ data = t_start, count = count };
+
+            found, first_line := split_from_left(script, "\n");
+            if found && is_all_whitespace(first_line)  start += xx (first_line.count + 1); // + 1 for the newline itself
+
+            if t < max_t {
+                found, _, last_line := split_from_right(script, "\n");
+                if found && is_all_whitespace(last_line)  end -= xx last_line.count;
+            }
+
+            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
+
+            // If we don't reset it here we highlight both abc in :is="abc" "abc". Which we don't want.
+            attribute_value_is_js = false;
+        }
+
         t += 1;
     } else if html_mode && is_valid_attribute_character(char) {
         token.type = .attribute_value;
@@ -569,6 +599,8 @@ Xml_Tokenizer :: struct {
     in_dtd_internal_subset: bool;
 
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
+    vue_mode: bool;
+    attribute_value_is_js: bool;
 }
 
 Xml_Tokenizer_State :: enum u8 {

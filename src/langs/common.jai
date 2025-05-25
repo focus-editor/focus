@@ -311,6 +311,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "bash";         return .Shell,      true;
         case "zsh";          return .Shell,      true;
         case "ini";          return .Ini,        true;
+        case "vue";          return .Vue,        true;
 
         // case "focus_config"; return .Focus_Config, true;  // disabled for now
         // case "focus_theme";  return .Focus_Theme,  true;

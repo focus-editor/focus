@@ -303,6 +303,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
         case .Swift;             return SAMPLE_Swift;
         case .Shell;             return SAMPLE_Shell;
         case .Ini;               return SAMPLE_Ini;
+        case .Vue;               return SAMPLE_Vue;
 
         case .Plain_Text;        #through;
         case .Focus_Config;      #through;
