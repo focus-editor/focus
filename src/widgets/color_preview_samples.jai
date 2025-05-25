@@ -1251,3 +1251,23 @@ lines"
 StillOk = true
 
 LANG_INI
+
+SAMPLE_Vue :: #string LANG_VUE
+<script setup lang="ts">
+import Menu from './Menu.vue';
+
+</script>
+
+<template>
+    <Menu />
+
+    <RouterView v-slot="{ Component }">
+        <div v-if="Component">
+            <component :is="Component" />
+        </div>
+        <div v-else>
+            <div>Else</div>
+        </div>
+    </RouterView>
+</template>
+LANG_VUE
