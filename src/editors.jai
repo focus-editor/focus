@@ -4032,14 +4032,14 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
         if !has_selection(cursor)  continue;
 
         selection := get_selection(cursor);
-        s := get_selected_string(cursor, buffer);
+        current_text := get_selected_string(cursor, buffer);
 
         if mode == .cycle {
             found_lower := false;
             found_upper := false;
-            for 0 .. s.count - 1 {
-                if      is_lower(s[it])  found_lower = true;
-                else if is_upper(s[it])  found_upper = true;
+            for 0 .. current_text.count - 1 {
+                if      is_lower(current_text[it])  found_lower = true;
+                else if is_upper(current_text[it])  found_upper = true;
 
                 if found_lower && found_upper  break;
             }
@@ -4049,27 +4049,28 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
             else                           continue;
         }
 
+        new_text := copy_temporary_string(current_text);
         if mode == {
             case .upper;
-                for 0 .. s.count - 1 {
-                    s[it] = to_upper(s[it]);
+                for 0 .. new_text.count - 1 {
+                    new_text[it] = to_upper(new_text[it]);
                 }
 
             case .lower;
-                for 0 .. s.count - 1 {
-                    s[it] = to_lower(s[it]);
+                for 0 .. new_text.count - 1 {
+                    new_text[it] = to_lower(new_text[it]);
                 }
 
             case .caps;
                 caps_next := true;
-                for 0 .. s.count - 1 {
-                    if is_alpha(s[it]) {
+                for 0 .. new_text.count - 1 {
+                    if is_alpha(new_text[it]) {
                         if caps_next {
                             caps_next = false;
-                            s[it] = to_upper(s[it]);
+                            new_text[it] = to_upper(new_text[it]);
                         }
                         else {
-                            s[it] = to_lower(s[it]);
+                            new_text[it] = to_lower(new_text[it]);
                         }
                     }
                     else {
@@ -4078,7 +4079,7 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
                 }
         }
 
-        replace_range(buffer, .{selection.start, selection.end}, s);
+        replace_range(buffer, .{selection.start, selection.end}, new_text);
     }
 }
 
