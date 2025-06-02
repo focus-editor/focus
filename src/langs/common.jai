@@ -68,9 +68,12 @@ eat_until_newline :: (using tokenizer: *Tokenizer) {
     }
 }
 
-eat_white_space :: (using tokenizer: *Tokenizer) {
+eat_white_space :: (using tokenizer: *Tokenizer, $only_until_newline := false) {
     t_old := t;
     while t < max_t && ascii_is_space(t.*) {
+        #if only_until_newline {
+            if t.* == #char "\n" break;
+        }
         t += 1;
     }
     had_white_space_to_skip = t != t_old;
