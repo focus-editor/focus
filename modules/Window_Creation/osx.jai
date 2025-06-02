@@ -23,35 +23,57 @@ init_mac_app :: () {
     #if #run macos_create_app_delegate_exists() { // :DecoupleWindowCreationAndInput:
         dg := context._macos_create_app_delegate();
         NSApplication.setDelegate(NSApp, dg);
+        NSApplication.setServicesProvider(NSApp, dg);
     }
 
+    // Create main menu
     menu_bar := objc_init(objc_alloc(NSMenu));
     autorelease(menu_bar);
     NSApp.setMainMenu(NSApp, menu_bar);
 
     S :: NSString.getTempString;
 
+    // Apple menu
     app_menu_item := menu_bar.addItemWithTitle(menu_bar, S(""), null, S(""));
     autorelease(app_menu_item);
 
     app_menu := objc_init(objc_alloc(NSMenu));
     autorelease(app_menu);
 
-    // @TODO we should probably override toggleFullScreen: in NSApplication in order to also set presentation options
-    // like we do in toggle_fullscreen
+    // Apple menu items
+    // app_menu.addItem(app_menu, services_menu_item);
+    app_menu.addItem(app_menu, NSMenuItem.separatorItem());
+    
     fullscreen_item := app_menu.addItemWithTitle(app_menu, S("Enter Full Screen"), selector("toggleFullScreen:"), S("f"));
-
-    // Change keyboard shortcut for fullscreen to the standard Ctrl-Cmd-F (instead of the default Cmd-F)
-    new_mask := NSEventModifierFlagControl | NSEventModifierFlagCommand;
-    NSMenuItem.setKeyEquivalentModifierMask(fullscreen_item, new_mask);
-
-    app_menu.addItemWithTitle(app_menu, S(tprint("Quit")), selector("terminate:"), S("q"));
-
+    NSMenuItem.setKeyEquivalentModifierMask(fullscreen_item, NSEventModifierFlagControl | NSEventModifierFlagCommand);
+    app_menu.addItemWithTitle(app_menu, S("Quit Focus"), selector("terminate:"), S("q"));
+    
     app_menu_item.setSubmenu(app_menu_item, app_menu);
 
+    // Window menu
+    window_menu_item := menu_bar.addItemWithTitle(menu_bar, S(""), null, S(""));
+    autorelease(window_menu_item);
+    window_menu := objc_init(objc_alloc(NSMenu));
+    autorelease(window_menu);
+    window_menu.setTitle(window_menu, S("Window"));
+
+    // Window menu items
+    window_menu.addItemWithTitle(window_menu, S("Minimize"), selector("miniaturize:"), S("m"));
+    window_menu.addItemWithTitle(window_menu, S("Hide"), selector("hide:"), S("h"));
+    
+    window_menu_item.setSubmenu(window_menu_item, window_menu);
+    
+    // Services menu
+    services_menu_item := app_menu.addItemWithTitle(menu_bar, S(""), null, S(""));
+    autorelease(services_menu_item);
+    services_menu := objc_init(objc_alloc(NSMenu));
+    autorelease(services_menu);
+    services_menu.setTitle(services_menu, S("Services"));
+    services_menu_item.setSubmenu(services_menu_item, services_menu);
+    NSApplication.setServicesMenu(NSApp, services_menu);
+    
     NSApplication.setAppleMenu(NSApp, app_menu);
     NSApplication.finishLaunching(NSApp);
-
     application_initialized = true;
 }
 

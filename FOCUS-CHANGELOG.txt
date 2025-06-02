@@ -11,6 +11,7 @@
     + New builtin themes:
         + Catppuccin, Rosé Pine, Jellybeans, Kanagawa, VSCode Dark (thanks @daolgierd)
         + Redshift (thanks @MusaMahmood)
+    + Mac: Hide command and Services menu added
 
 
 # RELEASES ==================================================================
