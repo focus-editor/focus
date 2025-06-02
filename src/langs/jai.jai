@@ -17,23 +17,13 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         if ascii_is_alpha(char) || char == #char "_" {
             parse_identifier_keyword_or_function(*tokenizer, *token, buffer);
         } else if ascii_is_digit(char) {
-            // // Handle number literals that don't look like they are being finished properly
-            // // For example, 0b10002 will highlight 0b1000 as one number and 2 as another number,
-            // // but when highlit in editor it looks like one number literal rather than two
-            // // The solution here is to not highlight more numbers if there are many number tokens in a row
-            // last_char := (t - 1).*;
-            // if tokenizer.last_tokens[1].type != .number || (!ascii_is_digit(last_char) && last_char != #char "_") {
-            //     parse_number(*tokenizer, *token);
-            // }
-            // else {
-            //     parse_identifier_keyword_or_function(*tokenizer, *token);
-            // }
-
-            parse_number(*tokenizer, *token);
-
-            if t >= max_t then t = max_t;
-            token.len = cast(s32) (t - start_t);
-            memset(tokens.data + token.start, xx token.type, token.len);
+            t += 1;
+            parse_number(*tokenizer, *token, buffer);
+            highlight(*token, buffer);
+        } else if char == #char "#" {
+            t += 1;
+            parse_directive(*tokenizer, *token);
+            highlight(*token, buffer);
         } else {
             t += 1;
             if char == {
@@ -62,45 +52,19 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
                 case #char "`";  token.type = .operation;   token.operation   = .backtick;
 
                 case #char ":";  parse_colon             (*tokenizer, *token);
-                case #char "#";  parse_directive         (*tokenizer, *token);  // TODO: set_token_len is already done
                 case #char ".";  parse_period            (*tokenizer, *token);
                 case #char "@";  parse_note              (*tokenizer, *token);
                 case #char "/";  parse_slash_or_comment  (*tokenizer, *token);
                 case #char "\""; parse_string_literal    (*tokenizer, *token);
                 case #char "-";  parse_minus             (*tokenizer, *token);
 
-                case;            token.type = .invalid; t += 1;
+                case;            token.type = .invalid;
             }
 
-            if t >= max_t then t = max_t;
-            token.len = cast(s32) (t - start_t);
-            highlight_token(buffer, token);
+            if t >= max_t then t = max_t;  // TODO: do we need this?
+            set_token_len(*tokenizer, *token);
+            highlight_token(buffer, token);  // TODO: use highlight()
         }
-
-        // if t >= max_t then t = max_t;
-        // token.len = cast(s32) (t - start_t);
-
-        // highlight(buffer, token);
-
-        // token := get_next_token(*tokenizer);
-        // if token.type == .eof break;
-
-        // // Maybe retroactively highlight a function
-        // before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
-        // if token.type == .punctuation && token.punctuation == .l_paren {
-        //     if prev.type == .identifier {
-        //         // Handle "func("
-        //         memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
-        //     } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-        //         // Handle "func :: ("
-        //         memset(tokens.data + before_prev.start, xx Token_Type.function, before_prev.len);
-        //     }
-        // } else if (token.type == .keyword && token.keyword == .kw_inline) || (token.type == .directive && token.directive == .directive_bake_arguments) {
-        //     // Handle "func :: inline" and "func :: #bake_arguments"
-        //     if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-        //         memset(tokens.data + before_prev.start, xx Token_Type.function, before_prev.len);
-        //     }
-        // }
 
         // TODO: if we need last 2 tokens, do it inline in the specified places
         // // Remember last 2 tokens
@@ -416,11 +380,13 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
     // if reset_herestring_state then maybe_herestring = false;
 }
 
-parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
+parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
     token.type = .number;
 
-    t += 1;
-    if t >= max_t return;
+    if t >= max_t {
+        set_token_len(tokenizer, token);
+        return;
+    }
 
     is_decimal_variant :: inline (c: u8) -> bool {
         return ascii_is_digit(c) || c == #char "." || c == #char "-" || c == #char "e" || c == #char "E";
@@ -433,24 +399,22 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         while t < max_t && (is_decimal_variant(t.*) || t.* == #char "_") {
             if t.* == #char "." {
                 // Handle 0..1 (gets interpreted as a float-period-int rather than int-rangeop-int)
-                if (t + 1) < max_t && (t + 1).* == #char "." {
-                    break;
-                }
+                if (t + 1) < max_t && (t + 1).* == #char "."  break;
 
                 // else handle float decimal
-                if seen_decimal_point then break;
+                if seen_decimal_point  break;
                 seen_decimal_point = true;
             }
             else if t.* == #char "e" || t.* == #char "E" {
                 // Scientific notation (3.5e2, 1.0e-34)
                 // Only works if there is a decimal point
-                if scientific_notation || !seen_decimal_point then break;
+                if scientific_notation || !seen_decimal_point  break;
                 scientific_notation = true;
             }
             else if t.* == #char "-" {
                 // Handle negative exponent in scientific notation (1.0e-34)
-                if !scientific_notation then break;
-                if (t - 1).* != #char "e" && (t - 1).* != #char "E" then break;
+                if !scientific_notation  break;
+                if (t - 1).* != #char "e" && (t - 1).* != #char "E"  break;
             }
 
             t += 1;
@@ -463,7 +427,21 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         // Binary
         t += 1;
         while t < max_t && (t.* == #char "1" || t.* == #char "0" || t.* == #char "_") t += 1;
+
+        // Handle the case where a binary number is immediately followed by a decimal number:
+        // e.g. 0b100101879 - we don't want to highlight everything as one number
+        if t < max_t && ascii_is_digit(t.*) {
+            set_token_len(tokenizer, token);
+            next_token := start_new_token(tokenizer);
+            next_token.type = .invalid;
+            while t < max_t && (ascii_is_digit(t.*) || t.* == #char "_")  t += 1;
+            set_token_len(tokenizer, *next_token);
+            highlight(*next_token, buffer);
+            return;
+        }
     }
+
+    set_token_len(tokenizer, token);
 }
 
 parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
@@ -504,9 +482,10 @@ parse_minus :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     if t >= max_t return;
 
-    if tokenizer.last_tokens[1].type != .number && ascii_is_digit(t.*) {
-        parse_number(tokenizer, token);
-    }
+    // TODO:
+    // if tokenizer.last_tokens[1].type != .number && ascii_is_digit(t.*) {
+    //     parse_number(tokenizer, token);
+    // }
 }
 
 parse_colon :: (using tokenizer: *Jai_Tokenizer, token: *Token) {

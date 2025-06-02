@@ -61,7 +61,10 @@ repetition_tester :: () {
     min_elapsed := FLOAT64_MAX;
     max_elapsed : float64 = 0.0;
 
-    for 0 .. 999 {
+    limit := 999;
+    #if DEBUG { limit = 9; }
+
+    for 0 .. limit {
         now := seconds_since_init();
 
         tokenize_jai(buffer);
