@@ -119,6 +119,18 @@ NSApplication :: struct {
         func :: #type (*void, Selector, NSUInteger) #c_call;
         (cast(func) objc_msgSend)(self, _sel.replyToOpenOrPrint_, reply);
     }
+    
+    // Added for Focus
+    setServicesProvider :: (self: *NSApplication, dg: id) #no_context {
+        func :: #type (*void, Selector, id) -> void #c_call;
+        (cast(func) objc_msgSend)(self, _sel.setServicesProvider_, dg);
+    }
+
+    // Added for Focus
+    setServicesMenu :: (self: *NSApplication, menu: *NSMenu) #no_context {
+        func :: #type (*void, Selector, *NSMenu) -> void #c_call;
+        (cast(func) objc_msgSend)(self, _sel.setServicesMenu_, menu);
+    }
 }
 
 
@@ -845,10 +857,27 @@ NSMenu :: struct {
         func = xx objc_msgSend;
         return func(self, _sel.addItemWithTitle_action_keyEquivalent_, title, action, keyEquivalent);
     }
+    
+    // Added for Focus
+    setTitle :: (self: *NSMenu, title: *NSString) -> id {
+        func :: #type (*void, Selector, *NSString) -> id #c_call;
+        return (cast(func) objc_msgSend)(self, _sel.setTitle_, title);
+    }
+    
+    // helper functions. Added for Focus
+    setTitle :: (self: *NSMenu, title: string) -> id {
+        nsstring := NSString.initWithString(objc_alloc(NSString), title);
+        defer release(nsstring);
+        return setTitle(self, nsstring);
+    }
 }
 
 NSMenuItem :: struct {
     using #as super: NSObject;
+
+    separatorItem :: () -> *NSMenuItem {
+        return xx objc_msgSend_typed(class(NSMenuItem), _sel.separatorItem);
+    }
 
     initWithTitle :: (self: *NSMenuItem, title: *NSString, action: Selector, keyEquivalent: *NSString) -> *NSMenuItem {
         func :: #type (*void, Selector, *NSString, Selector, *NSString) -> *NSMenuItem #c_call;
@@ -1562,6 +1591,9 @@ _sel: struct #type_info_no_size_complaint {
     screen: Selector;
     postEvent_atStart_: Selector;
     otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_: Selector;
+    separatorItem: Selector;
+    setServicesProvider_: Selector;
+    setServicesMenu_: Selector;
 }
 
 #import "Objective_C";
