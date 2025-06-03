@@ -566,6 +566,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Swift;        return tokenize_swift_for_indentation(buffer);
         case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
         case .Html;         return tokenize_xml_for_indentation(buffer);
+        case .Vue;          return tokenize_xml_for_indentation(buffer);
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
@@ -1617,6 +1618,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Shell;                return tokenize_shell;
         case .Html;                 return tokenize_xml;
         case .Xml;                  return tokenize_xml;
+        case .Vue;                  return tokenize_xml;
         case .Todo;                 return tokenize_todo;
         case .Yang;                 return tokenize_yang;
         case .Zig;                  return tokenize_zig;
@@ -1867,6 +1869,7 @@ Buffer :: struct {
         Rust;
         Xml;
         Html;
+        Vue;
         Todo;
         Yang;
         Zig;

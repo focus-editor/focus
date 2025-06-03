@@ -2176,6 +2176,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "html";            lang = .Html;
         case "htm";             lang = .Html;
         case "xhtml";           lang = .Html;
+        case "vue";             lang = .Vue;
         case "css";             lang = .Css;
         case "scss";            lang = .Css;
 
@@ -4269,6 +4270,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Css;      #through;
         case .Xml;      #through;
         case .Html;     #through;
+        case .Vue;      #through;
         case .Uxntal;   #through;
         case .Markdown;
             assert(!is_fallback, "Infinite recursion");
@@ -4478,6 +4480,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
             comment_end   = "]]";
 
         case .Xml;  #through;
+        case .Vue;  #through;
         case .Html;
             comment_start = "<!--";
             comment_end   = "-->";
