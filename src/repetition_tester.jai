@@ -53,31 +53,31 @@
 
 
 repetition_tester :: () {
-    buffer_id := find_or_create_buffer("W:/focus_test_debug1.1/src/editors.jai");
-    assert(buffer_id >= 0);
-    print("Opened buffer %\n", buffer_id);
-    buffer := *open_buffers[buffer_id];
+    // buffer_id := find_or_create_buffer("W:/focus_test_debug1.1/src/editors.jai");
+    // assert(buffer_id >= 0);
+    // print("Opened buffer %\n", buffer_id);
+    // buffer := *open_buffers[buffer_id];
 
-    min_elapsed := FLOAT64_MAX;
-    max_elapsed : float64 = 0.0;
+    // min_elapsed := FLOAT64_MAX;
+    // max_elapsed : float64 = 0.0;
 
-    limit := 999;
-    #if DEBUG { limit = 9; }
+    // limit := 999;
+    // #if DEBUG { limit = 9; }
 
-    for 0 .. limit {
-        now := seconds_since_init();
+    // for 0 .. limit {
+    //     now := seconds_since_init();
 
-        tokenize_jai(buffer);
+    //     tokenize_jai(buffer);
 
-        elapsed := seconds_since_init() - now;
-        if elapsed < min_elapsed then min_elapsed = elapsed;
-        if elapsed > max_elapsed then max_elapsed = elapsed;
+    //     elapsed := seconds_since_init() - now;
+    //     if elapsed < min_elapsed then min_elapsed = elapsed;
+    //     if elapsed > max_elapsed then max_elapsed = elapsed;
 
-        reset_temporary_storage();
-    }
+    //     reset_temporary_storage();
+    // }
 
-    print("MIN: %ms\n", min_elapsed * 1000);
-    print("MAX: %ms\n", max_elapsed * 1000);
+    // print("MIN: %ms\n", min_elapsed * 1000);
+    // print("MAX: %ms\n", max_elapsed * 1000);
 }
 
 // ====== Before changes =======

@@ -19,11 +19,21 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         } else if ascii_is_digit(char) {
             t += 1;
             parse_number(*tokenizer, *token, buffer);
-            highlight(*token, buffer);
+            highlight(*tokenizer, *token, buffer);
         } else if char == #char "#" {
             t += 1;
-            parse_directive(*tokenizer, *token);
-            highlight(*token, buffer);
+            parse_directive(*tokenizer, *token, buffer);
+            highlight(*tokenizer, *token, buffer);
+        } else if char == #char "/" {
+            t += 1;
+            parse_slash_or_comment(*tokenizer, *token);
+            highlight(*tokenizer, *token, buffer);
+            if token.type == .comment || token.type == .multiline_comment {
+                // Highlight words in comments
+                comment_str  := cast(string) to_view(buffer.bytes, token.start, token.len);
+                output_words := find_whole_words(*config.comment_words_automaton, comment_str);
+                for output_words  memset(buffer.tokens.data + token.start + it.offset, cast(u8) it.token_type, it.len);
+            }
         } else {
             t += 1;
             if char == {
@@ -50,28 +60,20 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
                 case #char "^";  token.type = .operation;   token.operation   = .caret;
                 case #char "~";  token.type = .operation;   token.operation   = .tilde;
                 case #char "`";  token.type = .operation;   token.operation   = .backtick;
+                case #char "-";  token.type = .operation;   token.operation   = .minus;
 
-                case #char ":";  parse_colon             (*tokenizer, *token);
-                case #char ".";  parse_period            (*tokenizer, *token);
-                case #char "@";  parse_note              (*tokenizer, *token);
-                case #char "/";  parse_slash_or_comment  (*tokenizer, *token);
-                case #char "\""; parse_string_literal    (*tokenizer, *token);
-                case #char "-";  parse_minus             (*tokenizer, *token);
+                case #char ".";  parse_period_or_enum_variant(*tokenizer, *token);
+                case #char "\""; parse_string_literal        (*tokenizer, *token);
+                case #char ":";  parse_colon                 (*tokenizer, *token);
+                case #char "@";  parse_note                  (*tokenizer, *token);
 
                 case;            token.type = .invalid;
             }
 
             if t >= max_t then t = max_t;  // TODO: do we need this?
             set_token_len(*tokenizer, *token);
-            highlight_token(buffer, token);  // TODO: use highlight()
+            highlight(*tokenizer, *token, buffer);
         }
-
-        // TODO: if we need last 2 tokens, do it inline in the specified places
-        // // Remember last 2 tokens
-        // tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
-        // tokenizer.last_tokens[1] = token;
-
-        // highlight(buffer, token);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -85,7 +87,7 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    // TODO: I want to get rid of this altogether if possible!
+    // TODO: rewrite
 
     // tokenizer := get_jai_tokenizer(buffer);
 
@@ -152,7 +154,8 @@ set_token_len :: (using tokenizer: *Jai_Tokenizer, token: *Token) #expand {
     token.len = cast(s32) (t - start_t);
 }
 
-highlight :: (token: *Token, buffer: *Buffer) #expand {
+highlight :: (tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) #expand {
+    tokenizer.last_token_type = token.type;
     memset(buffer.tokens.data + token.start, xx token.type, token.len);
 }
 
@@ -166,102 +169,69 @@ start_new_token :: inline (using tokenizer: *Jai_Tokenizer) -> Token {
     return token;
 }
 
-// peek_next_token :: (using tokenizer: Jai_Tokenizer, skip_white_space := true) -> Token {
-//     tokenizer_copy := tokenizer;
-//     if skip_white_space then eat_white_space(*tokenizer_copy);
-//     token := get_next_token(*tokenizer_copy);
-//     return token;
-// }
+maybe_mark_as_keyword :: inline (token: *Token, identifier_str: string) -> is_keyword: bool {
+    if identifier_str.count > MAX_KEYWORD_LENGTH return false;
+    kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
+    if ok {
+        token.type = kw_token.type;
+        token.keyword = kw_token.keyword;;
+        return true;
+    }
+    return false;
+}
 
-// get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
-//     eat_white_space(tokenizer);
-
-//     token: Token = ---;
-//     token.start = cast(s32) (t - buf.data);
-//     token.type  = .eof;
-//     if t >= max_t return token;
-
-//     start_t = t;
-
-//     // Assume ASCII, unless we're in the middle of a string.
-//     // UTF-8 characters elsewhere are a syntax error.
-//     char := t.*;
-
-//     if ascii_is_alpha(char) || char == #char "_" {
-//         parse_identifier_keyword_or_function(tokenizer, *token);
-//     } else if ascii_is_digit(char) {
-//         // Handle number literals that don't look like they are being finished properly
-//         // For example, 0b10002 will highlight 0b1000 as one number and 2 as another number,
-//         // but when highlit in editor it looks like one number literal rather than two
-//         // The solution here is to not highlight more numbers if there are many number tokens in a row
-//         last_char := (t - 1).*;
-//         if tokenizer.last_tokens[1].type != .number || (!ascii_is_digit(last_char) && last_char != #char "_") {
-//             parse_number(tokenizer, *token);
-//         }
-//         else {
-//             parse_identifier_keyword_or_function(tokenizer, *token);
-//         }
-//     } else if char == {
-//         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;     t += 1;
-//         case #char ",";  token.type = .punctuation; token.punctuation = .comma;         t += 1;
-//         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;       t += 1;
-//         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;       t += 1;
-//         case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;       t += 1;
-//         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;       t += 1;
-//         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket;     t += 1;
-//         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket;     t += 1;
-//         case #char "$";  token.type = .punctuation; token.punctuation = .dollar;        t += 1;
-
-//         case #char "?";  token.type = .operation;   token.operation   = .question;      t += 1;
-//         case #char "=";  token.type = .operation;   token.operation   = .equal;         t += 1;
-//         case #char "+";  token.type = .operation;   token.operation   = .plus;          t += 1;
-//         case #char "*";  token.type = .operation;   token.operation   = .asterisk;      t += 1;
-//         case #char "<";  token.type = .operation;   token.operation   = .less_than;     t += 1;
-//         case #char ">";  token.type = .operation;   token.operation   = .greater_than;  t += 1;
-//         case #char "!";  token.type = .operation;   token.operation   = .bang;          t += 1;
-//         case #char "&";  token.type = .operation;   token.operation   = .ampersand;     t += 1;
-//         case #char "|";  token.type = .operation;   token.operation   = .pipe;          t += 1;
-//         case #char "%";  token.type = .operation;   token.operation   = .percent;       t += 1;
-//         case #char "^";  token.type = .operation;   token.operation   = .caret;         t += 1;
-//         case #char "~";  token.type = .operation;   token.operation   = .tilde;         t += 1;
-//         case #char "`";  token.type = .operation;   token.operation   = .backtick;      t += 1;
-
-//         case #char ":";  parse_colon             (tokenizer, *token);
-//         case #char ".";  parse_period            (tokenizer, *token);
-//         case #char "@";  parse_note              (tokenizer, *token);
-//         case #char "/";  parse_slash_or_comment  (tokenizer, *token);
-//         case #char "\""; parse_string_literal    (tokenizer, *token);
-//         case #char "#";  parse_directive         (tokenizer, *token);
-//         case #char "-";  parse_minus             (tokenizer, *token);
-
-//         case;            token.type = .invalid; t += 1;
-//     }
-
-//     if t >= max_t then t = max_t;
-//     token.len = cast(s32) (t - start_t);
-
-//     return token;
-// }
-
-parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
+parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
     token.type = .identifier;
 
     identifier_str := read_jai_identifier_string(tokenizer);
     set_token_len(tokenizer, token);
 
     // Maybe it's a keyword
-    if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
-        if ok {
-            token.type = kw_token.type;
-            token.keyword = kw_token.keyword;;
+    is_keyword := maybe_mark_as_keyword(token, identifier_str);
+    if !is_keyword return;
+
+    // Check for modifiers
+    while true {
+        next_token := start_new_token(tokenizer);
+        if t >= max_t return;
+        if t.* != #char "," break;
+
+        t += 1;
+        next_token.type = .punctuation;
+        next_token.punctuation = .comma;
+        set_token_len(tokenizer, *next_token);
+        highlight(tokenizer, *next_token, buffer);
+
+        next_token = start_new_token(tokenizer);
+
+        if t >= max_t return;
+        if !ascii_is_alpha(t.*) return;
+
+        is_modifier := false;
+        modifier_str := read_jai_identifier_string(tokenizer);
+
+        if token.keyword == {
+            case .kw_using;         is_modifier = array_find(string.["only", "except", "map"], modifier_str);
+            case .kw_cast;          is_modifier = array_find(string.["no_check", "trunc", "force"], modifier_str);
+            case .kw_xx;            is_modifier = array_find(string.["no_check", "trunc", "force"], modifier_str);
+            case .kw_push_context;  is_modifier = array_find(string.["defer_pop"], modifier_str);
         }
+
+        if is_modifier {
+            next_token.type = .directive_modifier;
+        } else {
+            next_token.type = .identifier;
+            maybe_mark_as_keyword(*next_token, modifier_str);
+        }
+        set_token_len(tokenizer, *next_token);
+        highlight(tokenizer, *next_token, buffer);
+        if !is_modifier return;
     }
 }
 
 parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
-    parse_identifier_or_keyword(tokenizer, token);
-    defer highlight(token, buffer);
+    parse_identifier_or_keyword(tokenizer, token, buffer);
+    defer highlight(tokenizer, token, buffer);
 
     if token.type == .keyword return;
 
@@ -279,7 +249,7 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
         token.type = .function;
 
         set_token_len(tokenizer, *next_token);
-        highlight(*next_token, buffer);
+        highlight(tokenizer, *next_token, buffer);
         return;
     }
 
@@ -292,7 +262,7 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
         parse_colon(tokenizer, *next_token);
 
         set_token_len(tokenizer, *next_token);
-        highlight(*next_token, buffer);
+        highlight(tokenizer, *next_token, buffer);
 
         if next_token.operation != .double_colon return;  // not a function
 
@@ -307,77 +277,22 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
             token.type = .function;
 
             set_token_len(tokenizer, *next_token);
-            highlight(*next_token, buffer);
+            highlight(tokenizer, *next_token, buffer);
         } else if char == #char "#" {
             t += 1;
-            parse_directive(tokenizer, *next_token);
-            highlight(*next_token, buffer);
+            parse_directive(tokenizer, *next_token, buffer);
+            highlight(tokenizer, *next_token, buffer);
             if next_token.type == .directive && next_token.directive == .directive_bake_arguments {
                 token.type = .function;
             }
         } else if ascii_is_alpha(char) {
-            parse_identifier_or_keyword(tokenizer, *next_token);
-            highlight(*next_token, buffer);
+            parse_identifier_or_keyword(tokenizer, *next_token, buffer);
+            highlight(tokenizer, *next_token, buffer);
             if next_token.type == .keyword && next_token.keyword == .kw_inline {
                 token.type = .function;
             }
         }
     }
-
-    // highlight(token, buffer);
-
-    // // Check for here-string and directive modifiers
-    // prev, before_prev := last_tokens[1], last_tokens[0];
-    // if (prev.type == .directive && prev.directive == .directive_string) || maybe_herestring {
-    //     // Here-string
-    //     token.type = .multiline_string;
-    //     start := cast(s32) (t - buf.data);
-    //     end := find_index_from_left(buf, identifier_str, start_index = start);
-    //     if end < 0 {
-    //         end = buf.count - 1;
-    //         t = max_t;
-    //     } else {
-    //         t = buf.data + end + identifier_str.count;
-    //     }
-
-    //     // Maybe add a heredoc region for deferred highlighting
-    //     potential_lang_name := identifier_str;
-    //     {
-    //         // Extract lang from heredoc names like BLAH_BLAH_lang
-    //         found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
-    //         if found then potential_lang_name = lang;
-    //     }
-    //     lang := get_lang_from_name(potential_lang_name);
-    //     if lang != .Plain_Text {
-    //         array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
-    //     }
-
-    // } else if prev.type == .punctuation && prev.punctuation == .comma {
-    //     is_modifier := false;
-    //     if before_prev.type == {
-    //         case .directive;
-    //             if before_prev.directive == {
-    //                 case .directive_type;           is_modifier = array_find(string.["isa", "distinct"], identifier_str);
-    //                 case .directive_import;         is_modifier = array_find(string.["file", "dir", "string"], identifier_str);
-    //                 case .directive_insert;         is_modifier = array_find(string.["scope"], identifier_str);
-    //                 case .directive_run;            is_modifier = array_find(string.["stallable"], identifier_str);
-    //                 case .directive_library;        is_modifier = array_find(string.["no_static_library", "no_dll", "system", "link_always"], identifier_str);
-    //                 case .directive_system_library; is_modifier = array_find(string.["no_static_library", "no_dll", "link_always"], identifier_str);
-    //                 case .directive_string;         is_modifier = array_find(string.["cr", "\\\%"], identifier_str);
-    //                                                 if is_modifier { maybe_herestring = true; reset_herestring_state = false; }
-    //             }
-    //         case .keyword;
-    //             if before_prev.keyword == {
-    //                 case .kw_using;         is_modifier = array_find(string.["only", "except", "map"], identifier_str);
-    //                 case .kw_cast;          is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
-    //                 case .kw_xx;            is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
-    //                 case .kw_push_context;  is_modifier = array_find(string.["defer_pop"], identifier_str);
-    //             }
-    //     }
-    //     if is_modifier then token.type = .directive_modifier;
-    // }
-
-    // if reset_herestring_state then maybe_herestring = false;
 }
 
 parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
@@ -436,7 +351,7 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer
             next_token.type = .invalid;
             while t < max_t && (ascii_is_digit(t.*) || t.* == #char "_")  t += 1;
             set_token_len(tokenizer, *next_token);
-            highlight(*next_token, buffer);
+            highlight(tokenizer, *next_token, buffer);
             return;
         }
     }
@@ -444,7 +359,7 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer
     set_token_len(tokenizer, token);
 }
 
-parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
+parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
     token.type = .identifier;
 
     {
@@ -452,7 +367,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
         eat_white_space(tokenizer, only_until_newline = true);  // there may be spaces between the # and the name
         if t >= max_t return;
-        if !ascii_is_alpha(<<t) return;
+        if !ascii_is_alpha(t.*) return;
 
         start_offset := cast(s32) (start_t - buf.data);
 
@@ -461,31 +376,101 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         // Check if it's one of the existing directives
         if directive_str.count > MAX_DIRECTIVE_LENGTH return;
         directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
-        if ok {
-            token.type = .directive;
-            token.directive = directive;
+        if !ok return;
 
-            if directive == {
-                case .directive_scope_export;     start_scope(tokenizer, start_offset, .scope_export);
-                case .directive_scope_module;     start_scope(tokenizer, start_offset, .scope_module);
-                case .directive_scope_file;       start_scope(tokenizer, start_offset, .scope_file);
-            }
+        token.type = .directive;
+        token.directive = directive;
+
+        if directive == {
+            case .directive_scope_export;     start_scope(tokenizer, start_offset, .scope_export);
+            case .directive_scope_module;     start_scope(tokenizer, start_offset, .scope_module);
+            case .directive_scope_file;       start_scope(tokenizer, start_offset, .scope_file);
         }
     }
 
-    // TODO: modifiers
-}
+    // Check for modifiers
+    while true {
+        next_token := start_new_token(tokenizer);
+        if t >= max_t return;
+        if t.* != #char "," break;
 
-parse_minus :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
-    token.type = .operation;
-    token.operation = .minus;
+        t += 1;
+        next_token.type = .punctuation;
+        next_token.punctuation = .comma;
+        set_token_len(tokenizer, *next_token);
+        highlight(tokenizer, *next_token, buffer);
 
-    if t >= max_t return;
+        next_token = start_new_token(tokenizer);
 
-    // TODO:
-    // if tokenizer.last_tokens[1].type != .number && ascii_is_digit(t.*) {
-    //     parse_number(tokenizer, token);
-    // }
+        is_modifier := false;
+        modifier_str: string;
+
+        if t >= max_t return;
+        if ascii_is_alpha(t.*) {
+            modifier_str = read_jai_identifier_string(tokenizer);
+        } else if t.* == #char "\\" && (t + 1) < max_t && (t + 1).* == #char "%" {
+            modifier_str = "\\%";
+            t += modifier_str.count;
+        }
+        if !modifier_str return;
+
+        if token.directive == {
+            case .directive_type;           is_modifier = array_find(string.["isa", "distinct"], modifier_str);
+            case .directive_import;         is_modifier = array_find(string.["file", "dir", "string"], modifier_str);
+            case .directive_insert;         is_modifier = array_find(string.["scope"], modifier_str);
+            case .directive_run;            is_modifier = array_find(string.["stallable"], modifier_str);
+            case .directive_library;        is_modifier = array_find(string.["no_static_library", "no_dll", "system", "link_always"], modifier_str);
+            case .directive_system_library; is_modifier = array_find(string.["no_static_library", "no_dll", "link_always"], modifier_str);
+            case .directive_string;         is_modifier = array_find(string.["cr", "\\%"], modifier_str);
+        }
+
+        if is_modifier {
+            next_token.type = .directive_modifier;
+        } else {
+            next_token.type = .identifier;
+            maybe_mark_as_keyword(*next_token, modifier_str);
+        }
+        set_token_len(tokenizer, *next_token);
+        highlight(tokenizer, *next_token, buffer);
+        if !is_modifier return;
+    }
+
+    // Maybe it's a here-string
+    if token.directive == .directive_string {
+        next_token := start_new_token(tokenizer);
+        if t >= max_t return;
+        if !ascii_is_alpha(t.*) return;
+
+        next_token.type = .multiline_string;
+        identifier_str := read_jai_identifier_string(tokenizer);
+
+        set_token_len(tokenizer, *next_token);
+        highlight(tokenizer, *next_token, buffer);
+
+        start := cast(s32) (t - buf.data);
+        end   := find_index_from_left(buf, identifier_str, start_index = start);
+        if end < 0 {
+            end = buf.count - 1;
+            t = max_t;
+        } else {
+            t = buf.data + end + identifier_str.count;
+            memset(buffer.tokens.data + end, xx Token_Type.multiline_string, identifier_str.count);  // highlight the end identifier
+        }
+
+        // Maybe add a heredoc region for deferred highlighting
+        potential_lang_name := identifier_str;
+        {
+            // Extract lang from heredoc names like BLAH_BLAH_lang
+            found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
+            if found then potential_lang_name = lang;
+        }
+        lang := get_lang_from_name(potential_lang_name);
+        if lang != .Plain_Text {
+            array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
+        } else {
+            memset(buffer.tokens.data + start, xx Token_Type.multiline_string, end - start);  // highlight everything as string
+        }
+    }
 }
 
 parse_colon :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
@@ -500,20 +485,20 @@ parse_colon :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     }
 }
 
-parse_period :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
+parse_period_or_enum_variant :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type        = .punctuation;
     token.punctuation = .period;
 
     if t >= max_t return;
 
-    // // Maybe it's an enum variant
-    // if last_tokens[1].type != .identifier && tokenizer.had_white_space_to_skip {
-    //     next_token := peek_next_token(tokenizer);
-    //     if next_token.type == .identifier {
-    //         token.type = .enum_variant;
-    //         t = buf.data + next_token.start + next_token.len;  // fast-forward
-    //     }
-    // }
+    // Maybe it's an enum variant
+    if tokenizer.last_token_type != .identifier {
+        eat_white_space(tokenizer, only_until_newline = true);
+        if t < max_t && ascii_is_alpha(t.*) {
+            read_jai_identifier_string(tokenizer);
+            token.type = .enum_variant;
+        }
+    }
 }
 
 parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
@@ -526,6 +511,8 @@ parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 parse_slash_or_comment :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .slash;
+
+    defer set_token_len(tokenizer, token);
 
     if t >= max_t return;
 
@@ -561,8 +548,8 @@ parse_string_literal :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     escape_seen := false;
 
     while t < max_t && << t != #char "\n" {
-        if <<t == #char "\"" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+        if t.* == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
     }
     if t >= max_t return;
@@ -633,9 +620,7 @@ Jai_Tokenizer :: struct {
     regions.allocator = temp;
     current_scope_id := -1;
 
-    last_tokens: [2] Token;
-
-    // maybe_herestring := false;  // to support highlighting #string,cr END ... END
+    last_token_type: Token_Type;
 
     scratch_buffer: [MAX_IDENTIFIER_LENGTH] u8;
 }
