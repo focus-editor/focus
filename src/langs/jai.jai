@@ -87,44 +87,91 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    // TODO: rewrite
+    tokenizer := get_jai_tokenizer(buffer);
 
-    // tokenizer := get_jai_tokenizer(buffer);
+    while true {
+        using tokenizer;
 
-    // while true {
-    //     src := get_next_token(*tokenizer);
+        token := start_new_token(*tokenizer);
 
-    //     tokenizer.last_tokens[0] = tokenizer.last_tokens[1];  // if we don't remember last 2 tokens, here strings won't be detected properly
-    //     tokenizer.last_tokens[1] = src;
+        // A simplified parsing loop which does no highlighting.
+        // NOTE: This leads to code repetition but this is done so that the main highlighting code is faster
+        if t < max_t {
+            char := t.*;
 
-    //     token: Indentation_Token = ---;
-    //     token.start = src.start;
-    //     token.len   = src.len;
+            if ascii_is_alpha(char) || char == #char "_" {
+                t += 1;
+                read_jai_identifier_string(*tokenizer);
+            } else if ascii_is_digit(char) {
+                t += 1;
+                parse_number(*tokenizer, *token, buffer, do_highlighting = false);
+            } else if char == #char "#" {
+                t += 1;
+                parse_directive(*tokenizer, *token, buffer, do_highlighting = false);
+            } else if char == #char "/" {
+                t += 1;
+                parse_slash_or_comment(*tokenizer, *token);
+            } else {
+                t += 1;
+                if char == {
+                    case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;
+                    case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;
+                    case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;
+                    case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;
+                    case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket;
+                    case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket;
 
-    //     if src.type == {
-    //         case .punctuation;
-    //             if src.punctuation == {
-    //                 case .l_paren;      token.type = .open;  token.kind = .paren;
-    //                 case .l_bracket;    token.type = .open;  token.kind = .bracket;
-    //                 case .l_brace;      token.type = .open;  token.kind = .brace;
+                    case #char ".";  parse_period_or_enum_variant(*tokenizer, *token);
+                    case #char "\""; parse_string_literal        (*tokenizer, *token);
+                    case #char ":";  parse_colon                 (*tokenizer, *token);
+                    case #char "@";  parse_note                  (*tokenizer, *token);
 
-    //                 case .r_paren;      token.type = .close; token.kind = .paren;
-    //                 case .r_bracket;    token.type = .close; token.kind = .bracket;
-    //                 case .r_brace;      token.type = .close; token.kind = .brace;
+                    case;            token.type = .invalid;  // we don't care about invalid tokens here
+                }
 
-    //                 case;               continue;
-    //             }
+            }
 
-    //         case .multiline_comment;    token.type = .maybe_multiline;
-    //         case .multiline_string;     token.type = .maybe_multiline;
-    //         case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
-    //         case;                       token.type = .unimportant;
-    //     }
+            if t >= max_t then t = max_t;  // TODO: do we need this?
+            set_token_len(*tokenizer, *token);
+        }
 
-    //     array_add(*tokens, token);
+        src := token;
 
-    //     if src.type == .eof break;
-    // }
+        {
+            token: Indentation_Token = ---;
+            token.start = src.start;
+            token.len   = src.len;
+
+            if src.type == {
+                case .punctuation;
+                    if src.punctuation == {
+                        case .l_paren;      token.type = .open;  token.kind = .paren;
+                        case .l_bracket;    token.type = .open;  token.kind = .bracket;
+                        case .l_brace;      token.type = .open;  token.kind = .brace;
+
+                        case .r_paren;      token.type = .close; token.kind = .paren;
+                        case .r_bracket;    token.type = .close; token.kind = .bracket;
+                        case .r_brace;      token.type = .close; token.kind = .brace;
+
+                        case;               continue;
+                    }
+
+                case .directive;
+                    // In this version of the indentation tokenizer we don't detect .multiline_string and instead
+                    // mark the whole multiline string as .directive_string
+                    if src.directive == .directive_string then token.type = .maybe_multiline;
+
+                case .multiline_comment;    token.type = .maybe_multiline;
+                case .multiline_string;     token.type = .maybe_multiline;
+                case;                       token.type = .unimportant;
+            }
+
+            array_add(*tokens, token);
+
+        }
+
+        if t >= max_t break;
+    }
 
     return tokens;
 }
@@ -295,7 +342,7 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
     }
 }
 
-parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
+parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer, $do_highlighting := true) {
     token.type = .number;
 
     if t >= max_t {
@@ -345,21 +392,23 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer
 
         // Handle the case where a binary number is immediately followed by a decimal number:
         // e.g. 0b100101879 - we don't want to highlight everything as one number
-        if t < max_t && ascii_is_digit(t.*) {
-            set_token_len(tokenizer, token);
-            next_token := start_new_token(tokenizer);
-            next_token.type = .invalid;
-            while t < max_t && (ascii_is_digit(t.*) || t.* == #char "_")  t += 1;
-            set_token_len(tokenizer, *next_token);
-            highlight(tokenizer, *next_token, buffer);
-            return;
+        #if do_highlighting {
+            if t < max_t && ascii_is_digit(t.*) {
+                set_token_len(tokenizer, token);
+                next_token := start_new_token(tokenizer);
+                next_token.type = .invalid;
+                while t < max_t && (ascii_is_digit(t.*) || t.* == #char "_")  t += 1;
+                set_token_len(tokenizer, *next_token);
+                highlight(tokenizer, *next_token, buffer);
+                return;
+            }
         }
     }
 
     set_token_len(tokenizer, token);
 }
 
-parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
+parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer, $do_highlighting := true) {
     token.type = .identifier;
 
     {
@@ -398,7 +447,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
         next_token.type = .punctuation;
         next_token.punctuation = .comma;
         set_token_len(tokenizer, *next_token);
-        highlight(tokenizer, *next_token, buffer);
+        #if do_highlighting then highlight(tokenizer, *next_token, buffer);
 
         next_token = start_new_token(tokenizer);
 
@@ -431,7 +480,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
             maybe_mark_as_keyword(*next_token, modifier_str);
         }
         set_token_len(tokenizer, *next_token);
-        highlight(tokenizer, *next_token, buffer);
+        #if do_highlighting then highlight(tokenizer, *next_token, buffer);
         if !is_modifier return;
     }
 
@@ -445,7 +494,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
         identifier_str := read_jai_identifier_string(tokenizer);
 
         set_token_len(tokenizer, *next_token);
-        highlight(tokenizer, *next_token, buffer);
+        #if do_highlighting then highlight(tokenizer, *next_token, buffer);
 
         start := cast(s32) (t - buf.data);
         end   := find_index_from_left(buf, identifier_str, start_index = start);
@@ -454,21 +503,23 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
             t = max_t;
         } else {
             t = buf.data + end + identifier_str.count;
-            memset(buffer.tokens.data + end, xx Token_Type.multiline_string, identifier_str.count);  // highlight the end identifier
+            #if do_highlighting then memset(buffer.tokens.data + end, xx Token_Type.multiline_string, identifier_str.count);  // highlight the end identifier
         }
 
-        // Maybe add a heredoc region for deferred highlighting
-        potential_lang_name := identifier_str;
-        {
-            // Extract lang from heredoc names like BLAH_BLAH_lang
-            found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
-            if found then potential_lang_name = lang;
-        }
-        lang := get_lang_from_name(potential_lang_name);
-        if lang != .Plain_Text {
-            array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
-        } else {
-            memset(buffer.tokens.data + start, xx Token_Type.multiline_string, end - start);  // highlight everything as string
+        #if do_highlighting {
+            // Maybe add a heredoc region for deferred highlighting
+            potential_lang_name := identifier_str;
+            {
+                // Extract lang from heredoc names like BLAH_BLAH_lang
+                found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
+                if found then potential_lang_name = lang;
+            }
+            lang := get_lang_from_name(potential_lang_name);
+            if lang != .Plain_Text {
+                array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
+            } else {
+                memset(buffer.tokens.data + start, xx Token_Type.multiline_string, end - start);  // highlight everything as string
+            }
         }
     }
 }
@@ -505,7 +556,6 @@ parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .note;
 
     while t < max_t && ascii_is_alnum(<< t) t += 1;
-    if t >= max_t return;
 }
 
 parse_slash_or_comment :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
