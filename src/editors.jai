@@ -4049,6 +4049,7 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
             else                           continue;
         }
 
+        auto_release_temp();
         new_text := copy_temporary_string(current_text);
         if mode == {
             case .upper;
