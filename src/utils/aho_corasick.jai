@@ -43,7 +43,9 @@ find_whole_words :: (using automaton: *Aho_Corasick_Automaton, text: string) -> 
 
     s := text;
     while s {
-        char, result := utf8_next_character(*s);
+        char, bytes, result := inline character_utf8_to_utf32(s.data, s.count);
+        s.data  += bytes;
+        s.count -= bytes;
         if result != .CONVERSION_OK continue;
 
         // Transition to the next state
@@ -61,7 +63,7 @@ find_whole_words :: (using automaton: *Aho_Corasick_Automaton, text: string) -> 
                     len = cast(s32) it.word.count,
                     token_type = it.token_type,
                 };
-                if is_whole_word(text, result.offset, result.len) {
+                if inline is_whole_word(text, result.offset, result.len) {
                     array_add(*found_words, result);
                 }
             }
@@ -77,7 +79,7 @@ Aho_Corasick_Automaton :: struct {
     nodes: [] Node;
     raw_nodes: [..] RawNode;  // used only when building
 
-    memory_pool: Flat_Pool;  // TODO: use the pool
+    memory_pool: Flat_Pool;
 }
 
 #scope_file
@@ -105,7 +107,9 @@ insert_words :: (using automaton: *Aho_Corasick_Automaton, words: [] Highlight_W
         chars: [..] u32;
         s := it.word;
         while s {
-            char, result := utf8_next_character(*s);
+            char, bytes, result := inline character_utf8_to_utf32(s.data, s.count);
+            s.data  += bytes;
+            s.count -= bytes;
             if result != .CONVERSION_OK { log_error("Invalid UTF8 in word '%' when trying to insert it to Aho-Corasick automaton", it.word); continue; }
             array_add(*chars, char);
         }
@@ -164,6 +168,7 @@ cleanup :: (using automaton: *Aho_Corasick_Automaton) {
         node.output_words = raw_node.output_words;
         node.failure_link = raw_node.failure_link;
 
+        quick_sort(node.children, (a, b) => (cast(s64) a.char - cast(s64) b.char));  // alphabetically
         quick_sort(node.output_words, (a, b) => (b.word.count - a.word.count));  // sort by longest first
     }
 }
