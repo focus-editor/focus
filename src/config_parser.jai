@@ -114,10 +114,10 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
             for section : CONFIG_SECTIONS {
                 print_to_builder(*b, "    case .%;  success, error_msg = %(*parser, line);\n", replace(section.name, " ", "_"), section.parse_function);
             }
-            code := #string JAI
+            code := #string,\% JAI
                 case .none;
                     if !parse_for_highlighting {
-                        result.error_msg = log_parser_error(parser, "Expected a top-level section definition, got '%%'", line);
+                        result.error_msg = log_parser_error(parser, "Expected a top-level section definition, got '\%'", line);
                         return result;
                     }
             JAI
@@ -386,9 +386,9 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
                 JAI
                 print_to_builder(*b, code, section.name, replace(section.name, " ", "_"));
             }
-            code := #string JAI
+            code := #string,\% JAI
                 case;
-                    return true, tprint("Unknown top-level section %%", line);
+                    return true, tprint("Unknown top-level section \%", line);
             JAI
             print_to_builder(*b, code);
             append(*b, "}\n");
@@ -622,7 +622,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font_hinting = some(bool_val);
                     } else {
                         add_highlight(parser, cast(s64)(value.data - line.data), value.count, .error);
-                        return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", value);
+                        return true, tprint("Couldn't parse '%' - expected 'true' or 'false', got '%'", setting, value);
                     }
             }
 
@@ -792,37 +792,37 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
             if option.type.type == {
                 case .BOOL;
-                    code := #string JAI
+                    code := #string,\% JAI
                         val, success := parse_bool(*value);
                         if success {
                             target.%1 = val;
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .value);
                         } else {
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
+                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '\%'", setting_value);
                         }
                     JAI
                     print_to_builder(*b, code, option.name);
 
                 case .INTEGER;
-                    code := #string JAI
+                    code := #string,\% JAI
                         val, success := parse_int(*value);
                         if success {
                             target.%1 = val;
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .value);
                         } else {
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - a valid integer, got '%%'", setting_value);
+                            return true, tprint("Couldn't parse '%1' - a valid integer, got '\%'", setting_value);
                         }
                     JAI
                     print_to_builder(*b, code, option.name);
 
                 case .STRING;
-                    code := #string JAI
+                    code := #string,\% JAI
                         if setting_value {
                             target.%1 = setting_value;  // points into the file data!
                         } else {
-                            return true, tprint("Build command option '%%' can't be empty", setting_name);
+                            return true, tprint("Build command option '\%' can't be empty", setting_name);
                         }
                     JAI
                     print_to_builder(*b, code, option.name);
@@ -849,13 +849,13 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         JAI
                         append(*b, code);
 
-                        code = #string JAI
+                        code = #string,\% JAI
                             // Validate path and handle relative paths
                             dir_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(dir_path, #char "/");
                             working_dir := get_working_directory_from_workspace(result.config.members);
                             relative_to_working_dir := !is_absolute_path(dir_path) && working_dir;
-                            abs_path := ifx relative_to_working_dir then tprint("%%/%%", working_dir, dir_path) else dir_path;
+                            abs_path := ifx relative_to_working_dir then tprint("\%/\%", working_dir, dir_path) else dir_path;
 
                             if file_exists(abs_path) {
                                 target.%1 = copy_string(abs_path);
@@ -867,13 +867,13 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !dir_prefix continue;
-                                    abs_dir_prefix := ifx relative_to_working_dir then tprint("%%/%%", working_dir, dir_prefix) else dir_prefix;
+                                    abs_dir_prefix := ifx relative_to_working_dir then tprint("\%/\%", working_dir, dir_prefix) else dir_prefix;
                                     if !file_exists(abs_dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
                                         break;
                                     }
                                 }
-                                return true, tprint("Tried to use '%%' as a working dir in a build command, but it doesn't exist.", abs_path);
+                                return true, tprint("Tried to use '\%' as a working dir in a build command, but it doesn't exist.", abs_path);
                             }
                         JAI
                         print_to_builder(*b, code, option.name);
@@ -1078,7 +1078,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     code := construct_parse_code(
                         setting.name,
                         "val, success := parse_bool(*value);",
-                        "tprint(\"Couldn't parse '%1' - expected 'true' or 'false', got '%%'\", setting_value)",
+                        "tprint(\"Couldn't parse '%1' - expected 'true' or 'false', got '\%'\", setting_value)",
                     );
                     append(*b, code);
 
@@ -1086,7 +1086,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     code := construct_parse_code(
                         setting.name,
                         "val, success := parse_int(*value);",
-                        "tprint(\"Couldn't parse '%1' - expected a valid integer, got '%%'\", setting_value)",
+                        "tprint(\"Couldn't parse '%1' - expected a valid integer, got '\%'\", setting_value)",
                     );
                     append(*b, code);
 
@@ -1094,7 +1094,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     code := construct_parse_code(
                         setting.name,
                         "val, success := parse_float(*value);",
-                        "tprint(\"Couldn't parse '%1' - expected a valid float, got '%%'\", setting_value)",
+                        "tprint(\"Couldn't parse '%1' - expected a valid float, got '\%'\", setting_value)",
                     );
                     append(*b, code);
 
@@ -1108,7 +1108,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                             val := cast(enum_type) 0;
                             if success then val = xx enum_info.values[idx];
                         JAI,
-                        "tprint(\"Couldn't parse '%1' - valid values: %%\", join(..enum_info.names, \", \"))",
+                        "tprint(\"Couldn't parse '%1' - valid values: \%\", join(..enum_info.names, \", \"))",
                     );
                     append(*b, code);
             }

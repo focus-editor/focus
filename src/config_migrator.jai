@@ -390,7 +390,7 @@ DONE
                             b: String_Builder;
                             append(*b, "if color_name == {\n");
                             for RENAMED_COLORS {
-                                code := #string JAI
+                                code := #string,\% JAI
                                     case "%1";
                                         if valid_version(%3, config_info.version) {
                                             force_value_from := "%4";
@@ -399,7 +399,7 @@ DONE
                                                 if success && source_value then color_value = source_value;
                                             }
                                             padding  := get_tmp_spaces(COLOR_VALUES_INDENT - "%2".count - 1);
-                                            new_line := tprint("%2:%%1%%2\n", padding, color_value);
+                                            new_line := tprint("%2:\%1\%2\n", padding, color_value);
                                             offset_difference += replace_line(*modified_data, line_start_offset, new_line);
                                         }
                                 JAI
