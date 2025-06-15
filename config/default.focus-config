@@ -138,7 +138,7 @@ draw_indent_guides:                                 false
 
 # Example error regexes:
 # For Jai:    ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
-# For MSVC:   ^(?P<file>.*)\((?P<line>\d+),?(?P<col>\d+)?\)[ ]?: (?P<type>error|warning) (?P<msg>.*)$
+# For MSVC:   ^(?P<file>.*)\((?P<line>\d+),?(?P<col>\d+)?\):[ ]?(?P<type>fatal error|error|warning) (?P<msg>.*)$
 # For Golang: ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<msg>.*)$
 # For Gcc:    ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<type>error|warning): (?P<msg>.*) (\[(?P<msg1>.*)\])?$
 # For Odin:   ^(?P<file>.*)\((?P<line>\d+):(?P<col>\d+)\) (?P<type>Error|Syntax Error): (?P<msg>.*)$
