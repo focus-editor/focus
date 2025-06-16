@@ -267,17 +267,27 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .string_literal;
 
-    escape_seen := false;
+    if t + 2 <= max_t && (t+1).* == #char "\"" && (t+2).* == #char "\"" {
 
-    t += 1;
-    while t < max_t && t.* != #char "\n" {
-        if <<t == #char "\"" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+        multiline_string_end :: "\"\"\"";
+
+        end := find_index_from_left(buf, multiline_string_end, start_index = t - buf.data + 1);
+        if end < 0 { t = max_t; return; }
+
+        t = buf.data + end + multiline_string_end.count;
+    } else {
+        escape_seen := false;
+
+        t += 1;
+        while t < max_t && t.* != #char "\n" {
+            if <<t == #char "\"" && !escape_seen break;
+            escape_seen = !escape_seen && <<t == #char "\\";
+            t += 1;
+        }
+        if t >= max_t return;
+
         t += 1;
     }
-    if t >= max_t return;
-
-    t += 1;
 }
 
 parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
