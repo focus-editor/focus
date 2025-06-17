@@ -2297,6 +2297,9 @@ make_editor_active :: (editor_id: s64) {
 
     if is_build_panel(editor_id) {
         build_panel_grab_focus();
+    } else if is_color_preview_panel(editor_id) {
+        // TODO:
+        // color_preview_grab_focus();
     } else {
         pane, editor_index := editors_find_pane_with_editor(editor_id);
         if pane {
