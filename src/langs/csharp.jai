@@ -365,7 +365,6 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     directive := read_identifier_string(tokenizer);
 
     while t < max_t && ascii_is_alnum(t.*) t += 1;
-    if t >= max_t return;
 
     // Check if it's one of the existing directives
     if directive.count > MAX_DIRECTIVE_LENGTH return;

@@ -341,7 +341,6 @@ parse_directive :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     directive_str := read_identifier_string_tmp(tokenizer);
 
     while t < max_t && ascii_is_alnum(t.*) t += 1;
-    if t >= max_t return;
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
