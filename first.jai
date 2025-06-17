@@ -40,11 +40,12 @@ build :: () {
           case "release";
             optimized = true;
             build_dir = "build_release";
-            set_optimization(*options, .VERY_OPTIMIZED);
+            set_optimization(*options, .OPTIMIZED);
             options.llvm_options.enable_split_modules = false;
             options.array_bounds_check = .ON;
             options.null_pointer_check = .ON;
             options.arithmetic_overflow_check = .OFF;
+            options.stack_trace = false;
           case "debug";
           case "no_output";
             options.output_type = .NO_OUTPUT;

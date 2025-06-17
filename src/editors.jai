@@ -4065,7 +4065,7 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
             case .caps;
                 caps_next := true;
                 for 0 .. new_text.count - 1 {
-                    if is_alpha(new_text[it]) {
+                    if ascii_is_alpha(new_text[it]) {
                         if caps_next {
                             caps_next = false;
                             new_text[it] = to_upper(new_text[it]);
