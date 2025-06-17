@@ -41,9 +41,9 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number_c_like(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon                 (tokenizer, *token);
@@ -141,7 +141,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(t.*) parse_number_c_like(tokenizer, token);
+            if ascii_is_digit(t.*) parse_number_c_like(tokenizer, token);
     }
 }
 
@@ -226,11 +226,11 @@ parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
-    if !is_alpha(t.*) return;
+    if !ascii_is_alpha(t.*) return;
 
     directive_str := read_identifier_string(tokenizer);
 
-    while t < max_t && is_alnum(t.*) t += 1;
+    while t < max_t && ascii_is_alnum(t.*) t += 1;
     if t >= max_t return;
 
     // Check if it's one of the existing directives

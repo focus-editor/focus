@@ -3,8 +3,11 @@
 + New features:
     + TODO: add everything related to the multi-pane support here
     + It is now possible to specify words which will be highlighted in comments
+    + prefer_system_file_dialogs now works on macOS (thanks @caztanj)
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
+    + Fixed a crash when trying to jump to build error if build output has been cleared
+    + Fixed a bug with not being able to undo a change case action (thanks @fda0)
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)
@@ -12,6 +15,10 @@
         + Catppuccin, Rosé Pine, Jellybeans, Kanagawa, VSCode Dark (thanks @daolgierd)
         + Redshift (thanks @MusaMahmood)
     + Mac: Hide command and Services menu added
+    + Syntax highlighting:
+        + Improved the speed of syntax highlighting significantly
+        + Vue syntax highlighting (thanks @caztanj)
+        + Java: Added support for multi-line string highlighting (thanks @LainLayer)
 
 
 # RELEASES ==================================================================

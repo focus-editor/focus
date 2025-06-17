@@ -114,9 +114,9 @@ get_next_token :: (using tokenizer: *Lua_Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char "'";  #through;
@@ -207,7 +207,7 @@ parse_number :: (using tokenizer: *Lua_Tokenizer, token: *Token) {
         else if is_hex_number && !is_hex(t.*) {
             break;
         }
-        else if !is_hex_number && !is_digit(t.*) {
+        else if !is_hex_number && !ascii_is_digit(t.*) {
             break;
         }
 

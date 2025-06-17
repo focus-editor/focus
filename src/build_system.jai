@@ -753,6 +753,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         cursor := leave_only_original_cursor(editor);
         cursor.sel = build_error.file_path_location.start;
         cursor.pos = build_error.file_path_location.end;
+        put_cursor_in_valid_spot(cursor, buffer);
         if buffer.dirty then rescan_for_lines(buffer);
         select_line(cursor, buffer);
         editor.cursor_moved = true;

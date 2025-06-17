@@ -100,9 +100,9 @@ get_next_token :: (using tokenizer: *Swift_Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char "?";  parse_question           (tokenizer, *token);
@@ -189,7 +189,7 @@ parse_number :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
 
     // Decimal
     seen_decimal_point := false;
-    while t < max_t && (is_digit(t.*) || t.* == #char ".") {
+    while t < max_t && (ascii_is_digit(t.*) || t.* == #char ".") {
         if t.* == #char "." {
             if seen_decimal_point  break;
             seen_decimal_point = true;
@@ -210,7 +210,7 @@ parse_number :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
         }
     }
 
-    while t < max_t && is_digit(t.*) {
+    while t < max_t && ascii_is_digit(t.*) {
         t += 1;
     }
 }
@@ -513,7 +513,7 @@ parse_dollar :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t  return;
 
-    while t < max_t && is_digit(t.*)  t += 1;
+    while t < max_t && ascii_is_digit(t.*)  t += 1;
 }
 
 Swift_Tokenizer :: struct {

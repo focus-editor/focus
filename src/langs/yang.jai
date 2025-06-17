@@ -27,9 +27,9 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
     char := << t;
 
-    if is_alpha(char) {
+    if ascii_is_alpha(char) {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char "\"";        parse_string_literal(tokenizer, *token, char);
@@ -77,11 +77,11 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if is_digit(<< t) || << t == #char "_" {
+    if ascii_is_digit(<< t) || << t == #char "_" {
         // Decimal
         t += 1;
         seen_decimal_point := false;
-        while t < max_t && (is_digit(<< t) || << t == #char "_" || << t == #char ".") {
+        while t < max_t && (ascii_is_digit(<< t) || << t == #char "_" || << t == #char ".") {
             if << t == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
@@ -137,7 +137,7 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
 
     while t < max_t {
         c := <<t;
-        if is_alnum(c) || c == #char "-"  { t += 1; continue; }
+        if ascii_is_alnum(c) || c == #char "-"  { t += 1; continue; }
         break;
     }
     if t >= max_t then t = max_t;

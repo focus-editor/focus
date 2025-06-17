@@ -269,4 +269,4 @@ is_hex_digit :: inline (char: u8) -> bool {
     return (char >= #char "a" && char <= #char "f") || (char >= #char "0" && char <= #char "9");
 }
 
-is_alnum :: inline (c: u8) -> bool { return is_alpha(c) || is_digit(c); }
+is_alnum :: inline (c: u8) -> bool { return ascii_is_alpha(c) || ascii_is_digit(c); }
