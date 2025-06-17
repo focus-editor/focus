@@ -1,4 +1,4 @@
-[19]  # Version number. Do not delete.
+[20]  # Version number. Do not delete.
 
 # Based on Casey Muratori's emacs theme used on Handmade Hero series
 
@@ -106,3 +106,7 @@ code_comment_highlight1:                E0AD82FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                B8860BFF
 code_comment_highlight4:                6B8E23FF
+
+# Added after migration to version [20]
+cursor_line_highlight:                  121212FF
+color_preview_title_bar:                121212FF

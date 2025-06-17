@@ -1,4 +1,4 @@
-[19]  # Version number. Do not delete.
+[20]  # Version number. Do not delete.
 
 # Based on the gruber darker theme by Jason Blevins
 # https://github.com/rexim/gruber-darker-theme
@@ -104,3 +104,7 @@ code_comment_highlight1:                E0AD82FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                FFDD33FF
 code_comment_highlight4:                E4E4EFFF
+
+# Added after migration to version [20]
+cursor_line_highlight:                  141416FF
+color_preview_title_bar:                141416FF
