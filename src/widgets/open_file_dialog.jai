@@ -28,7 +28,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
 
             case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                     return true;
 
-            case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"));
+            case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true);
                                             return handled;
 
             case .pop_directory;            if pop_directory() return true;
@@ -46,7 +46,6 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         return handled;
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
-        if open_file_dialog.mode == .navigate && (char == #char "/" || char == #char "\\") return true;  // these are special chars, don't handle
 
         text_input_type_char(*open_file_dialog.input, char);
         refresh_entries(clear_input = false);
@@ -126,26 +125,12 @@ open_file_dialog_get_result :: (action_id: Deferred_Action_Id) -> Open_File_Dial
     return open_file_dialog.result, open_file_dialog.selected_path;
 }
 
-open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, slash_key_pressed := false) -> handled: bool {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false) -> handled: bool {
     using open_file_dialog;
-
-    // If we are in search mode we want the "/" to show up as text in the search bar, instead of eating it
-    if mode == .search && slash_key_pressed return false;
 
     if selected >= entries.filtered.count   return true;
 
     entry := entries.filtered[selected];
-
-    if path_chunks.count == 0 && slash_key_pressed {
-        // We are selecting our first chunk and we just pushed the "/" key.
-        // In this special case, we will open "/" (the root dir) if it is in the list.
-        for entries.filtered {
-            if it.entry_name == "/" {
-                entry = it;
-                break;
-            }
-        }
-    }
 
     if entry.type == {
         case .save;

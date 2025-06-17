@@ -33,14 +33,6 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
         }
     }
 
-    #if Action == Action_Open_File_Dialog {
-        // Hard-coded case: When the Open File dialog is active, "/" or "\" opens a directory.
-        if event.key_code == {
-            case #char "/";  #through;
-            case #char "\\"; return .open_directory, .{};
-        }
-    }
-
     return invalid_action, .{};
 }
 

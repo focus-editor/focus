@@ -4,6 +4,8 @@
     + TODO: add everything related to the multi-pane support here
     + It is now possible to specify words which will be highlighted in comments (see example in settings)
     + prefer_system_file_dialogs now works on macOS (thanks @caztanj)
+    + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
+        + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
     + Fixed a crash when trying to jump to build error if build output has been cleared
