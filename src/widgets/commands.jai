@@ -159,6 +159,11 @@ base_commands := #run -> [] Command {
         cmd( "Close Top Pane",                    .close_top_pane,                   .Single ),
         cmd( "Close Bottom Pane",                 .close_bottom_pane,                .Single ),
 
+        cmd( "Change Case To Upper",              .change_case_to_upper,             .Single ),
+        cmd( "Change Case To Lower",              .change_case_to_lower,             .Single ),
+        cmd( "Change Case To Caps",               .change_case_to_caps,              .Single ),
+        cmd( "Change Case Cycle",                 .change_case_cycle,                .Single ),
+
         cmd( "Save",                              .save,                             .Single ),
         cmd( "Save As",                           .save_as,                          .Single ),
         cmd( "Save All",                          .save_all,                         .Single ),
