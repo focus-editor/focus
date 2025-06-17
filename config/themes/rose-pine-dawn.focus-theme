@@ -1,4 +1,4 @@
-[19]  # Version number. Do not delete.
+[20]  # Version number. Do not delete.
       # (https://rosepinetheme.com/)
 
 [colors]
@@ -102,3 +102,7 @@ code_comment_highlight1:                797593FF
 code_comment_highlight2:                D7827EFF
 code_comment_highlight3:                286983FF
 code_comment_highlight4:                EA9D34FF
+
+# Added after migration to version [20]
+cursor_line_highlight:                  F2E9E1FF
+color_preview_title_bar:                F2E9E1FF

@@ -611,6 +611,9 @@ ADDED_COLORS :: Added_Color.[
     .{ 19, "code_comment_highlight2",          "code_error",             "FF0000FF" },
     .{ 19, "code_comment_highlight3",          "code_keyword",           "E0AD82FF" },
     .{ 19, "code_comment_highlight4",          "code_value"  ,           "D699B5FF" },
+
+    .{ 20, "cursor_line_highlight",            "background4",            "21333FFF" },
+    .{ 20, "color_preview_title_bar",          "background4",            "21333FFF" },
 ];
 
 
@@ -1692,6 +1695,8 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
 
 FOCUS_CONFIG
 
@@ -1774,6 +1779,8 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
 
 FOCUS_CONFIG
 
@@ -1948,6 +1955,8 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
 
 FOCUS_CONFIG
 
@@ -2071,6 +2080,8 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
 
 [[keymap]]
 
@@ -2358,6 +2369,8 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
 
 FOCUS_CONFIG
 
@@ -2533,5 +2546,7 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                B8860BFF
 code_comment_highlight4:                6B8E23FF
+cursor_line_highlight:                  121212FF
+color_preview_title_bar:                121212FF
 
 FOCUS_CONFIG
