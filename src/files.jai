@@ -261,10 +261,20 @@ is_known_binary_file_extension :: (extension: string) -> bool {
 }
 
 should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool = false {
-    path_chunks := split(path, "/",, allocator = temp);
+    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
 
-    // Allow list has priority
-    if path_is_explicitly_allowed(path) return false, true;
+    // Allow list has priority - check if path is explicitly allowed
+    for config.workspace.allow {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return false, true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if path_wildcard_match(chunk, it) return false, true;
+            }
+        }
+    }
 
     // Then check the user-specified ignore list
     for config.workspace.ignore {
@@ -284,48 +294,12 @@ should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool =
 }
 
 should_descend_into_dir :: (path: string) -> bool {
-    if path_is_explicitly_allowed(path) return true;
+    // If we have ANY allow patterns in the config, we HAVE to descend into every dir,
+    // because even though the dir might be ignored, some of its contents might be
+    // explicitly allowed, so we have to check everything.
+    if config.workspace.allow return true;
 
-    // We want to look inside dirs even if they match some ignore wildcards,
-    // so that the user can do a catch-all ignore wildcard like '*'
-    // and then explicitly unignore some of the files inside.
-    // If we don't descend into the dir we won't know what's inside!
-
-    // But if there's a matching non-wildcard rule, then we want to skip the dir altogether
-    path_chunks := split(path, "/",, allocator = temp);
-
-    for config.workspace.ignore {
-        if contains_any_character(it, "*?") continue;  // ignore wildcards
-
-        if contains(it, cast(u8) #char "/") {
-            if platform_path_begins_with(path, it) return false;
-        } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if platform_path_equals(chunk, it) return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-path_is_explicitly_allowed :: (path: string) -> bool {
-    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
-
-    for config.workspace.allow {
-        if contains(it, cast(u8) #char "/") {
-            // Match whole path
-            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return true;
-        } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if path_wildcard_match(chunk, it) return true;
-            }
-        }
-    }
-
-    return false;
+    return should_ignore_path(path);
 }
 
 // Match simple wildcard patterns. Supports `*`, `**` and `?` only.
