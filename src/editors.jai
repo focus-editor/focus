@@ -1136,7 +1136,8 @@ close_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
     if is_unsaved(buffer) {
         if buffer.has_file {
-            reload_from_disk(buffer_id, force = true);
+            reloaded := reload_from_disk(buffer_id, force = true);
+            if !reloaded then buffer.modified = false;  // if a file was deleted on disk, we don't want to see it in any file lists
         } else {
             reset(*buffer.bytes);
             buffer.deleted = true;
