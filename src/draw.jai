@@ -4144,6 +4144,8 @@ get_region_color :: (kind: Buffer_Region.Kind) -> Color {
         case .success;          color = Color.REGION_SUCCESS;
         case .warning;          color = Color.REGION_WARNING;
         case .error;            color = Color.REGION_ERROR;
+        case .addition;         color = Color.REGION_ADDITION;
+        case .deletion;         color = Color.REGION_DELETION;
     }
     return color;
 }

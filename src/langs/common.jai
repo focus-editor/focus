@@ -398,4 +398,7 @@ Token_Type :: enum u8 {
     header4;
     header5;
     header6;
+
+    addition;
+    deletion;
 }

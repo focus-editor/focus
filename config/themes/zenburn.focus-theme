@@ -1,4 +1,4 @@
-[20]  # Version number. Do not delete.
+[21]  # Version number. Do not delete.
 
 # Based on the original Zenburn Vim theme:
 # https://github.com/jnurmine/Zenburn/blob/master/colors/zenburn.vim
@@ -108,3 +108,9 @@ code_comment_highlight4:                8CD0D3FF
 # Added after migration to version [20]
 cursor_line_highlight:                  2E3330FF
 color_preview_title_bar:                2E3330FF
+
+# Added after migration to version [21]
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
