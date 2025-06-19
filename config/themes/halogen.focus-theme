@@ -1,4 +1,4 @@
-[20]  # Version number. Do not delete.
+[21]  # Version number. Do not delete.
 
 [colors]
 background0:                            181818FF
@@ -106,4 +106,10 @@ code_comment_highlight4:                3aa982FF
 # Added after migration to version [20]
 cursor_line_highlight:                  181818FB
 color_preview_title_bar:                181818FB
+
+# Added after migration to version [21]
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 

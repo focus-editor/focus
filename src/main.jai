@@ -1067,6 +1067,7 @@ focus_allocator: Allocator;
 #load "langs/batch.jai";
 #load "langs/swift.jai";
 #load "langs/ini.jai";
+#load "langs/diff.jai";
 
 #load "repetition_tester.jai";
 

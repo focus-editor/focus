@@ -238,6 +238,8 @@ map_name_to_color :: (name: string) -> Color {
         case "region_warning";                          return .REGION_WARNING;
         case "region_error";                            return .REGION_ERROR;
         case "region_heredoc";                          return .REGION_HEREDOC;
+        case "region_addition";                         return .REGION_ADDITION;
+        case "region_deletion";                         return .REGION_DELETION;
 
         case "build_panel_background";                  return .BUILD_PANEL_BACKGROUND;
         case "build_panel_scrollbar";                   return .BUILD_PANEL_SCROLLBAR;
