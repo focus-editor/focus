@@ -23,6 +23,7 @@
         + Improved the speed of syntax highlighting significantly
         + Vue syntax highlighting (thanks @caztanj)
         + Java: Added support for multi-line string highlighting (thanks @LainLayer)
+        + Patch/diff (thanks @SentientCoffee)
     + New colors: `cursor_line_highlight` and `color_preview_title_bar` for more granular control (thanks @NotKyon)
 
 
