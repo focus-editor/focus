@@ -938,6 +938,7 @@ Mods :: Input.Event.Modifier_Flags;
 
 project_dirs:  [..] Project_Dir;
 project_files: [..] string;  // individual files added to project
+unique_project_dirs: [..] string;
 
 active_global_widget: Active_Global_Widget = .editors;
 
