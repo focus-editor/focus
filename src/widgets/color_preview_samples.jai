@@ -291,8 +291,8 @@ main :: proc() {
 }
 
 Structure :: struct {
-    is_true:    bool,
-    text:        string,
+    is_true: bool,
+    text:    string,
 }
 
 ODIN
@@ -1271,3 +1271,62 @@ import Menu from './Menu.vue';
     </RouterView>
 </template>
 LANG_VUE
+
+SAMPLE_Diff :: #string LANG_Diff
+diff --git a/src/draw.jai b/src/draw.jai
+index 6711110..e7b4234 100644
+--- a/src/draw.jai
++++ b/src/draw.jai
+@@ -3761,7 +3761,7 @@ get_new_scroll_target_from_scrollbar :: (main_rect: Rect, content_height: float,
+ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
+     scroll_target = clamp(scroll_target, 0, max_scroll);
+
+-    if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id, initial_value = config.settings.scrollbar_max_opacity);
++    if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id);
+
+     if max_scroll <= 0 return scroll_target;
+
+@@ -3955,7 +3955,9 @@ is_hovering_over :: (ui_id: Ui_Id) -> bool {
+     return (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id;
+ }
+
+-start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := 1.0) {
++start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
++    if initial_value < 0 then initial_value = config.settings.scrollbar_max_opacity;
++
+     animation: *Scrollbar_Fade_Out_Animation;
+     for * scrollbar_fade_out_animations {
+         if it.ui_id == ui_id { animation = it; break; }
+@@ -3967,6 +3969,7 @@ start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := 1.0) {
+     start_animation(*animation.anim, initial_value, 0.0, delay = config.settings.scrollbar_fade_out_delay_seconds);
+ }
+
++
+ #scope_export
+
+ Icon :: enum u16 {
+diff --git a/src/editors.jai b/src/editors.jai
+index fa5ae21..3bc8ebf 100644
+--- a/src/editors.jai
++++ b/src/editors.jai
+@@ -2320,13 +2320,15 @@ move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down;
+     page_size := cast(s32) (window_height / line_height);
+
+     for * cursor : editor.cursors {
+-        line := offset_to_line(editor, buffer, cursor.pos);
++        coords := offset_to_coords(editor, buffer, cursor.pos);
+         if dir == .up {
+-            line -= page_size;
++            coords.line -= page_size;
+         } else {
+-            line += page_size;
++            coords.line += page_size;
+         }
+-        cursor.pos = coords_to_offset(editor, buffer, Coords.{ line = line, col = cursor.col_wanted });
++        if cursor.col_wanted < 0 then cursor.col_wanted = coords.col;
++        coords.col = cursor.col_wanted;
++        cursor.pos = coords_to_offset(editor, buffer, coords);
+     }
+
+     if dir == .up  editor.cursor_moved = .moved_up;
+LANG_Diff

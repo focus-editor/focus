@@ -1,4 +1,4 @@
-[19]  # Version number. Do not delete.
+[21]  # Version number. Do not delete.
       # (https://github.com/catppuccin/catppuccin)
 
 [colors]
@@ -102,3 +102,13 @@ code_comment_highlight1:                ACB0BEFF
 code_comment_highlight2:                D20F39FF
 code_comment_highlight3:                8839EFFF
 code_comment_highlight4:                FE640BFF
+
+# Added after migration to version [20]
+cursor_line_highlight:                  CCD0DAFF
+color_preview_title_bar:                CCD0DAFF
+
+# Added after migration to version [21]
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C

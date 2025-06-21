@@ -30,9 +30,9 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := << t;
 
-    if is_alpha(char) {
+    if ascii_is_alpha(char) {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char ".";  parse_selector(tokenizer, *token);
@@ -78,12 +78,12 @@ read_css_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     identifier: string;
     identifier.data = t;
 
-    if !is_alnum(<<t) && <<t != #char "@" && <<t != #char "!" return identifier;
+    if !ascii_is_alnum(<<t) && <<t != #char "@" && <<t != #char "!" return identifier;
 
     t += 1;
     if t >= max_t then t = max_t;
 
-    while t < max_t && (is_alnum(<<t) || <<t == #char "-") {
+    while t < max_t && (ascii_is_alnum(<<t) || <<t == #char "-") {
         t += 1;
     }
     if t >= max_t then t = max_t;
@@ -126,7 +126,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Number
     seen_decimal_point := false;
-    while t < max_t && (is_digit(t.*) || t.* == #char ".") {
+    while t < max_t && (ascii_is_digit(t.*) || t.* == #char ".") {
         if t.* == #char "." {
             if seen_decimal_point break;
             seen_decimal_point = true;

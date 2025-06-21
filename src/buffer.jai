@@ -1431,7 +1431,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     finder.need_to_refresh_results = true;
 }
 
-reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false) {
+reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false) -> success: bool {
     context.current_buffer_id = buffer_id;
     defer context.current_buffer_id = -1;
 
@@ -1441,25 +1441,24 @@ reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false
     path := buffer.file.full_path;
 
     file_contents_str, success := read_entire_file(path);
-    if is_file_binary(file_contents_str) {
-        free(file_contents_str);
-        file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
-        buffer.readonly = true;
-    }
-
     if !success {
         if show_user_messages {
             add_user_error("Couldn't read file:\n%", path);
         } else {
             log_error("Couldn't read file:\n%", path);
         }
-        return;
+        return false;
+    }
+    if is_file_binary(file_contents_str) {
+        free(file_contents_str);
+        file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
+        buffer.readonly = true;
     }
     defer free(file_contents_str);
 
     bytes_removed := remove_crlf_in_place(*file_contents_str);
     file_hash := calculate_hash(cast([] u8) file_contents_str);
-    if buffer.meow_hash == file_hash && !force return;
+    if buffer.meow_hash == file_hash && !force return true;
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
@@ -1478,6 +1477,7 @@ reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false
     }
 
     refresh_all_editors_for_buffer(buffer_id);
+    return true;
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
@@ -1604,6 +1604,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Css;                  return tokenize_css;
         case .CSharp;               return tokenize_csharp;
         case .D;                    return tokenize_d;
+        case .Diff;                 return tokenize_diff;
         case .Glsl;                 return tokenize_glsl;
         case .Hlsl;                 return tokenize_hlsl;
         case .Golang;               return tokenize_golang;
@@ -1856,6 +1857,7 @@ Buffer :: struct {
         Css;
         CSharp;
         D;
+        Diff;
         Glsl;
         Hlsl;
         Golang;
@@ -1932,6 +1934,9 @@ Buffer_Region :: struct {
         scope_module;
 
         heredoc;
+
+        addition;
+        deletion;
     }
 }
 

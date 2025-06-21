@@ -113,15 +113,15 @@ get_next_token :: (using tokenizer: *Rust_Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier_or_raw_string(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         // Handle number literals that don't look like they are being finished properly
         // For example, 0b10002 will highlight 0b1000 as one number and 2 as another number,
         // but when highlit in editor it looks like one number literal rather than two
         // The solution here is to not highlight more numbers if there are many number tokens in a row
         last_char := (t - 1).*;
-        if tokenizer.last_tokens[1].type != .number || (!is_digit(last_char) && last_char != #char "_") {
+        if tokenizer.last_tokens[1].type != .number || (!ascii_is_digit(last_char) && last_char != #char "_") {
             parse_number(tokenizer, *token);
         } else {
             parse_identifier_or_raw_string(tokenizer, *token);
@@ -221,7 +221,7 @@ parse_number :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
     if t >= max_t return;
 
     is_decimal_variant :: inline (c: u8) -> bool {
-        return is_digit(c) || c == #char "." || c == #char "-" || c == #char "e" || c == #char "E";
+        return ascii_is_digit(c) || c == #char "." || c == #char "-" || c == #char "e" || c == #char "E";
     }
 
     if is_decimal_variant(t.*) || t.* == #char "_" {
@@ -312,7 +312,7 @@ parse_minus :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
                 token.operation = .unknown;  // -- is not a valid token
             }
         case;
-            if tokenizer.last_tokens[1].type != .number && is_digit(t.*) {
+            if tokenizer.last_tokens[1].type != .number && ascii_is_digit(t.*) {
                 parse_number(tokenizer, token);
             }
     }
@@ -572,8 +572,8 @@ read_identifier_string_tmp :: (using tokenizer: *Rust_Tokenizer) -> string /* te
 
     while t < max_t {
         c := t.*;
-        if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
-        if c == #char "\\"  { t += 1; slash_mode = true;  continue; }
+        if ascii_is_alnum(c) { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
+        if c == #char "\\"   { t += 1; slash_mode = true;  continue; }
         if slash_mode && is_white_space(c) { t += 1; continue; }
         break;
     }

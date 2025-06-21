@@ -172,15 +172,15 @@ get_next_token :: (using tokenizer: *Odin_Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         // Handle number literals that don't look like they are being finished properly
         // For example, 0b10002 will highlight 0b1000 as one number and 2 as another number,
         // but when highlit in editor it looks like one number literal rather than two
         // The solution here is to not highlight more numbers if there are many number tokens in a row
         last_char := (t - 1).*;
-        if tokenizer.last_tokens[1].type != .number || (!is_digit(last_char) && last_char != #char "_") {
+        if tokenizer.last_tokens[1].type != .number || (!ascii_is_digit(last_char) && last_char != #char "_") {
             parse_number(tokenizer, *token);
         }
         else {
@@ -266,7 +266,7 @@ parse_number :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     if t >= max_t return;
 
     is_decimal_variant :: inline (c: u8) -> bool {
-        return is_digit(c)    || c == #char "." || c == #char "-" ||
+        return ascii_is_digit(c)    || c == #char "." || c == #char "-" ||
                c == #char "e" || c == #char "E" ||
                c == #char "i" || c == #char "j" || c == #char "k";
     }
@@ -314,7 +314,7 @@ parse_number :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     else if t.* == #char "o" {
         // Octal
         is_octal :: inline (c: u8) -> bool {
-            return is_digit(c) && c < #char "8";
+            return ascii_is_digit(c) && c < #char "8";
         }
 
         t += 1;
@@ -334,14 +334,13 @@ parse_directive :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
-    if !is_alpha(t.*) then return;
+    if !ascii_is_alpha(t.*) then return;
 
     auto_release_temp();
 
     directive_str := read_identifier_string_tmp(tokenizer);
 
-    while t < max_t && is_alnum(t.*) t += 1;
-    if t >= max_t return;
+    while t < max_t && ascii_is_alnum(t.*) t += 1;
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
@@ -400,7 +399,7 @@ parse_minus :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
                 token.operation = .unknown;  // -- is not a valid token
             }
         case;
-            if tokenizer.last_tokens[1].type != .number && is_digit(t.*) {
+            if tokenizer.last_tokens[1].type != .number && ascii_is_digit(t.*) {
                 parse_number(tokenizer, token);
             }
     }
@@ -694,7 +693,7 @@ read_identifier_string_tmp :: (using tokenizer: *Odin_Tokenizer) -> string /* te
     array_add(*identifier, t.*);
     t += 1;
 
-    while t < max_t && is_alnum(t.*) {
+    while t < max_t && ascii_is_alnum(t.*) {
         array_add(*identifier, t.*);
         t += 1;
     }

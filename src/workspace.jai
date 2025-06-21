@@ -6,6 +6,22 @@ init_workspace :: () {
             add_directory_to_workspace(path);
         }
     }
+
+    // Build a list of unique project dirs for watching and scanning
+    // For example, if project dirs are C:/dir and C:/dir/child, we will only keep the parent C:/dir
+    for dir : project_dirs {
+        is_unique := true;
+        for project_dirs {
+            if dir.path.count > it.path.count && platform_path_begins_with(dir.path, it.path) {
+                is_unique = false;
+                break;
+            }
+        }
+        if is_unique then array_add(*unique_project_dirs, dir.path);
+    }
+
+    print("Unique dirs: %\n", join(..unique_project_dirs, separator=", "));
+
     // Change working directory to the first directory in the list
     working_dir := get_working_directory_from_workspace(config.workspace.members);
     if working_dir {
@@ -62,14 +78,6 @@ add_directory_to_workspace :: (path: string, index := -1) {
     dir.path = trim_right(full_path, "/");
     dir.path_prefix_len = find_index_from_right(dir.path, #char "/") + 1;
     dir.name = advance(dir.path, dir.path_prefix_len);
-
-    in_project, project_dir := dir_is_within_project(dir.path);
-    if in_project {
-        error_msg := tprint("Directory % is already in the project. Found existing directory %", dir.path, project_dir.path);
-        log_error(error_msg);
-        add_user_warning(error_msg, dismiss_in_seconds = 10);
-        return;
-    }
 
     // Disambiguate project names
     // E.g. C:/projects/project1/src/code and C:/projects/project2/src/code should
@@ -233,6 +241,7 @@ reload_workspace :: (automatic := false) {
     // Reinit things
     init_file_watcher();
     array_reset_keeping_memory(*project_dirs);
+    array_reset_keeping_memory(*unique_project_dirs);
     for project_files  free(it);
     array_reset_keeping_memory(*project_files);
     init_workspace();
@@ -451,7 +460,7 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
         table_add(*file_list_table, full_path, true);
     }
 
-    for project_dirs visit_files(it.path, recursive = true, scan_pool_allocator, maybe_add_file_to_scan_list, visit_directories = true);
+    for unique_project_dirs visit_files(it, recursive = true, scan_pool_allocator, maybe_add_file_to_scan_list, visit_directories = true);
 
     return .STOP;  // don't need you no mo
 }
@@ -480,10 +489,12 @@ start_file_watcher :: () {
         return;
     }
 
-    for project_dirs {
-        added := add_directories(*watchers.project_watcher, it.path);
-        if !added log_error("Couldn't start watching directory '%'", it.path);
+    for unique_project_dirs {
+        added := add_directories(*watchers.project_watcher, it);
+        if !added log_error("Couldn't start watching directory '%'", it);
     }
+
+    // Setting it here at runtime before anything has a chance to use it
     dirs_to_rescan.allocator = temp;
 
     // Add directories that contain standalone files which we want to watch

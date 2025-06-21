@@ -99,9 +99,9 @@ get_next_token :: (using tokenizer: *Js_Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := << t;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon                       (tokenizer, *token);
@@ -167,10 +167,10 @@ parse_number :: (using tokenizer: *Js_Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if is_digit(t.*) || t.* == #char "." {
+    if ascii_is_digit(t.*) || t.* == #char "." {
         // Decimal
         seen_decimal_point := false;
-        while t < max_t && (is_digit(t.*) || t.* == #char ".") {
+        while t < max_t && (ascii_is_digit(t.*) || t.* == #char ".") {
             if t.* == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
@@ -189,7 +189,7 @@ parse_number :: (using tokenizer: *Js_Tokenizer, token: *Token) {
               if t >= max_t return;
             }
 
-            while t < max_t && is_digit(t.*) {
+            while t < max_t && ascii_is_digit(t.*) {
                 t += 1;
             }
             if t >= max_t return;
@@ -246,7 +246,7 @@ parse_minus :: (using tokenizer: *Js_Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(<< t) parse_number(tokenizer, token);
+            if ascii_is_digit(<< t) parse_number(tokenizer, token);
     }
 }
 
@@ -492,7 +492,7 @@ parse_private_identifier :: (using tokenizer: *Js_Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
-    if t < max_t && !is_alpha(<<t) && <<t != #char "_" return;
+    if t < max_t && !ascii_is_alpha(<<t) && <<t != #char "_" return;
 
     identifier_str := read_utf8_identifier_string(tokenizer);
 }
@@ -501,7 +501,7 @@ parse_decorator :: (using tokenizer: *Js_Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
-    if t < max_t && !is_alpha(<<t) && <<t != #char "_" return;
+    if t < max_t && !ascii_is_alpha(<<t) && <<t != #char "_" return;
 
     identifier_str := read_utf8_identifier_string(tokenizer);
 }

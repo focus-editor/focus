@@ -555,7 +555,7 @@ parse_period_or_enum_variant :: (using tokenizer: *Jai_Tokenizer, token: *Token)
 parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .note;
 
-    while t < max_t && ascii_is_alnum(<< t) t += 1;
+    while t < max_t && ascii_is_alnum(t.*) t += 1;
 }
 
 parse_slash_or_comment :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
@@ -566,24 +566,25 @@ parse_slash_or_comment :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "/";
             token.type = .comment;
             t += 1;
-            while t < max_t && << t != #char "\n" t += 1;
+            while t < max_t && t.* != #char "\n" t += 1;
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
             num_open_comments := 0;
             while t + 1 < max_t {
-                if << t == #char "*" && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1).* == #char "/" {
                     if num_open_comments == 0 {
                         t += 2;
                         break;
                     } else {
                         num_open_comments -= 1;
+                        t += 1;
                     }
-                } else if << t == #char "/" && << (t + 1) == #char "*" {
+                } else if t.* == #char "/" && (t + 1).* == #char "*" {
                     num_open_comments += 1;
                     t += 1;
                 }
@@ -597,7 +598,7 @@ parse_string_literal :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     escape_seen := false;
 
-    while t < max_t && << t != #char "\n" {
+    while t < max_t && t.* != #char "\n" {
         if t.* == #char "\"" && !escape_seen break;
         escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;

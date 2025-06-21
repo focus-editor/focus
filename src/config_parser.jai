@@ -205,6 +205,7 @@ map_name_to_color :: (name: string) -> Color {
         case "scrollbar_background";                    return .SCROLLBAR_BACKGROUND;
         case "cursor";                                  return .CURSOR;
         case "cursor_inactive";                         return .CURSOR_INACTIVE;
+        case "cursor_line_highlight";                   return .CURSOR_LINE_HIGHLIGHT;
         case "paste_animation";                         return .PASTE_ANIMATION;
         case "splitter";                                return .SPLITTER;
         case "splitter_hover";                          return .SPLITTER_HOVER;
@@ -237,12 +238,16 @@ map_name_to_color :: (name: string) -> Color {
         case "region_warning";                          return .REGION_WARNING;
         case "region_error";                            return .REGION_ERROR;
         case "region_heredoc";                          return .REGION_HEREDOC;
+        case "region_addition";                         return .REGION_ADDITION;
+        case "region_deletion";                         return .REGION_DELETION;
 
         case "build_panel_background";                  return .BUILD_PANEL_BACKGROUND;
         case "build_panel_scrollbar";                   return .BUILD_PANEL_SCROLLBAR;
         case "build_panel_scrollbar_hover";             return .BUILD_PANEL_SCROLLBAR_HOVER;
         case "build_panel_scrollbar_background";        return .BUILD_PANEL_SCROLLBAR_BACKGROUND;
         case "build_panel_title_bar";                   return .BUILD_PANEL_TITLE_BAR;
+
+        case "color_preview_title_bar";                 return .COLOR_PREVIEW_TITLE_BAR;
     }
 
     return .NONE;

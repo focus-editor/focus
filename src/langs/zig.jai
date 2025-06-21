@@ -46,9 +46,9 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := << t;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char "!";  token.type = .operation; token.operation = .bang;                t += 1;
@@ -112,7 +112,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     is_decimal_variant :: inline (c: u8) -> bool {
-        return is_digit(c) || c == #char "." || c == #char "-" || c == #char "e" || c == #char "E";
+        return ascii_is_digit(c) || c == #char "." || c == #char "-" || c == #char "e" || c == #char "E";
     }
 
     if is_decimal_variant(t.*) || t.* == #char "_" {

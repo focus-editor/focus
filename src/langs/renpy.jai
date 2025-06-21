@@ -40,9 +40,9 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := << t;
 
-    if is_alpha(char) || char == #char "_" {
+    if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
-    } else if is_digit(char) {
+    } else if ascii_is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon             (tokenizer, *token);
@@ -104,11 +104,11 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if is_digit(<< t) || << t == #char "_" {
+    if ascii_is_digit(<< t) || << t == #char "_" {
         // Decimal
         t += 1;
         seen_decimal_point := false;
-        while t < max_t && (is_digit(<< t) || << t == #char "_" || << t == #char ".") {
+        while t < max_t && (ascii_is_digit(<< t) || << t == #char "_" || << t == #char ".") {
             if << t == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
@@ -174,7 +174,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
                 token.operation = .unknown;  // -- is not a valid token
             }
         case;
-            if is_digit(<< t) parse_number(tokenizer, token);
+            if ascii_is_digit(<< t) parse_number(tokenizer, token);
     }
 }
 

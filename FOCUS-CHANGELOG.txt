@@ -2,9 +2,16 @@
 
 + New features:
     + TODO: add everything related to the multi-pane support here
-    + It is now possible to specify words which will be highlighted in comments
+    + It is now possible to specify words which will be highlighted in comments (see example in settings)
+    + prefer_system_file_dialogs now works on macOS (thanks @caztanj)
+    + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
+        + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
+    + Fixed a crash when trying to jump to build error if build output has been cleared
+    + Fixed a bug where `change case` actions couldn't be undone (thanks @fda0)
+    + Fixed a bug with the last directive in file not being highlighted
+    + Fixed a bug with ignore/allow patterns where some allow patterns weren't applied if a folder was ignored
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)
@@ -12,6 +19,13 @@
         + Catppuccin, Rosé Pine, Jellybeans, Kanagawa, VSCode Dark (thanks @daolgierd)
         + Redshift (thanks @MusaMahmood)
     + Mac: Hide command and Services menu added
+    + Syntax highlighting:
+        + Improved the speed of syntax highlighting significantly
+        + Vue syntax highlighting (thanks @caztanj)
+        + Java: Added support for multi-line string highlighting (thanks @LainLayer)
+        + Patch/diff (thanks @SentientCoffee)
+    + New colors: `cursor_line_highlight` and `color_preview_title_bar` for more granular control (thanks @NotKyon)
+    + Adding subdirectories of existing directories in the workspace is now allowed
 
 
 # RELEASES ==================================================================

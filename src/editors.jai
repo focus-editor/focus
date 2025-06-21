@@ -1136,7 +1136,8 @@ close_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
     if is_unsaved(buffer) {
         if buffer.has_file {
-            reload_from_disk(buffer_id, force = true);
+            reloaded := reload_from_disk(buffer_id, force = true);
+            if !reloaded then buffer.modified = false;  // if a file was deleted on disk, we don't want to see it in any file lists
         } else {
             reset(*buffer.bytes);
             buffer.deleted = true;
@@ -2196,6 +2197,9 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
 
         case "ini";             lang = .Ini;
 
+        case "diff";            lang = .Diff;
+        case "patch";           lang = .Diff;
+
         case;
             // Files named `.focus_config` are assumed to have no extension
             if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
@@ -2297,6 +2301,9 @@ make_editor_active :: (editor_id: s64) {
 
     if is_build_panel(editor_id) {
         build_panel_grab_focus();
+    } else if is_color_preview_panel(editor_id) {
+        // TODO:
+        // color_preview_grab_focus();
     } else {
         pane, editor_index := editors_find_pane_with_editor(editor_id);
         if pane {
@@ -4065,7 +4072,7 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
             case .caps;
                 caps_next := true;
                 for 0 .. new_text.count - 1 {
-                    if is_alpha(new_text[it]) {
+                    if ascii_is_alpha(new_text[it]) {
                         if caps_next {
                             caps_next = false;
                             new_text[it] = to_upper(new_text[it]);
@@ -4282,6 +4289,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         // No support for comments at all
         case .Plain_Text;        #through;
         case .Todo;              #through;
+        case .Diff;              #through;
         case .Focus_Build_Panel;
             return;
     }
@@ -4512,6 +4520,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         // No support for comments at all
         case .Plain_Text;        #through;
         case .Todo;              #through;
+        case .Diff;              #through;
         case .Focus_Build_Panel;
             return;
     }

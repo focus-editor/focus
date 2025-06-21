@@ -607,10 +607,18 @@ ADDED_COLORS :: Added_Color.[
 
     .{ 18, "inactive_pane_dim_overlay",        "",                       "050505FF" },
 
-    .{ 19, "code_comment_highlight1",           "code_note",              "E67D74FF" },
+    .{ 19, "code_comment_highlight1",          "code_note",              "E67D74FF" },
     .{ 19, "code_comment_highlight2",          "code_error",             "FF0000FF" },
     .{ 19, "code_comment_highlight3",          "code_keyword",           "E0AD82FF" },
     .{ 19, "code_comment_highlight4",          "code_value"  ,           "D699B5FF" },
+
+    .{ 20, "cursor_line_highlight",            "background4",            "21333FFF" },
+    .{ 20, "color_preview_title_bar",          "background4",            "21333FFF" },
+
+    .{ 21, "code_addition",                    "",                       "33B333FF" },
+    .{ 21, "code_deletion"  ,                  "",                       "E64D4DFF" },
+    .{ 21, "region_addition",                  "",                       "2260224C" },
+    .{ 21, "region_deletion",                  "",                       "7722224C" },
 ];
 
 
@@ -1692,6 +1700,12 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 FOCUS_CONFIG
 
@@ -1774,6 +1788,12 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 FOCUS_CONFIG
 
@@ -1948,6 +1968,12 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 FOCUS_CONFIG
 
@@ -2071,6 +2097,12 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 [[keymap]]
 
@@ -2358,6 +2390,12 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                E0AD82FF
 code_comment_highlight4:                D699B5FF
+cursor_line_highlight:                  21333FFF
+color_preview_title_bar:                21333FFF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 FOCUS_CONFIG
 
@@ -2533,5 +2571,11 @@ code_comment_highlight1:                E67D74FF
 code_comment_highlight2:                FF0000FF
 code_comment_highlight3:                B8860BFF
 code_comment_highlight4:                6B8E23FF
+cursor_line_highlight:                  121212FF
+color_preview_title_bar:                121212FF
+code_addition:                          33B333FF
+code_deletion:                          E64D4DFF
+region_addition:                        2260224C
+region_deletion:                        7722224C
 
 FOCUS_CONFIG
