@@ -61,7 +61,7 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         editor, buffer = get_editor_and_buffer(editor_id);
         cursor := get_main_cursor(editor);
         array_add(*forward_history, .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel });
-        current_line = offset_to_line(editor, buffer, cursor.pos);
+        current_line = offset_to_line(editor, buffer, cursor.pos, safe = true);
     }
 
     // Find the previous cursor position
@@ -82,7 +82,7 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
         }
         if last_global_frame.editor_id != editor_id break;
         if !editor break;
-        if has_editor_history && editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos)) >= MIN_LINE_THRESHOLD break;
+        if has_editor_history && editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos, safe = true)) >= MIN_LINE_THRESHOLD break;
     }
 
     prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };

@@ -765,7 +765,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
                 existing_buffer.modified = false;
                 existing_buffer.modified_on_disk = false;
 
-                reroute_active_editor(existing_buffer_id, buffer_id);
+                reroute_editors_to_new_buffer(existing_buffer_id, buffer_id);
             }
 
             table_add(*buffers_table, copy_string(file_path), buffer_id);
@@ -786,7 +786,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
         if new_id < 0 return;  // logged elsewhere
 
-        reroute_active_editor(buffer_id, new_id);
+        reroute_editors_to_new_buffer(buffer_id, new_id);
         update_window_title(open_editors[get_active_editor_id()].buffer_id);
         update_most_recent_buffers(new_id);
     }
@@ -845,13 +845,13 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     redraw_requested = true;
 }
 
-reroute_active_editor :: (old_buffer_id: s64, new_buffer_id: s64) {
+reroute_editors_to_new_buffer :: (old_buffer_id: s64, new_buffer_id: s64) {
     old_buffer := *open_buffers[old_buffer_id];
     new_buffer := *open_buffers[new_buffer_id];
 
-    editor := *open_editors[get_active_editor_id()];
+    for * editor : open_editors {
+        if editor.buffer_id != old_buffer_id  continue;
 
-    if editor.buffer_id == old_buffer_id {
         editor.buffer_id = new_buffer_id;
         editor.scroll_to_cursor = .yes;
         organise_cursors(editor);
@@ -860,7 +860,6 @@ reroute_active_editor :: (old_buffer_id: s64, new_buffer_id: s64) {
         old_buffer.num_editors_open -= 1;
         new_buffer.num_editors_open += 1;
     }
-
 }
 
 delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
