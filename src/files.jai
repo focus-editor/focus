@@ -299,7 +299,7 @@ should_descend_into_dir :: (path: string) -> bool {
     // explicitly allowed, so we have to check everything.
     if config.workspace.allow return true;
 
-    return should_ignore_path(path);
+    return !should_ignore_path(path);
 }
 
 // Match simple wildcard patterns. Supports `*`, `**` and `?` only.
