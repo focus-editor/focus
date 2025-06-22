@@ -1129,6 +1129,22 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     visible_offset_range: Offset_Range;
     cursors_off_screen := 0;
 
+    // Try to position the scrollbar outside the scrollable area if there's space there
+    rect_with_scrollbar := rect;
+    {
+        free_space_on_right := right(main_area) - right(rect);
+        rect_with_scrollbar.w += min(free_space_on_right, scrollbar_width);
+    }
+    num_editor_lines := get_max_line_num(editor, buffer);
+    content_height := (num_editor_lines + 2) * line_height;
+    scroll_behind_height := 0.0;
+    scroll_behind_lines: s32 = 12;
+    if buffer_settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
+    if buffer_settings.scroll_behind_first_line && !as_build_panel && !is_color_preview_panel(editor_id) then scroll_behind_height = (scroll_behind_lines * line_height);
+
+    min_y_scroll := cast(s32) -scroll_behind_height;
+    max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
+
     // Draw editor
     {
         min_visible_chars :: 5;
@@ -1137,17 +1153,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         defer pop_scissor();
 
         // Handle editor scrolling here because we only know the layout at this point.
-        num_editor_lines := get_max_line_num(editor, buffer);
-        content_height := (num_editor_lines + 2) * line_height;
-        scroll_behind_height := 0.0;
-        scroll_behind_lines: s32 = 12;
-        if buffer_settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
-        if buffer_settings.scroll_behind_first_line && !as_build_panel && !is_color_preview_panel(editor_id) then scroll_behind_height = (scroll_behind_lines * line_height);
-
-        min_y_scroll := cast(s32) -scroll_behind_height;
-        max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
-
-        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(main_area) && mouse.scroll_y_delta != 0 {
             // Mousewheel scrolling - vertical
             // We only handle vertical scrolling here because horizontal scrolling depends on the
             // length of the longest visible line, which we can only determine once we determine
@@ -1323,7 +1329,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
         // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
         // Do it after we've handled cursor_moved AND after calculating the next scroll_y animation value, because it uses viewport.top
-        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(rect_with_scrollbar, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             snap_viewport_top_to_target(editor, buffer, new_scroll_target);
@@ -1625,61 +1631,60 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 }
             }
         }
+    }
 
+    // Draw scrollbar and scrollbar marks
+    draw_scrollbar(rect_with_scrollbar, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id, as_build_panel);
 
-        // Draw scrollbar and scrollbar marks
-        draw_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, min_y_scroll, max_y_scroll, scrollbar_id, as_build_panel);
+    if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
+        Simp.set_shader_for_color(enable_blend = true);
 
-        if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
-            Simp.set_shader_for_color(enable_blend = true);
+        marks_rect := cut_right(rect_with_scrollbar, scrollbar_width);
+        marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
+        marks_rect_top := marks_rect.y + marks_rect.h;
+        assert(buffer.line_starts.count > 0);
 
-            marks_rect := cut_right(rect, scrollbar_width);
-            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
-            marks_rect_top := marks_rect.y + marks_rect.h;
-            assert(buffer.line_starts.count > 0);
+        highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
+        highlight_mark_rect.h = floor(4 * dpi_scale);
 
-            highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-            highlight_mark_rect.h = floor(4 * dpi_scale);
+        total_scrollable_lines := content_height / line_height;
 
-            total_scrollable_lines := content_height / line_height;
-
-            if !is_empty(search_bar.results) {
-                // Search results
-                for search_bar.results {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
-                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
-                    draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Color.SEARCH_RESULT_ACTIVE else Color.SEARCH_RESULT_INACTIVE);
-                }
+        if !is_empty(search_bar.results) {
+            // Search results
+            for search_bar.results {
+                pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
+                highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
+                draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Color.SEARCH_RESULT_ACTIVE else Color.SEARCH_RESULT_INACTIVE);
             }
+        }
 
-            if !search_bar_is_open(editor) {
-                // Selection highlights
-                for highlights {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
-                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
-                    draw_rect_raw(highlight_mark_rect, Color.SELECTION_HIGHLIGHT);
-                }
+        if !search_bar_is_open(editor) {
+            // Selection highlights
+            for highlights {
+                pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
+                highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
+                draw_rect_raw(highlight_mark_rect, Color.SELECTION_HIGHLIGHT);
             }
+        }
 
-            // Cursor and selection marks
-            cursor_mark_rect := marks_rect;
-            cursor_mark_rect.h = 2 * dpi_scale;
-            selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
+        // Cursor and selection marks
+        cursor_mark_rect := marks_rect;
+        cursor_mark_rect.h = 2 * dpi_scale;
+        selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
 
-            for cursor : cursors {
-                coords := cursor_coords[it_index];
-                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;
-                cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
-                if has_selection(cursor) {
-                    sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
-                    min_pos := min(pos_from_top, sel_from_top);
-                    max_pos := max(pos_from_top, sel_from_top);
-                    selection_mark_rect.y = marks_rect_top - max_pos - cursor_mark_rect.h;
-                    selection_mark_rect.h = max_pos - min_pos + cursor_mark_rect.h;
-                    draw_rect_raw(selection_mark_rect, Color.SELECTION_INACTIVE);
-                }
-                draw_rect_raw(cursor_mark_rect, Color.CURSOR);
+        for cursor : cursors {
+            coords := cursor_coords[it_index];
+            pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;
+            cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
+            if has_selection(cursor) {
+                sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
+                min_pos := min(pos_from_top, sel_from_top);
+                max_pos := max(pos_from_top, sel_from_top);
+                selection_mark_rect.y = marks_rect_top - max_pos - cursor_mark_rect.h;
+                selection_mark_rect.h = max_pos - min_pos + cursor_mark_rect.h;
+                draw_rect_raw(selection_mark_rect, Color.SELECTION_INACTIVE);
             }
+            draw_rect_raw(cursor_mark_rect, Color.CURSOR);
         }
     }
 
