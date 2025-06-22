@@ -129,15 +129,15 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
     pane_ui_id := get_ui_id_for_pane(root_pane_id, unique_pane_id);
 
     if layout == .single {
+        clicked := maybe_set_hot_or_active(root_pane_id, rect, .NORMAL);
+        if clicked {
+            activate_editors();
+            clear_all_lingering_actions();
+            editors.active_pane = pane;
+            redraw_requested = true;
+        }
         if editor_index >= 0 {
             draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane);
-        } else {
-            clicked := maybe_set_hot_or_active(pane_ui_id, rect, .NORMAL);
-            if clicked {
-                activate_editors();
-                editors.active_pane = pane;
-                redraw_requested = true;
-            }
         }
         if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
             size := floor(config.settings.active_pane_border_width * dpi_scale);
@@ -881,8 +881,7 @@ coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
     return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
 }
 
-// TODO: remove total_editor_area
-draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true, total_editor_area := Rect.{}) {
+draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true) {
     as_build_panel := is_build_panel(editor_id);
 
     using editor := *open_editors[editor_id];
@@ -899,11 +898,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
     if !is_valid(rect) return;
 
-    became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
-    if became_active {
-        activate_editors();
-        clear_all_lingering_actions();
-    }
+    maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
 
     active_editor_id := get_active_editor_id();
     editor_is_active := editor_id == active_editor_id && Input.input_application_has_focus;
