@@ -20,8 +20,6 @@ init_workspace :: () {
         if is_unique then array_add(*unique_project_dirs, dir.path);
     }
 
-    print("Unique dirs: %\n", join(..unique_project_dirs, separator=", "));
-
     // Change working directory to the first directory in the list
     working_dir := get_working_directory_from_workspace(config.workspace.members);
     if working_dir {

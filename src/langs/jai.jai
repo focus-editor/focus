@@ -488,7 +488,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
     if token.directive == .directive_string {
         next_token := start_new_token(tokenizer);
         if t >= max_t return;
-        if !ascii_is_alpha(t.*) return;
+        if !ascii_is_alpha(t.*) && t.* != #char "_" return;
 
         next_token.type = .multiline_string;
         identifier_str := read_jai_identifier_string(tokenizer);
