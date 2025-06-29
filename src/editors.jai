@@ -1134,18 +1134,16 @@ close_editor_by_id :: (editor_id: s64) {
 
 close_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
+
     if is_unsaved(buffer) {
-        if buffer.has_file {
-            reloaded := reload_from_disk(buffer_id, force = true);
-            if !reloaded then buffer.modified = false;  // if a file was deleted on disk, we don't want to see it in any file lists
-        } else {
-            reset(*buffer.bytes);
-            buffer.deleted = true;
-            buffer.modified = false;
-        }
+        if buffer.has_file then reload_from_disk(buffer_id, force = true);
         reset_all_editors_for_buffer(buffer_id);
     }
+
+    buffer.modified = false;
     buffer.num_times_opened = 0;  // deprioritise it in the full file list
+    if !buffer.has_file then buffer.deleted = true;
+
     array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
 }
 
