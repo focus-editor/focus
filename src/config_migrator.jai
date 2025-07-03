@@ -525,6 +525,8 @@ RENAMED_SETTINGS :: Renamed_Setting.[
     .{ 11, "show_selected_text_length",           "status_bar_show_selected_text_length", .[], ""},
 
     .{ 17, "editor_history_size", "", .[], "" },  // removed
+
+    .{ 22, "disable_file_open_close_animations", "", .[], "" },  // removed
 ];
 
 SETTING_VALUES_INDENT :: #run -> int {
@@ -1268,6 +1270,7 @@ max_entries_in_open_file_dialog:        2000
 insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
+disable_file_open_close_animations:     false
 persist_local_search_results:           false
 strip_trailing_whitespace_on_save:      true
 

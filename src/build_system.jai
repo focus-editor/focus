@@ -283,12 +283,7 @@ build_panel_toggle_height :: () {
     target := ifx build_panel_is_expanded then config.settings.build_panel_height_percent / 100.0 else 1.0;
     target = clamp(target, 0.1, 1.0);
 
-    if !config.settings.disable_file_open_close_animations {
-        start_animation(*build_panel_height_anim, build_panel_height, target);
-    } else {
-        build_panel_height_anim.target = target;
-        build_panel_height = target;
-    }
+    start_animation(*build_panel_height_anim, build_panel_height, target);
     build_panel_is_expanded = !build_panel_is_expanded;
 }
 

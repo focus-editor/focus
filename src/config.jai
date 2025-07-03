@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
-CURRENT_CONFIG_VERSION :: 21;
+CURRENT_CONFIG_VERSION :: 22;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -670,7 +670,6 @@ Settings :: struct {
     window_x                                                := -1000;   @v1  // using -1000 because -1 could be a valid value someone might want
     window_y                                                := -1000;   @v1
     cursor_blink_time_in_seconds                            := 5;       @v1
-    disable_file_open_close_animations                      := false;   @v1
     disable_viewport_chasing_cursor_near_the_edge           := false;   @v3
     smooth_scrolling                                        := true;    @v1
     show_paste_effect                                       := true;    @v6
