@@ -249,6 +249,7 @@ main :: () {
         num_text_input_events_to_ignore := 0;
 
         for event : Input.events_this_frame {
+
             // General events
             if event.type == {
                 case .QUIT;

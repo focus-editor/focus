@@ -168,9 +168,14 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             if layout == .horizontal {
                 splitter_pos = (mouse.pointer.x - rect.x) / rect.w;
             } else {
-                splitter_pos = (mouse.pointer.y - rect.y) / rect.h;
+                splitter_pos = 1.0 - (mouse.pointer.y - rect.y) / rect.h;
             }
             splitter_pos = clamp(splitter_pos, 0.1, 0.9);
+            splitter_anim.target = splitter_pos;
+        }
+        if !values_are_close(splitter_pos, splitter_anim.target) {
+            redraw_requested = true;
+            splitter_pos = get_animation_value(splitter_anim);
         }
 
         // NOTE: this logic is duplicated in gather_leaf_pane_rects
@@ -179,7 +184,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = PANE_SPLITTER_WIDTH);
             splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, PANE_SPLITTER_WIDTH, rect1.h);
         } else {
-            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = PANE_SPLITTER_WIDTH);
+            rect1, rect2 = cut_top(rect, rect.h * splitter_pos, margin = PANE_SPLITTER_WIDTH);
             splitter_rect = make_rect(rect2.x, rect2.y + rect2.h, rect2.w, PANE_SPLITTER_WIDTH);
         }
 

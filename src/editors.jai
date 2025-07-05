@@ -2026,7 +2026,7 @@ gather_leaf_pane_rects :: () -> [] Leaf_Pane_Rect /* temp */ {
         if pane.layout == .horizontal {
             rect1, rect2 = cut_left(rect, rect.w * pane.splitter_pos + PANE_SPLITTER_WIDTH);
         } else {
-            rect2, rect1 = cut_bottom(rect, rect.h * pane.splitter_pos - PANE_SPLITTER_WIDTH);
+            rect1, rect2 = cut_top(rect, rect.h * pane.splitter_pos - PANE_SPLITTER_WIDTH);
         }
 
         _gather_rects(pane.child1, rect1, result);
@@ -2303,6 +2303,7 @@ make_editor_active :: (editor_id: s64) {
         // TODO:
         // color_preview_grab_focus();
     } else {
+        activate_editors();
         pane, editor_index := editors_find_pane_with_editor(editor_id);
         if pane {
             // Make the pane active
@@ -2311,6 +2312,10 @@ make_editor_active :: (editor_id: s64) {
         } else {
             log_error("Attempting to make an editor active, but it's missing in the pane tree. This is probably a bug.");
             return;
+        }
+        // Maybe expand the newly activated editor
+        if editors.expanded_editor_id >= 0 && editors.expanded_editor_id != editor_id {
+            expand_active_editor();
         }
     }
 
@@ -2836,20 +2841,64 @@ toggle_expand :: () {
     if build_panel_is_active() {
         build_panel_toggle_height();
     } else {
-        toggle_editor_expand(!editors.expanded);
+        toggle_editor_expand();
     }
 }
 
-toggle_editor_expand :: (expanded: bool) {
-    // !!!! TODO: rewrite
-    // if editors.layout != .Double return;
+toggle_editor_expand :: () {
+    if editors_get_layout() != .Multi return;
 
-    // editors.expanded = expanded;
-    // if editors.expanded {
-    //     editors_start_moving_splitter(ifx editors.active == editors.left then 0.9 else 0.1);
-    // } else {
-    //     editors_start_moving_splitter(0.5);  // back to center
-    // }
+    active_editor_id := get_active_editor_id();
+    if active_editor_id < 0 return;  // no active editor
+
+    if editors.expanded_editor_id == -1 {
+        // Expand
+        remember_all_splitter_positions();
+        expand_active_editor();
+    } else if editors.expanded_editor_id == active_editor_id {
+        editors.expanded_editor_id = -1;
+        restore_saved_splitter_positions();
+    }
+}
+
+remember_all_splitter_positions :: () {
+    _save_pos :: (using pane: *Editor_Pane) {
+        if !pane return;
+        saved_splitter_pos = splitter_pos;
+        _save_pos(child1);
+        _save_pos(child2);
+    }
+    _save_pos(editors.root);
+}
+
+restore_saved_splitter_positions :: () {
+    _restore_pos :: (using pane: *Editor_Pane) {
+        if !pane return;
+        if layout != .single {
+            start_animation(*splitter_anim, splitter_pos, saved_splitter_pos);
+        } else {
+            splitter_pos = 0.5;
+            saved_splitter_pos = splitter_pos;
+            splitter_anim.target = splitter_pos;
+        }
+        _restore_pos(child1);
+        _restore_pos(child2);
+    }
+    _restore_pos(editors.root);
+}
+
+expand_active_editor :: () {
+    editors.expanded_editor_id = get_active_editor_id();
+
+    pane   := editors.active_pane;
+    parent := pane.parent;
+    while parent != null {
+        assert(parent.layout != .single);
+        splitter_target := ifx parent.child1 == pane then 0.9 else 0.1;
+        start_animation(*parent.splitter_anim, parent.splitter_pos, splitter_target);
+        pane = parent;
+        parent = pane.parent;
+    }
 }
 
 action_scroll_viewport :: (action: Action_Editors, event: Input.Event, editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
@@ -4772,7 +4821,7 @@ Editor_State :: struct {
     active_pane: *Editor_Pane;
 
     last_active_editor_id: s64 = -1;
-    expanded := false;  // whether the active editor should be larger
+    expanded_editor_id: s64 = -1;
 
     Layout :: enum u8 {
         None    :: 0;
@@ -4795,6 +4844,8 @@ Editor_Pane :: struct {
 
     layout: Layout = .single;
     splitter_pos: float = 0.5;
+    splitter_anim := #run Tween_Animation(float).{ start = 0.5, target = 0.5, duration = 0.1, func = .smoothstep };
+    saved_splitter_pos: float = 0.5;  // remembered when expanding, restored when unexpanding
 
     parent: *Editor_Pane;
     child1: *Editor_Pane;
