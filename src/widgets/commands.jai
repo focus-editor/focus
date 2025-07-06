@@ -244,6 +244,9 @@ base_commands := #run -> [] Command {
         cmd( "Rotate Panes Clockwise",            .rotate_panes_clockwise,           .Multi  ),
         cmd( "Rotate Panes Counterclockwise",     .rotate_panes_counterclockwise,    .Multi  ),
 
+        cmd( "Center Pane Splitter",              .center_pane_splitter,             .Multi  ),
+        cmd( "Center All Pane Splitters",         .center_all_pane_splitters,        .Multi  ),
+
         cmd( "Toggle Block Comment",              .toggle_block_comment,             .Single ),
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),
         cmd( "Toggle Line Numbers",               .toggle_line_numbers,              .Single ),

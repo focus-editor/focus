@@ -1830,6 +1830,32 @@ rotate_panes :: (pane: *Editor_Pane, direction: enum { clockwise; counterclockwi
     rotate_panes(pane.child2, direction);
 }
 
+center_pane_splitter :: () {
+    parent := editors.active_pane.parent;
+    if !parent return;
+
+    start_animation(*parent.splitter_anim, parent.splitter_pos, 0.5);
+    parent.saved_splitter_pos = 0.5;
+
+    editors.expanded_editor_id = -1;
+}
+
+center_all_pane_splitters :: () {
+    _center_splitter :: (using pane: *Editor_Pane) {
+        if !pane return;
+
+        start_animation(*splitter_anim, splitter_pos, 0.5);
+        saved_splitter_pos = 0.5;
+
+        _center_splitter(child1);
+        _center_splitter(child2);
+    }
+
+    _center_splitter(editors.root);
+
+    editors.expanded_editor_id = -1;
+}
+
 assert_leaf_pane :: (pane: *Editor_Pane, msg := "Expected a leaf pane but got something else. This is a bug.") {
     assert(pane.layout == .single, msg);
     assert(pane.left  == null, msg);

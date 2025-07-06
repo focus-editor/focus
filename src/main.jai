@@ -451,6 +451,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .rotate_panes_clockwise;                           rotate_panes(editors.root, .clockwise);             return true;
         case .rotate_panes_counterclockwise;                    rotate_panes(editors.root, .counterclockwise);      return true;
 
+        case .center_pane_splitter;                             center_pane_splitter();                             return true;
+        case .center_all_pane_splitters;                        center_all_pane_splitters();                        return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;

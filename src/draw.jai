@@ -42,49 +42,6 @@ draw_frame :: () {
         }
     }
 
-    // !!!!!!!!!!!!! TODO: handle toggle_expand, then delete
-    // if #complete editors.layout == {
-    //     case .None;
-    //         editors_snap_splitter(0.5);
-    //         draw_welcome_screen(screen);
-
-    //     case .Single;
-    //         editors_snap_splitter(0.5);
-    //         draw_editor(editors.left, screen, status_bar_height, .editor_single);
-    //         active_editor_rect = screen;
-
-    //     case .Double;
-    //         // Drag splitter
-    //         if ui.active == .editor_splitter {
-    //             editors_snap_splitter((mouse.pointer.x - screen.x) / screen.w);
-    //             editors.expanded = false;
-    //         }
-    //         if !values_are_close(splitter_pos, splitter_anim.target) {
-    //             redraw_requested = true;
-    //             splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
-    //         } else if editor_closing_id >= 0 {
-    //             finish_closing_editor();
-    //         }
-    //         if editors.expanded {
-    //             if active_editor_id == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
-    //             if active_editor_id == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
-    //         }
-
-    //         split_x := screen.w * splitter_pos;
-    //         left_rect, right_rect := cut_left(screen, split_x, margin = 2);
-
-    //         draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
-    //         draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
-
-    //         active_editor_rect = ifx active_editor_id == editors.left then left_rect else right_rect;
-
-    //         splitter_rect := make_rect(left_rect.x + left_rect.w, 0, 2, left_rect.h);
-    //         draw_splitter(splitter_rect, split_x, .editor_splitter);
-
-    //     case .Multi;
-    //         // @split
-    // }
-
     panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(active_editor_rect);
     if panel_is_active then active_editor_rect = panel_editor_rect;
 

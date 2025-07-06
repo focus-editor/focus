@@ -237,6 +237,9 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
 
     "rotate_panes_clockwise",
     "rotate_panes_counterclockwise",
+
+    "center_pane_splitter",
+    "center_all_pane_splitters",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
