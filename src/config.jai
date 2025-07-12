@@ -350,6 +350,8 @@ get_current_project_dir :: () -> string {
 #scope_file
 
 load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
+    assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
+
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
@@ -543,9 +545,6 @@ old_tab_size := 0;  // used to detect when tab size is changed in the config
 
 
 process_comment_highlight_words :: () {
-    // config.comment_highlights.allocator = focus_allocator;
-    // array_reset_keeping_memory(*config.comment_highlights);
-
     highlight_words_settings := string.[
         config.settings.comment_highlight_words1,
         config.settings.comment_highlight_words2,

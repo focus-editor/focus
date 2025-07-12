@@ -220,6 +220,19 @@ workspace_update :: () {
     watchers.external_file_modified = "";
 }
 
+abort_workspace_scanning_and_shut_down_threads :: () {
+    if file_list_thread_group.initted {
+        shutdown(*file_list_thread_group);
+        file_list_thread_group = Thread_Group.{};
+    }
+    if scanner_thread_group.initted {
+        shutdown(*scanner_thread_group);
+        scanner_thread_group = Thread_Group.{};
+    }
+
+    workspace_scan_complete = true;
+}
+
 reload_workspace :: (automatic := false) {
     // Make sure no threads are running
     if file_list_thread_group.initted then shutdown(*file_list_thread_group);
@@ -303,6 +316,7 @@ reload_workspace :: (automatic := false) {
     bucket_array_reset(*open_buffers);
     open_buffers = new_open_buffers;
 
+    // !!!!!!!!!!!!!!!!!!
     // // Reopen visible editors, if any of them are preserved
     // if editors.layout != .None {
     //     new_active, active_preserved := table_find(*editor_id_map, editors.active);
@@ -612,7 +626,7 @@ file_list_ready       := false;
 num_jobs_to_complete  := 0;
 num_jobs_completed    := 0;
 
-MAX_FILES_PER_JOB :: 500;  // we don't want to give huge jobs to threads because then it's more likely
+MAX_FILES_PER_JOB :: 50;   // we don't want to give huge jobs to threads because then it's more likely
                            // that some threads will finish faster than others and will sit around twiddling
                            // their thumbs while they could be doing work if the work pieces were smaller
 
@@ -620,4 +634,4 @@ MAX_FILES_PER_JOB :: 500;  // we don't want to give huge jobs to threads because
 #scope_export
 
 // Other modules might want to know whether the scan is complete
-workspace_scan_complete := false;
+workspace_scan_complete := true;

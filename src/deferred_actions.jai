@@ -14,6 +14,7 @@ defer_action_switch_to_project :: (path: string) {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.load_project_config, .{ load_project_config = .{ path = copy_string(path) } });
+    push_action(.abort_workspace_scanning);
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     defer_action_save_all_buffers();
@@ -31,6 +32,7 @@ defer_action_close_project :: () {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.close_project);
+    push_action(.abort_workspace_scanning);
     push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     defer_action_save_all_buffers();
@@ -131,6 +133,7 @@ execute_top_action :: () -> Action_Result {
         case .close_project;                            return execute_close_project(action);
         case .reload_workspace;                         return execute_reload_workspace(action);
         case .build_command;                            return execute_build_command(action);
+        case .abort_workspace_scanning;                 return execute_abort_workspace_scanning(action);
         case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
         case .wait_for_killed_command_to_stop;          return execute_wait_for_killed_command_to_stop(action);
         case .close_editor;                             return execute_close_editor(action);
@@ -165,6 +168,7 @@ remove_top_action :: () {
         case .reload_workspace;
         case .close_project;
         case .build_command;
+        case .abort_workspace_scanning;
         case .wait_for_workspace_scanning_to_finish;
         case .wait_for_killed_command_to_stop;
         case .close_editor;
@@ -211,6 +215,7 @@ Deferred_Action :: struct {
         load_project_config;
         close_project;
         reload_workspace;
+        abort_workspace_scanning;
         wait_for_workspace_scanning_to_finish;
         wait_for_killed_command_to_stop;
         close_editor;
@@ -444,6 +449,11 @@ execute_build_command :: (action: Deferred_Action) -> Action_Result {
     command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
     execute_build_command(command);
     return .CANCEL;  // final command
+}
+
+execute_abort_workspace_scanning :: (action: Deferred_Action) -> Action_Result {
+    if !workspace_scan_complete then abort_workspace_scanning_and_shut_down_threads();
+    return .DONE;
 }
 
 execute_wait_for_scanning :: (action: Deferred_Action) -> Action_Result {
