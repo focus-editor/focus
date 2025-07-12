@@ -102,6 +102,7 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
             if ascii_is_alpha(char) || char == #char "_" {
                 t += 1;
                 read_jai_identifier_string(*tokenizer);
+                token.type = .identifier;
             } else if ascii_is_digit(char) {
                 t += 1;
                 parse_number(*tokenizer, *token, buffer, do_highlighting = false);
