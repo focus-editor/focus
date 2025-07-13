@@ -9,15 +9,25 @@ init_workspace :: () {
 
     // Build a list of unique project dirs for watching and scanning
     // For example, if project dirs are C:/dir and C:/dir/child, we will only keep the parent C:/dir
-    for dir : project_dirs {
-        is_unique := true;
+    {
+        project_dirs_with_slashes: [..] string;
+        project_dirs_with_slashes.allocator = temp;
         for project_dirs {
-            if dir.path.count > it.path.count && platform_path_begins_with(dir.path, it.path) {
-                is_unique = false;
-                break;
-            }
+            dir := it.path;
+            if !ends_with(dir, #char "/") then dir = tprint("%/", dir);
+            array_add(*project_dirs_with_slashes, dir);
         }
-        if is_unique then array_add(*unique_project_dirs, dir.path);
+
+        for dir : project_dirs {
+            is_unique := true;
+            for prefix : project_dirs_with_slashes {
+                if dir.path.count > prefix.count && platform_path_begins_with(dir.path, prefix) {
+                    is_unique = false;
+                    break;
+                }
+            }
+            if is_unique then array_add(*unique_project_dirs, dir.path);
+        }
     }
 
     // Change working directory to the first directory in the list
