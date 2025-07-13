@@ -94,7 +94,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
+        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
@@ -234,7 +234,7 @@ parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
+    ok, directive := table_find_new(*DIRECTIVES_MAP, directive_str);
     if ok {
         token.type = .directive;
         token.directive = directive;

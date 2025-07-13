@@ -374,7 +374,7 @@ save_editor_state_into_file :: () {
     if !success then log_error("Couldn't save editor state into file '%'", state_file_path);
 }
 
-dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
+dump_buffer_state :: (buffer_id: s64) -> [] u8 {
     buffer := *open_buffers[buffer_id];
 
     // Build buffer state for saving into file

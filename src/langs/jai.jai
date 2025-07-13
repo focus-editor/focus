@@ -219,7 +219,7 @@ start_new_token :: inline (using tokenizer: *Jai_Tokenizer) -> Token {
 
 maybe_mark_as_keyword :: inline (token: *Token, identifier_str: string) -> is_keyword: bool {
     if identifier_str.count > MAX_KEYWORD_LENGTH return false;
-    kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
+    ok, kw_token := table_find_new(*KEYWORD_MAP, identifier_str);
     if ok {
         token.type = kw_token.type;
         token.keyword = kw_token.keyword;;
@@ -427,7 +427,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
 
         // Check if it's one of the existing directives
         if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-        directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
+        ok, directive := table_find_new(*DIRECTIVES_MAP, directive_str);
         if !ok return;
 
         token.type = .directive;

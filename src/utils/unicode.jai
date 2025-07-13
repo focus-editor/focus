@@ -42,7 +42,7 @@ Utf8_Char :: struct {
     count: s32;
 }
 
-advance_by_chars :: (s: string, num_chars: s64, tab_size: s32) -> string #must, remainder: s64 {
+advance_by_chars :: (s: string, num_chars: s64, tab_size: s32) -> string, remainder: s64 {
     result := s;
     col := 0;
     while result && col < num_chars {
@@ -58,7 +58,7 @@ advance_by_chars :: (s: string, num_chars: s64, tab_size: s32) -> string #must, 
     return result, col - num_chars;
 }
 
-take_first_n_chars :: (s: string, num_chars: s64, tab_size: s32) -> string #must {
+take_first_n_chars :: (s: string, num_chars: s64, tab_size: s32) -> string {
     result := s;
     result.count -= advance_by_chars(result, num_chars, tab_size).count;
     return result;

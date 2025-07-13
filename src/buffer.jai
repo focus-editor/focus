@@ -753,7 +753,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
 
         lock(*open_buffers_lock);
         {
-            existing_buffer_id, found_existing := table_find(*buffers_table, file_path);
+            found_existing, existing_buffer_id := table_find_new(*buffers_table, file_path);
             if found_existing {
                 assert(buffer_id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
                 // The user chose to save the buffer into an existing file. OK.
@@ -1156,7 +1156,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     }
     lock(*open_buffers_lock);
 
-    buffer_id, found_buffer := table_find(*buffers_table, path);
+    found_buffer, buffer_id := table_find_new(*buffers_table, path);
     buffer: *Buffer = ---;
 
     if !found_buffer {
@@ -1221,7 +1221,7 @@ find_buffer_id_by_path :: (path: string) -> buffer_id: s64 {
     lock(*open_buffers_lock);
     defer unlock(*open_buffers_lock);
 
-    buffer_id, found_buffer := table_find(*buffers_table, path);
+    found_buffer, buffer_id := table_find_new(*buffers_table, path);
     if found_buffer return buffer_id;
 
     return -1;
@@ -1391,7 +1391,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
 
         // Find if there's an existing buffer already and mark it as deleted
         lock(*open_buffers_lock);
-        buffer_id, found_buffer := table_find(*buffers_table, path);
+        found_buffer, buffer_id := table_find_new(*buffers_table, path);
         if found_buffer {
             open_buffers[buffer_id].deleted = true;
             finder.need_to_refresh_results = true;
@@ -1483,7 +1483,7 @@ maybe_mark_buffer_as_deleted :: (path: string) {
     lock(*open_buffers_lock);
     defer unlock(*open_buffers_lock);
 
-    buffer_id, found_buffer := table_find(*buffers_table, path);
+    found_buffer, buffer_id := table_find_new(*buffers_table, path);
     if !found_buffer return;  // no buffer for this path
     maybe_mark_buffer_as_deleted(buffer_id);
 }

@@ -132,7 +132,7 @@ set_parameter :: (shader: *Shader, name: string, m: Matrix4) {
 get_uniform_location :: (gl_handle: GLuint, name: string) -> GLint {
     // Asking OpenGL for the location can be an incredibly expensive operation on some systems, so we cache it
     key := tprint("%,%", gl_handle, name);
-    loc, found := table_find(*uniform_location_cache, key);
+    found, loc := table_find_new(*uniform_location_cache, key);
     if !found {
         loc = glGetUniformLocation(gl_handle, temp_c_string(name));
         table_set(*uniform_location_cache, copy_string(key), loc);

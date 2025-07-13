@@ -767,7 +767,7 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     hash_key := (cast(u64) utf32) | ((cast(u64) font_anti_aliasing) << 32) | ((cast(u64) font_hinting) << 36);
 
-    data, success := table_find(*font.glyph_lookup, hash_key);
+    success, data := table_find_new(*font.glyph_lookup, hash_key);
     if success  return data;
 
     if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows

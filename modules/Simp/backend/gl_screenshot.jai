@@ -21,7 +21,7 @@ Pixel_Read :: struct {
     dest_width, dest_height: s32;
 
     flip := false;
-    
+
     using platform_specific: Pixel_Read_Platform;
 }
 
@@ -57,19 +57,19 @@ get_bitmap_from_texture :: (map: *Texture, format:=Texture_Format.Unknown, width
 // Call pixel_read_is_done() to know whether the read has finished, in which case,
 // when you call pixel_read_end() it will return very quickly. Otherwise, pixel_read_end()
 // will block until the screenshot is done.
-pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Format, width: s32 = -1, height: s32 = -1, srgb := false, flip := false) -> *Pixel_Read #must {
+pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Format, width: s32 = -1, height: s32 = -1, srgb := false, flip := false) -> *Pixel_Read {
     assert((dest_format == .RGB8) || (dest_format == .RGBA8));
-    
+
     reader := New(Pixel_Read);  // @Cleanup: Don't use the heap?
-    
+
     // Allocate some shared resources. If we actually were able to thread this, there'd be one per reader.
     glGenFramebuffers(1, *reader.src\_fbo_handle);
     glGenFramebuffers(1, *reader.dest_fbo_handle);
 
     reader.dest_format = dest_format;
-    reader.dest_srgb   = srgb;    
+    reader.dest_srgb   = srgb;
     reader.flip        = flip;
-    
+
     if source {
         if width  == -1  width  = source.width;
         if height == -1  height = source.height;
@@ -82,7 +82,7 @@ pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Fo
 
     reader.dest_width  = width;
     reader.dest_height = height;
-    
+
     // Compute size.
     size := get_image_size(dest_format, width, height);
 
@@ -96,7 +96,7 @@ pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Fo
 
     // If the input is multisampled, or we need to do format conversion, or resizing, then use an intermediate buffer.
     if source && (source.flags & .Multisampled ||
-                  source.format != dest_format || src_srgb   != srgb || 
+                  source.format != dest_format || src_srgb   != srgb ||
                   source.width  != width       || source.height != height) {
         if reader.intermediate_texture == null {
             flags: Texture_Flags;
@@ -111,7 +111,7 @@ pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Fo
 
         dest_width := width;
         dest_height := height;
-            
+
         // Crop if aspect ratio of src and dst do not match.
         if dest_width*src_height != src_width*height {
             h := (height * src_width) / dest_width;
@@ -144,7 +144,7 @@ pixel_read_begin :: (source: *Texture /* may be null */, dest_format: Texture_Fo
     if source {
         source_handle = source.gl_handle;
     }
-    
+
     old_read := bind_read_fbo(source_target, source_handle, reader.src_fbo_handle);
     defer unbind_read_fbo(source_target, source_handle, old_read);
 
@@ -170,7 +170,7 @@ reader_start :: (using reader: *Pixel_Read, src: *Texture, face:int, level:int) 
 
     // If the input is multisampled, or we need to do format conversion, or resizing, then use intermediate buffer.
     if  src.flags & .Multisampled ||
-        src.format != dest_format || src_srgb != dest_srgb || 
+        src.format != dest_format || src_srgb != dest_srgb ||
         src_width != dest_width || src_height != dest_height
     {
         assert(src.gl_target != GL_TEXTURE_CUBE_MAP);
@@ -210,7 +210,7 @@ reader_start :: (using reader: *Pixel_Read, src: *Texture, face:int, level:int) 
 
     src_handle := src.gl_handle;
     src_target := src.gl_target;
-    
+
     if src_target == GL_TEXTURE_CUBE_MAP {
         assert(face != -1);
         src_target = cast(u32)(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face);
@@ -310,7 +310,7 @@ unbind_read_fbo :: (target: GLenum, handle: GLuint, prev_read_fbo: GLuint) {
 
 bind_draw_fbo :: (target: GLenum, handle: GLuint, dest_fbo_handle: GLuint) -> (old: GLuint) {
     prev_draw_fbo: GLuint;
-    
+
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, xx *prev_draw_fbo);
 
     if handle {
@@ -387,4 +387,4 @@ reader_unlock :: (reader: *Pixel_Read) {
 get_gl_target :: (t: *Texture) -> u32 {
     return GL_TEXTURE_2D; // This seems to be the thing that works for just about anything we care about (including render targets).
 }
-    
+

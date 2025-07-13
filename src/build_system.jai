@@ -622,10 +622,10 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         named_captures := re.map_named_captures(captures, compiled_regex);
         #if DEBUG_BUILD_ERRORS for value, name : named_captures { print("% = %\n", name, value); }
 
-        msg, msg_found := table_find(*named_captures, "msg");
+        msg_found, msg := table_find_new(*named_captures, "msg");
         if !msg_found continue;
 
-        file, file_found := table_find(*named_captures, "file");
+        file_found, file := table_find_new(*named_captures, "file");
         if !file_found continue;
 
         build_error := Build_Error.{ file = copy_string(file), message = copy_string(msg) };

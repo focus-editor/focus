@@ -1257,7 +1257,7 @@ push_simple_op :: (using ps: *ParseState, op: RegexpOp) {
 // Pushes a repeat operator regexp onto the stack.
 // A valid argument for the operator must already be on the stack.
 // The char c is the name of the operator, for use in error messages.
-push_repeat_op :: (using ps: *ParseState, op: RegexpOp, s: string, nongreedy: bool) -> bool #must {
+push_repeat_op :: (using ps: *ParseState, op: RegexpOp, s: string, nongreedy: bool) -> bool {
 	if stacktop == null || is_marker(stacktop.op) {
 		status.code = .RepeatArgument;
 		status.error_arg = s;
@@ -1344,7 +1344,7 @@ push_repeat_op :: (using ps: *ParseState, op: RegexpOp, s: string, nongreedy: bo
 
 // Pushes a repetition regexp onto the stack.
 // A valid argument for the operator must already be on the stack.
-push_repetition :: (using ps: *ParseState, min: int, max: int, s: string, nongreedy: bool) -> bool #must {
+push_repetition :: (using ps: *ParseState, min: int, max: int, s: string, nongreedy: bool) -> bool {
 	if (max != -1 && max < min) || min > MAX_REPEAT || max > MAX_REPEAT {
 		status.code = .RepeatSize;
 		status.error_arg = s;
@@ -1443,7 +1443,7 @@ do_vertical_bar ::(using ps: *ParseState) {
 }
 
 // Processes a right parenthesis in the input.
-do_right_paren :: (using ps: *ParseState) -> bool #must {
+do_right_paren :: (using ps: *ParseState) -> bool {
 	// Finish the current concatenation and alternation.
 	do_alternation(ps);
 
@@ -2457,7 +2457,7 @@ add_unicode_group :: (cc: *CharClass, g: *UGroup, sign: int, parse_flags: ParseF
 // On success, sets *s to span the remainder of the string
 // and returns the corresponding UGroup.
 // The StringPiece must *NOT* be edited unless the call succeeds.
-maybe_parse_perl_cc_escape :: (s: *string, parse_flags: ParseFlags) -> *UGroup #must {
+maybe_parse_perl_cc_escape :: (s: *string, parse_flags: ParseFlags) -> *UGroup {
 	if !(parse_flags & .PerlClasses)	return null;
 	if s.count < 2 || (<<s)[0] != #char "\\"		return null;
 

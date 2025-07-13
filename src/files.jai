@@ -1,4 +1,4 @@
-get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info #must {
+get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info {
     assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
     full_path := copy_string(abs_path);  // one allocation, the rest are views into it

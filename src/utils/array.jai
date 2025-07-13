@@ -98,7 +98,7 @@ add :: (array: *Array($T), item: T) {
     array.count += 1;
 }
 
-add :: (array: *Array($T)) -> *T #must {
+add :: (array: *Array($T)) -> *T {
     maybe_grow(array);
     result := *array.data[array.count];
 
