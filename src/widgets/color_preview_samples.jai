@@ -391,6 +391,51 @@ void main()
 
 LANG_D
 
+SAMPLE_Dart :: #string LANG_DART
+import 'dart:math';
+// Comment
+/* Multiline Comment */
+void main() {
+    int fibonacci(int n) {
+      if (n == 0 || n == 1) return n;
+      return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+
+    var result = fibonacci(20);
+
+    var s = r'In a raw string, not even \n or gets special treatment.';
+    var s1 = '''
+    You can create
+    multi-line strings like this one.
+    fibonacci(20) = ${result}
+    ''';
+
+    print('Hello, World!');
+}
+
+abstract class Spacecraft {
+  String name;
+  DateTime? launchDate;
+
+  int? get launchYear => launchDate?.year;
+
+  Spacecraft(this.name, this.launchDate) {
+  }
+
+  Spacecraft.unlaunched(String name) : this(name, null);
+
+  void describe() {
+    print('Spacecraft: $name');
+  }
+}
+
+class Orbiter extends Spacecraft {
+  double altitude;
+
+  Orbiter(super.name, DateTime super.launchDate, this.altitude);
+}
+
+LANG_DART
 
 SAMPLE_Glsl :: #string GLSL
 // Comment

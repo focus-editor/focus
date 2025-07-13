@@ -558,6 +558,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Cpp;          return tokenize_c_like_lang_for_indentation(buffer, get_next_cpp_token);
         case .Css;          return tokenize_c_like_lang_for_indentation(buffer, get_next_css_token);
         case .D;            return tokenize_c_like_lang_for_indentation(buffer, get_next_d_token);
+        case .Dart;         return tokenize_dart_indentation(buffer);
         case .Java;         return tokenize_c_like_lang_for_indentation(buffer, get_next_java_token);
         case .Js;           return tokenize_js_for_indentation(buffer);
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
@@ -1603,6 +1604,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Css;                  return tokenize_css;
         case .CSharp;               return tokenize_csharp;
         case .D;                    return tokenize_d;
+        case .Dart;                 return tokenize_dart;
         case .Diff;                 return tokenize_diff;
         case .Glsl;                 return tokenize_glsl;
         case .Hlsl;                 return tokenize_hlsl;
@@ -1856,6 +1858,7 @@ Buffer :: struct {
         Css;
         CSharp;
         D;
+        Dart;
         Diff;
         Glsl;
         Hlsl;
