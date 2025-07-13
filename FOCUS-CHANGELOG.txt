@@ -14,6 +14,7 @@
     + Fixed a bug where `change case` actions couldn't be undone (thanks @fda0)
     + Fixed a bug with the last directive in file not being highlighted
     + Fixed a bug with ignore/allow patterns where some allow patterns weren't applied if a folder was ignored
+    + Fixed a few bugs with workspace scanning when workspace items overlap
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)

@@ -114,8 +114,6 @@ add_directory_to_workspace :: (path: string, index := -1) {
 start_workspace_scan :: () {
     file_list_ready = false;
     workspace_scan_complete = false;
-    array_reset(*files_to_scan);
-    for project_files  array_add(*files_to_scan, copy_string(it));
 
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
     file_list_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
@@ -467,6 +465,13 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
     reset(*scan_memory_pool);
     scan_pool_allocator := get_scan_pool_allocator();
     table_reset(*file_list_table);
+
+    array_reset(*files_to_scan);
+    for project_files {
+        full_path := copy_string(it,, allocator=scan_pool_allocator);
+        array_add(*files_to_scan, full_path);
+        table_add(*file_list_table, full_path, true);
+    }
 
     maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: Allocator) {
         if file.is_directory {
