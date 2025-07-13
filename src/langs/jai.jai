@@ -203,7 +203,7 @@ set_token_len :: (using tokenizer: *Jai_Tokenizer, token: *Token) #expand {
 }
 
 highlight :: (tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) #expand {
-    tokenizer.last_token_type = token.type;
+    tokenizer.last_token = token.*;
     memset(buffer.tokens.data + token.start, xx token.type, token.len);
 }
 
@@ -304,7 +304,9 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
     // Check for:
     // func :: (
     // func :: inline
+    // func :: no_inline
     // func :: #bake_arguments
+    // func :: #bake_constants
     if char == #char ":" {
         t += 1;
         parse_colon(tokenizer, *next_token);
@@ -330,13 +332,13 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
             t += 1;
             parse_directive(tokenizer, *next_token, buffer);
             highlight(tokenizer, *next_token, buffer);
-            if next_token.type == .directive && next_token.directive == .directive_bake_arguments {
+            if next_token.type == .directive && (next_token.directive == .directive_bake_arguments || next_token.directive == .directive_bake_constants) {
                 token.type = .function;
             }
         } else if ascii_is_alpha(char) {
             parse_identifier_or_keyword(tokenizer, *next_token, buffer);
             highlight(tokenizer, *next_token, buffer);
-            if next_token.type == .keyword && next_token.keyword == .kw_inline {
+            if next_token.type == .keyword && (next_token.keyword == .kw_inline || next_token.keyword == .kw_no_inline) {
                 token.type = .function;
             }
         }
@@ -544,9 +546,27 @@ parse_period_or_enum_variant :: (using tokenizer: *Jai_Tokenizer, token: *Token)
     if t >= max_t return;
 
     // Maybe it's an enum variant
-    if tokenizer.last_token_type != .identifier {
+    is_enum_variant := !(  last_token.type == .identifier
+                        || last_token.type == .string_literal
+                        || last_token.type == .multiline_string
+                        || (   last_token.type == .punctuation
+                            && (   last_token.punctuation == .period                  // ..whatever
+                                || last_token.punctuation == .r_bracket               // [asdf].whatever
+                                || last_token.punctuation == .r_paren))               // (asdf).whatever
+                        || (   last_token.type == .value
+                            && (   last_token.keyword == .kw_context                  // context.whatever
+                                || last_token.keyword == .kw_it                       // it.whatever
+                                || last_token.keyword == .kw_it_index))               // it_index.whatever
+                        || (   last_token.type == .directive
+                            && (   last_token.directive == .directive_caller_location // #caller_location.whatever
+                                || last_token.directive == .directive_Context         // #Context.whatever
+                                || last_token.directive == .directive_file            // #file.whatever
+                                || last_token.directive == .directive_filepath        // #filepath.whatever
+                                || last_token.directive == .directive_this)));        // #this.whatever
+
+    if is_enum_variant {
         eat_white_space(tokenizer, only_until_newline = true);
-        if t < max_t && ascii_is_alpha(t.*) {
+        if t < max_t && (ascii_is_alpha(t.*) || t.* == #char "_") {
             read_jai_identifier_string(tokenizer);
             token.type = .enum_variant;
         }
@@ -672,7 +692,7 @@ Jai_Tokenizer :: struct {
     regions.allocator = temp;
     current_scope_id := -1;
 
-    last_token_type: Token_Type;
+    last_token: Token;
 
     scratch_buffer: [MAX_IDENTIFIER_LENGTH] u8;
 }
