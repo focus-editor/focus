@@ -403,7 +403,7 @@ void main() {
 
     var result = fibonacci(20);
 
-    var s = r'In a raw string, not even \n or gets special treatment.';
+    var s = r'In a raw string, not even \n gets special treatment.';
     var s1 = '''
     You can create
     multi-line strings like this one.
