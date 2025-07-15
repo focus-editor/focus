@@ -269,7 +269,7 @@ create_timer :: (timeout_ms: u64, repeat := true) -> *Focus_Timer {
 
 destroy_timer :: (timer: *Focus_Timer) {
     if (timer) {
-        ns_timer, found := table_find(*native_timers, timer);
+        found, ns_timer := table_find_new(*native_timers, timer);
         if found {
             NSTimer.invalidate(ns_timer);
             table_remove(*native_timers, timer);

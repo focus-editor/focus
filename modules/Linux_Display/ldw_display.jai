@@ -592,7 +592,7 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
     w.window_width = xx width;
     w.window_height = xx height;
 
-    cursor, found := table_find(*d.cursors, "default");
+    found, cursor := table_find_new(*d.cursors, "default");
     if !found {
         for d.cursors {
             cursor = it;
@@ -669,7 +669,7 @@ wl_set_cursor_from_theme :: (window: *Window, name: string) {
     wl_check_usage(null, window);
 
     w: *Wayland_Window = window;
-    cursor, found := table_find(*w.display.cursors, name);
+    found, cursor := table_find_new(*w.display.cursors, name);
     if found {
         w.cursor = cursor;
         refresh_cursor(w);
