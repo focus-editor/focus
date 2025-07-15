@@ -558,7 +558,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Cpp;          return tokenize_c_like_lang_for_indentation(buffer, get_next_cpp_token);
         case .Css;          return tokenize_c_like_lang_for_indentation(buffer, get_next_css_token);
         case .D;            return tokenize_c_like_lang_for_indentation(buffer, get_next_d_token);
-        case .Dart;         return tokenize_dart_indentation(buffer);
+        case .Dart;         return tokenize_dart_for_indentation(buffer);
         case .Java;         return tokenize_c_like_lang_for_indentation(buffer, get_next_java_token);
         case .Js;           return tokenize_js_for_indentation(buffer);
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);

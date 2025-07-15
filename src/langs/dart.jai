@@ -28,7 +28,7 @@ tokenize_dart :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return .[];
 }
 
-tokenize_dart_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_dart_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

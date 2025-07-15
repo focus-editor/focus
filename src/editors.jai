@@ -2199,6 +2199,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "m";               lang = .Cpp;
         case "mm";              lang = .Cpp;
         case "tpp";             lang = .Cpp;
+        case "ipp";             lang = .Cpp;
 
         case "html";            lang = .Html;
         case "htm";             lang = .Html;
