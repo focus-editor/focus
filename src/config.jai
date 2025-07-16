@@ -350,7 +350,8 @@ get_current_project_dir :: () -> string {
 #scope_file
 
 load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
-    assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
+    // TODO: reenable when config reloading is deferrable
+    // assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
 
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
