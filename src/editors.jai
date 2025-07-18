@@ -699,7 +699,14 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     assert_leaf_pane(active_pane, "Can't open buffer in a non-leaf pane. This is a bug.");
 
     target_pane := get_adjacent_editor_pane(active_pane, placement);
-    if !target_pane then target_pane = split_active_pane(placement);
+    if !target_pane {
+        if active_pane == editors.root && !active_pane.editor_ids {
+            // Don't create new panes when we have an empty root
+            target_pane = active_pane;
+        } else {
+            target_pane = split_active_pane(placement);
+        }
+    }
     if !target_pane return;
 
     editors_open_buffer_in_pane(buffer_id, target_pane);
