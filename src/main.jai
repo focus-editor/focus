@@ -60,7 +60,7 @@ main :: () {
         // - `focus.exe -project "Project Name"` or `focus.exe -project <path/to/project>` will load a project. No other arguments are allowed.
         project := args[2];
         success: bool;
-        if ends_with(project, ".focus-config") {
+        if ends_with_nocase(project, ".focus-config") {
             success = load_project_config(project);
         } else {
             config_path := tprint("%/%.focus-config", projects_dir, project);

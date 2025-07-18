@@ -38,6 +38,12 @@ defer_action_close_project :: () {
     defer_action_save_all_buffers();
 }
 
+defer_action_refresh_config_or_theme :: (path: string) {
+    clear_action_queue();
+    push_action(.refresh_config_or_theme, .{ refresh_config_or_theme = .{ path = copy_string(path) } });
+    push_action(.wait_for_workspace_scanning_to_finish);
+}
+
 defer_action_quit :: () {
     clear_action_queue();
     push_action(.quit);
@@ -131,6 +137,7 @@ execute_top_action :: () -> Action_Result {
         case .kill_running_command;                     return execute_kill_running_command(action);
         case .load_project_config;                      return execute_load_project_config(action);
         case .close_project;                            return execute_close_project(action);
+        case .refresh_config_or_theme;                  return execute_refresh_config_or_theme(action);
         case .reload_workspace;                         return execute_reload_workspace(action);
         case .build_command;                            return execute_build_command(action);
         case .abort_workspace_scanning;                 return execute_abort_workspace_scanning(action);
@@ -150,6 +157,10 @@ remove_top_action :: () {
     if #complete action.kind == {
         case .load_project_config;
             using action.details.load_project_config;
+            if path { free(path); path = ""; }
+
+        case .refresh_config_or_theme;
+            using action.details.refresh_config_or_theme;
             if path { free(path); path = ""; }
 
         case .confirm_overwrite;
@@ -192,16 +203,17 @@ Deferred_Action :: struct {
     using details: Details;
 
     Details :: union {
-        save_as:                struct { buffer_id: s64; is_move: bool; }
-        save_buffers:           struct { buffer_ids: [] s64; }
-        confirm_overwrite:      struct { buffer_id: s64; is_move: bool; file_path: string; }
-        delete:                 struct { buffer_id: s64; }
-        load_project_config:    struct { path: string; }
-        reload_workspace:       struct { automatic: bool; }
-        build_command:          struct { command_id: s64; }
-        close_editor:           struct { editor_id: s64; }
-        close_editors_for_pane: struct { pane: *Editor_Pane; except: s64; notify: bool; }
-        close_pane:             struct { pane: *Editor_Pane; }
+        save_as:                    struct { buffer_id: s64; is_move: bool; }
+        save_buffers:               struct { buffer_ids: [] s64; }
+        confirm_overwrite:          struct { buffer_id: s64; is_move: bool; file_path: string; }
+        delete:                     struct { buffer_id: s64; }
+        load_project_config:        struct { path: string; }
+        reload_workspace:           struct { automatic: bool; }
+        refresh_config_or_theme:    struct { path: string; }
+        build_command:              struct { command_id: s64; }
+        close_editor:               struct { editor_id: s64; }
+        close_editors_for_pane:     struct { pane: *Editor_Pane; except: s64; notify: bool; }
+        close_pane:                 struct { pane: *Editor_Pane; }
     }
 
     Kind :: enum {
@@ -215,6 +227,7 @@ Deferred_Action :: struct {
         load_project_config;
         close_project;
         reload_workspace;
+        refresh_config_or_theme;
         abort_workspace_scanning;
         wait_for_workspace_scanning_to_finish;
         wait_for_killed_command_to_stop;
@@ -436,6 +449,16 @@ execute_close_project :: (action: Deferred_Action) -> Action_Result {
         return .CANCEL;
     }
     project_config.loaded = false;
+    return .DONE;
+}
+
+execute_refresh_config_or_theme :: (action: Deferred_Action) -> Action_Result {
+    path := action.details.refresh_config_or_theme.path;
+    if is_our_config_file(path) {
+        refresh_config(path);
+    } else if is_current_theme(path) {
+        refresh_current_theme();
+    }
     return .DONE;
 }
 

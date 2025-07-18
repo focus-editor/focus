@@ -73,6 +73,12 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
     }
 }
 
+maybe_defer_refresh_config_or_theme :: (path: string) {
+    if is_our_config_file(path) || is_current_theme(path) {
+        defer_action_refresh_config_or_theme(path);
+    }
+}
+
 refresh_config :: (path: string) {
     // Deep copy old workspace members and allow/ignore lists (they will be freed by the load config function otherwise)
     old_workspace_members: [..] string;
@@ -350,8 +356,7 @@ get_current_project_dir :: () -> string {
 #scope_file
 
 load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
-    // TODO: reenable when config reloading is deferrable
-    // assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
+    assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
 
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
