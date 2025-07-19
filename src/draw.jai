@@ -2411,15 +2411,8 @@ draw_open_file_dialog :: () {
     if #complete mode == {
         case .search;
             label := ifx finder.initted then " Search files in workspace" else " Scanning the workspace. Please wait...";
-            draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+            draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label, progress_bar_value = get_workspace_scan_progress());
             if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
-
-            scan_progress := get_workspace_scan_progress();
-            if scan_progress < 1.0 {
-                progress_bar_rect := shrink(input_rect, 1);
-                progress_bar_rect.w *= scan_progress;
-                draw_rect(progress_bar_rect, Color.LIST_CURSOR_LITE);
-            }
 
         case .open_editors;
             label := " Switch to open file";
@@ -3141,7 +3134,7 @@ draw_finder :: () {
     {
         label := ifx initted then "Type to search in workspace" else "Scanning the workspace. Please wait...";
         color := ifx !regex_search || (regex_search && regex_is_valid) then Color.UI_DEFAULT else Color.UI_ERROR_BRIGHT;
-        became_active := draw_text_input(*finder.input, input_rect, ui_id = input_id, active = (finder.active_input == .input), label = label, margin_right = input_rect.h * 3, color = color);
+        became_active := draw_text_input(*finder.input, input_rect, ui_id = input_id, active = (finder.active_input == .input), label = label, margin_right = input_rect.h * 3, color = color, progress_bar_value = get_workspace_scan_progress());
         if became_active then finder_activate_input(.input);
 
         button_width := input_rect.h;
@@ -3185,13 +3178,6 @@ draw_finder :: () {
             if combo then tooltip = tprint("% (%)", tooltip, combo);
         }
         if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
-
-        scan_progress := get_workspace_scan_progress();
-        if scan_progress < 1.0 {
-            progress_bar_rect := shrink(input_rect, 1);
-            progress_bar_rect.w *= scan_progress;;
-            draw_rect(progress_bar_rect, Color.LIST_CURSOR_LITE);
-        }
     }
 
     // Include files input
@@ -3599,7 +3585,7 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Color.UI_DEFAULT, margin_left := 1.0, margin_right := 1.0) -> became_active := false {
+draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Color.UI_DEFAULT, margin_left := 1.0, margin_right := 1.0, progress_bar_value := -1.0) -> became_active := false {
     if !is_valid(rect_) return;
 
     rect := align_to_grid(rect_);  // to get a consistent outline
@@ -3616,6 +3602,12 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 
     input_rect.w -= (margin_left + margin_right);
     input_rect.x += margin_left;
+
+    if progress_bar_value > 0.0 && progress_bar_value < 1.0 {
+        progress_bar_rect := shrink(input_rect, 1);
+        progress_bar_rect.w *= progress_bar_value;
+        draw_rect(progress_bar_rect, Color.LIST_CURSOR_LITE);
+    }
 
     if !is_valid(input_rect) return;
 
