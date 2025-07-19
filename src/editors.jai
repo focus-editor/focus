@@ -783,6 +783,19 @@ editors_get_next_pane_number :: () -> s64 {
 }
 
 editors_find_pane_by_number :: (number: s64) -> *Editor_Pane {
+    if editors.active_pane == editors.root {
+        if !editors.active_pane.editor_ids return editors.active_pane;  // don't split if the root pane is empty
+        if number == 1 {
+            new_pane, other_pane := split_active_pane(.left);
+            new_pane.number = 1;  // special case
+            other_pane.number = 2;
+            return new_pane;
+        } else if number == 2 {
+            new_pane := split_active_pane(.right);
+            return new_pane;
+        }
+    }
+
     _find_by_number :: (pane: *Editor_Pane, number: s64) -> *Editor_Pane {
         if !pane return null;
 
@@ -797,7 +810,7 @@ editors_find_pane_by_number :: (number: s64) -> *Editor_Pane {
         return null;
     }
 
-    return _find_by_number(editors.root, number);
+    return _find_by_number(editors.root, number);;
 }
 
 editors_find_pane_with_editor :: (editor_id: s64) -> *Editor_Pane, editor_index: int {
@@ -1759,7 +1772,7 @@ action_duplicate_editor :: (placement: Editor_Placement) {
     duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
 }
 
-split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
+split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane, *Editor_Pane {
     active_pane := editors.active_pane;
     assert_leaf_pane(active_pane, "Cannot split a non-leaf pane. This is a bug");
 
@@ -1774,7 +1787,7 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
         }
         if depth >= MAX_DEPTH {
             add_user_error("Can't split this pane any further", dismiss_in_seconds = 3);
-            return null;
+            return null, null;
         }
     }
 
@@ -1809,7 +1822,7 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
 
     editors.active_pane = new_pane;
 
-    return new_pane;
+    return new_pane, other_pane;
 }
 
 rotate_panes :: (pane: *Editor_Pane, direction: enum { clockwise; counterclockwise; }) {
