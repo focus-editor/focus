@@ -556,6 +556,18 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place, lin
     return true;
 }
 
+editors_show_existing_file_or_open_in_place :: (path: string) -> success: bool {
+    buffer_id := _open_buffer_from_relative_path(path);
+    if buffer_id < 0 return false;
+
+    success := editors_show_existing_buffer(buffer_id);
+    if success return true;
+
+    editors_open_buffer(buffer_id, .in_place);
+
+    return true;
+}
+
 editors_open_file_in_pane :: (path: string, pane: *Editor_Pane, line := -1) -> success: bool {
     buffer_id := _open_buffer_from_relative_path(path);
     if buffer_id < 0 return false;
@@ -867,7 +879,7 @@ _find_pane_with_buffer_id :: (buffer_id: s64, current_pane: *Editor_Pane) -> *Ed
 
 #scope_export
 
-editors_show_existing_buffer :: (buffer_id: s64) {
+editors_show_existing_buffer :: (buffer_id: s64) -> found: bool {
     _find_by_buffer_id :: (pane: *Editor_Pane, buffer_id: s64) -> *Editor_Pane, editor_index: s64 = -1 {
         if !pane return null;
 
@@ -886,10 +898,12 @@ editors_show_existing_buffer :: (buffer_id: s64) {
     }
 
     pane, editor_index := _find_by_buffer_id(editors.root, buffer_id);
-    if !pane return;
+    if !pane return false;
 
     pane.editor_index = editor_index;
     activate_pane(pane);
+
+    return true;
 }
 
 get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {

@@ -772,7 +772,13 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         return;
     }
 
-    success := editors_open_file(path, placement);
+    success: bool;
+    if placement == .in_place {
+        // By default we want to open build errors in existing editors rather than creating new editors in place
+        success = editors_show_existing_file_or_open_in_place(path);
+    } else {
+        success = editors_open_file(path, placement);
+    }
     if !success return;
 
     editor, buffer := get_active_editor_and_buffer();
