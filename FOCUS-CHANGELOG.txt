@@ -15,6 +15,7 @@
     + Fixed a bug with the last directive in file not being highlighted
     + Fixed a bug with ignore/allow patterns where some allow patterns weren't applied if a folder was ignored
     + Fixed a few bugs with workspace scanning when workspace items overlap
+    + Fixed a bug where closing an unsaved file via the open files dialog would not ask for a confirmation
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)

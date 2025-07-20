@@ -1164,6 +1164,8 @@ close_editor_by_id :: (editor_id: s64) {
     }
 
     editor_do_post_close_cleanup(editor_id);
+
+    if !pane.editor_ids then close_pane(pane);
 }
 
 editor_do_post_close_cleanup :: (editor_id: s64) {
