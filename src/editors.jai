@@ -1153,6 +1153,12 @@ close_editor_by_id :: (editor_id: s64) {
     pane := get_pane_by_editor_id(editor_id);
     if !pane return;
 
+    if config.settings.closing_last_editor_should_exit_program && pane.editor_ids.count == 1 && pane == editors.root {
+        // Do it before actually closing the editor to avoid flickering
+        defer_action_quit();
+        return;
+    }
+
     active_editor_id := get_active_editor_id();
 
     remove_editor_from_pane(pane, editor_id);
@@ -1165,7 +1171,7 @@ close_editor_by_id :: (editor_id: s64) {
 
     editor_do_post_close_cleanup(editor_id);
 
-    if !pane.editor_ids then close_pane(pane);
+    if config.settings.closing_last_editor_in_pane_should_close_pane && !pane.editor_ids then close_pane(pane);
 }
 
 editor_do_post_close_cleanup :: (editor_id: s64) {

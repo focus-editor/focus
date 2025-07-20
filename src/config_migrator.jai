@@ -515,6 +515,8 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 23, "enable_temporary_editors",                           "true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor" },
     .{ 23, "cursor_position_after_jump",                         "0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center" },
+    .{ 23, "closing_last_editor_in_pane_should_close_pane",      "true"  },
+    .{ 23, "closing_last_editor_should_exit_program",            "false" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[

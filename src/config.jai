@@ -724,6 +724,8 @@ Settings :: struct {
     comment_highlight_words4                                := "";      @v19
     enable_temporary_editors                                := true;    @v23
     cursor_position_after_jump                              := 0.45;    @v23
+    closing_last_editor_in_pane_should_close_pane           := true;    @v23
+    closing_last_editor_should_exit_program                 := false;   @v23
 
     // TODO
     // load_last_session_on_start:         true
