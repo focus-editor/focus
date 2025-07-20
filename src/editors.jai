@@ -1147,7 +1147,6 @@ action_close_editor :: (event: *Input.Event) {
     if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 
     defer_action_close_editor(get_active_editor_id());
-    if is_unsaved(buffer) && num_editors_for_buffer_in_the_tree(editor.buffer_id) <= 1 then defer_action_save_buffers(.[editor.buffer_id]);
 }
 
 close_editor_by_id :: (editor_id: s64) {

@@ -86,6 +86,8 @@ defer_action_close_pane :: (pane: *Editor_Pane) {
 
 defer_action_close_editor :: (editor_id: s64) {
     push_action(.close_editor, .{ close_editor = .{ editor_id = editor_id } });
+    editor, buffer := get_editor_and_buffer(editor_id);
+    if is_unsaved(buffer) && num_editors_for_buffer_in_the_tree(editor.buffer_id) <= 1 then defer_action_save_buffers(.[editor.buffer_id]);
 }
 
 defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: s64 = -1, notify := false) {
