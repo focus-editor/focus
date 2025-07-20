@@ -235,6 +235,7 @@ base_commands := #run -> [] Command {
         cmd( "Duplicate Editor Bottom",           .duplicate_editor_bottom,          .Single ),
 
         cmd( "Reopen Closed Editor",              .reopen_closed_editor,             .None   ),
+        cmd( "Keep Editor",                       .keep_editor,                      .Single ),
 
         cmd( "Move Editor Left",                  .move_editor_left,                 .Single ),
         cmd( "Move Editor Right",                 .move_editor_right,                .Single ),

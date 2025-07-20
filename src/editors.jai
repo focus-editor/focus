@@ -355,6 +355,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
         if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
+        maybe_make_temporary_editor_permanent();
     }
     organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
@@ -380,6 +381,8 @@ active_editor_type_char :: (char: u32) {
         editor.search_bar.scroll_to_selected = .snap;
         return;
     }
+
+    maybe_make_temporary_editor_permanent();
 
     if buffer.readonly return;
 
@@ -729,8 +732,7 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     for target_pane.editor_ids {
         editor := *open_editors[it];
         if editor.buffer_id == buffer_id {
-            _, target_pane.editor_index = array_find(target_pane.editor_ids, it);  // select the editor
-            assert(target_pane.editor_index >= 0);
+            target_pane.editor_index = it_index;  // select the editor
             return it;
         }
     }
@@ -754,9 +756,18 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     _find_existing_editors_for_buffer(buffer_id, editors.root, *unwanted_existing_editors);
 
     editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
+
+    // Open the editor in the target pane
+    if target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count && config.settings.enable_temporary_editors {
+        // Remove old temporary editor
+        old_temporary_editor_id := target_pane.editor_ids[target_pane.temporary_editor_index];
+        remove_editor_from_pane(target_pane, old_temporary_editor_id);
+        editor_do_post_close_cleanup(old_temporary_editor_id);
+    }
     new_index := target_pane.editor_index + 1;
     array_insert_at(*target_pane.editor_ids, editor_id, new_index);
     target_pane.editor_index = new_index;
+    if config.settings.enable_temporary_editors then target_pane.temporary_editor_index = new_index;
 
     // In case we've just opened a previously closed editor, remove it from the closed list
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
@@ -1139,6 +1150,10 @@ close_editor_by_id :: (editor_id: s64) {
         make_editor_active(new_editor_id);
     }
 
+    editor_do_post_close_cleanup(editor_id);
+}
+
+editor_do_post_close_cleanup :: (editor_id: s64) {
     editor := *open_editors[editor_id];
     buffer_id := editor.buffer_id;
 
@@ -1315,9 +1330,17 @@ _free_pane_tree :: (pane: *Editor_Pane) {
 remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
     found, index := array_find(pane.editor_ids, editor_id);
     if !found return;
+
     array_ordered_remove_by_index(*pane.editor_ids, index);
+
     if pane.editor_index >= index then pane.editor_index -= 1;
     if pane.editor_ids && pane.editor_index < 0 then pane.editor_index = 0;
+
+    if pane.temporary_editor_index == index {
+        pane.temporary_editor_index = -1;  // remove temporary editor
+    } else if pane.temporary_editor_index > index {
+        pane.temporary_editor_index -= 1;
+    }
 }
 
 action_close_pane :: (placement: Editor_Placement) {
@@ -1652,6 +1675,7 @@ action_move_editor :: (placement: Editor_Placement) {
         if editor.buffer_id == buffer_id {
             target_pane.editor_ids[it_index] = editor_id;
             target_pane.editor_index = it_index;
+            if target_pane.temporary_editor_index == it_index then target_pane.temporary_editor_index = -1;
             replaced_existing = true;
             break;
         }
@@ -1659,6 +1683,7 @@ action_move_editor :: (placement: Editor_Placement) {
 
     if !replaced_existing {
         // Insert next to the visible editor
+        if target_pane.temporary_editor_index > target_pane.editor_index then target_pane.temporary_editor_index += 1;
         array_insert_at(*target_pane.editor_ids, editor_id, target_pane.editor_index + 1);
         target_pane.editor_index += 1;
     }
@@ -1702,6 +1727,10 @@ switch_to_pane_by_number :: (number: s64) {
     } else {
         add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
     }
+}
+
+action_keep_editor :: () {
+    maybe_make_temporary_editor_permanent();
 }
 
 action_reopen_closed_editor :: () {
@@ -1809,8 +1838,9 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane, *Editor_Pane
         new_pane, other_pane = active_pane.child2, active_pane.child1;
     }
 
-    other_pane.editor_index = active_pane.editor_index;
     other_pane.editor_ids   = active_pane.editor_ids;
+    other_pane.editor_index = active_pane.editor_index;
+    other_pane.temporary_editor_index = active_pane.temporary_editor_index;
 
     other_pane.number  = active_pane.number;
     active_pane.number = -1;
@@ -1823,6 +1853,27 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane, *Editor_Pane
     editors.active_pane = new_pane;
 
     return new_pane, other_pane;
+}
+
+maybe_make_temporary_editor_permanent :: () {
+    if active_global_widget != .editors return;
+
+    active_pane := editors.active_pane;
+    if active_pane.temporary_editor_index == active_pane.editor_index {
+        active_pane.temporary_editor_index = -1;
+    }
+}
+
+make_all_editors_permanent :: () {
+    // This is only used when the user disables temporary editors in the config - to make sure we don't keep a bad index anywhere
+    _make_permanent :: (pane: *Editor_Pane) {
+        if !pane return;
+        pane.temporary_editor_index = -1;
+        _make_permanent(pane.child1);
+        _make_permanent(pane.child2);
+    }
+
+    _make_permanent(editors.root);
 }
 
 rotate_panes :: (pane: *Editor_Pane, direction: enum { clockwise; counterclockwise; }) {
@@ -2444,6 +2495,8 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 action_save_all :: () {
     unsaved_buffer_ids := get_unsaved_buffer_ids();
     for < unsaved_buffer_ids  save(it);
+
+    maybe_make_temporary_editor_permanent();
 }
 
 #scope_file
@@ -2850,6 +2903,8 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
 action_save :: () {
     editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id < 0 return;
+
+    maybe_make_temporary_editor_permanent();
 
     save(open_editors[editor_id].buffer_id);
 }
@@ -4884,6 +4939,7 @@ Editor_Pane :: struct {
     number := -1;  // for navigation - gets assigned at the time of splitting
 
     editor_index: s64 = -1;
+    temporary_editor_index: s64 = -1;
     editor_ids: [..] s64;
 
     editor_draw_info: struct {

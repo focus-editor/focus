@@ -512,6 +512,8 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 19, "comment_highlight_words2",                           "# words to highlight using `code_comment_highlight2`" },
     .{ 19, "comment_highlight_words3",                           "# words to highlight using `code_comment_highlight3`" },
     .{ 19, "comment_highlight_words4",                           "# words to highlight using `code_comment_highlight4`" },
+
+    .{ 23, "enable_temporary_editors",                           "true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -704,7 +706,9 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "common",  "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
     .{ 17, "common",  "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
 
-    .{ 18, "editors", "reopen_closed_editor",                       "Ctrl-Shift-T",                 "Cmd-Shift-T"  },
+    .{ 18, "editors", "reopen_closed_editor",                       "Ctrl-Shift-T",                 "Cmd-Shift-T" },
+
+    .{ 23, "editors", "keep_editor",                                "Ctrl-Alt-S Enter",             "Cmd-Opt-S Enter" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[

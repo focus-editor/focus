@@ -555,7 +555,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
 
-            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_size", "font_ui_size", "anti_aliasing", "hinting" ];
+            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_ui_bold_italic", "font_size", "font_ui_size", "anti_aliasing", "hinting" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
                 return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, temp));
@@ -587,6 +587,15 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     } else {
                         add_highlight(parser, value.data - line.data, value.count, .error);
                         result.config.font_ui_bold = "default";
+                        return true, error_msg;
+                    }
+                case "font_ui_bold_italic";
+                    found, error_msg := find_font_by_name(value);
+                    if found {
+                        result.config.font_ui_bold_italic = value;
+                    } else {
+                        add_highlight(parser, value.data - line.data, value.count, .error);
+                        result.config.font_ui_bold_italic = "default";
                         return true, error_msg;
                     }
                 case "font_size";
@@ -1403,13 +1412,13 @@ Parsed_Config :: struct {
     file_specific_settings: [..] File_Specific_Settings;
 
     // Style
-    theme:        string;
-    font:         string;
-    font_size:    int;
-    font_ui:      string;
-    font_ui_bold: string;
-    font_ui_size: int;
-
+    theme:                  string;
+    font:                   string;
+    font_size:              int;
+    font_ui:                string;
+    font_ui_bold:           string;
+    font_ui_bold_italic:    string;
+    font_ui_size:           int;
     font_hinting:       Option(bool);
     font_anti_aliasing: Option(Font_Anti_Aliasing);
 

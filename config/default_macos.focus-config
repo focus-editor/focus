@@ -93,6 +93,8 @@ comment_highlight_words2:                           # words to highlight using `
 comment_highlight_words3:                           # words to highlight using `code_comment_highlight3`
 comment_highlight_words4:                           # words to highlight using `code_comment_highlight4`
 
+enable_temporary_editors:                           true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor
+
 # NOTE: some settings can be specified for a subset of files, based on their language or a wildcard,
 # for example:
 # [file: <wildcard1>, <wildcard2>, ...]
@@ -232,6 +234,7 @@ Cmd-Opt-D ArrowDown             duplicate_editor_bottom
 Cmd-Shift-,                     duplicate_editor
 
 Cmd-Shift-T                     reopen_closed_editor
+Cmd-Opt-S Enter                 keep_editor
 
 Cmd-N                           create_new_file
 Cmd-Shift-N                     create_new_file_in_side_pane

@@ -313,6 +313,14 @@ apply_style :: (parsed: Parsed_Config) {
             add_user_error("Couldn't load font %", parsed.font_ui_bold);
         }
     }
+    if parsed.font_ui_bold_italic {
+        loaded_font, success := load_font_by_name(parsed.font_ui_bold_italic, .ui_bold_italic);
+        if success {
+            loaded_fonts.ui_bold_italic = loaded_font;
+        } else {
+            add_user_error("Couldn't load font %", parsed.font_ui_bold_italic);
+        }
+    }
     if parsed.font_size > 0 {
         font_main_size = parsed.font_size;
         default_font_main_size = font_main_size;
@@ -534,6 +542,8 @@ apply_config :: () {
 
     process_comment_highlight_words();
 
+    if !config.settings.enable_temporary_editors then make_all_editors_permanent();
+
     // NOTE: this is potentially expensive, and apply_config as it's currently set up could be called 3 times
     for * open_buffers  recalculate_settings(it);
 
@@ -580,12 +590,13 @@ process_comment_highlight_words :: () {
     config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
-load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; }) -> Loaded_Font, success: bool {
+load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
     if name == "default" {
-        if kind == {
-            case .main;    return FONT_MAIN,    true;
-            case .ui;      return FONT_UI,      true;
-            case .ui_bold; return FONT_UI_BOLD, true;
+        if #complete kind == {
+            case .main;             return FONT_MAIN,           true;
+            case .ui;               return FONT_UI,             true;
+            case .ui_bold;          return FONT_UI_BOLD,        true;
+            case .ui_bold_italic;   return FONT_UI_BOLD_ITALIC, true;
         }
     }
 
@@ -709,6 +720,7 @@ Settings :: struct {
     comment_highlight_words2                                := "";      @v19
     comment_highlight_words3                                := "";      @v19
     comment_highlight_words4                                := "";      @v19
+    enable_temporary_editors                                := true;    @v23
 
     // TODO
     // load_last_session_on_start:         true

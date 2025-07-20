@@ -1995,7 +1995,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
         }
-        draw_status_bar(editor, buffer, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
+        draw_status_bar(editor, buffer, pane, ui_id, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
     }
 
     if should_show_pane_editors(pane) {
@@ -2017,7 +2017,10 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
         for pane.editor_ids {
             editor, buffer := get_editor_and_buffer(it);
 
-            _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name | .modified, dry_run = true);
+            font_variant := File_Info_Font_Variant.bold;
+            if it_index == pane.temporary_editor_index && config.settings.enable_temporary_editors then font_variant = .bold_italic;
+
+            _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name | .modified, dry_run = true, font_variant = font_variant);
             if max_file_name_width < pen.x then max_file_name_width = pen.x;
 
             _, pen = draw_file_info(buffer, 0, padding, Vector2.{}, flags = .folder, dry_run = true);
@@ -2096,7 +2099,10 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
             draw_rounded_rect_with_corners(entry_rect, Color.LIST_CURSOR, tl = top_corners, tr = top_corners, br = bottom_corners, bl = bottom_corners);
         }
 
-        _, pen_after := draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified);
+        font_variant := File_Info_Font_Variant.bold;
+        if it_index == pane.temporary_editor_index && config.settings.enable_temporary_editors then font_variant = .bold_italic;
+
+        _, pen_after := draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified, font_variant = font_variant);
         file_name_width := pen_after.x - pen.x;
         if new_max_file_name_width < file_name_width then new_max_file_name_width = file_name_width;
 
@@ -2121,7 +2127,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
 
 }
 
-draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
+draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, editor_ui_id: Ui_Id, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
     push_scissor(rect);
     defer pop_scissor();
 
@@ -2130,13 +2136,31 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar
     width   := 0.0;
     padding := floor(4 * dpi_scale);
 
+    ui_id := get_ui_id_from_loc(parent_id = editor_ui_id);
+    clicked := maybe_set_hot_or_active(ui_id, status_bar_rect, .NORMAL);
+    if clicked {
+        activate_editors();
+        clear_all_lingering_actions();
+        editors.active_pane = pane;
+        redraw_requested = true;
+    }
+
     pen := Vector2.{
         status_bar_rect.x,
         status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
     };
 
     // Draw file name and path
-    width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning);
+    is_temporary_editor := pane.editor_index == pane.temporary_editor_index && config.settings.enable_temporary_editors;
+    font_variant := ifx is_temporary_editor then File_Info_Font_Variant.bold_italic else File_Info_Font_Variant.bold;
+    pen_old := pen;
+    width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning, font_variant = font_variant);
+    if is_temporary_editor {
+        hover_rect := Rect.{ pen_old.x, status_bar_rect.y, pen.x - pen_old.x, status_bar_rect.h };
+        if is_hovering_over(ui_id) && mouse_pointer_is_within(hover_rect) && mouse.left.just_double_clicked {
+            maybe_make_temporary_editor_permanent();
+        }
+    }
 
     // Draw line, column numbers, and selection length
     {
@@ -2223,7 +2247,7 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, rect: Rect, status_bar
             if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
 
             hover_rect := Rect.{ cursor_rect.x - padding, status_bar_rect.y, cursor_rect.w + padding + width + 2 * padding, status_bar_rect.h };
-            cursor_number_id := get_ui_id_from_loc();
+            cursor_number_id := get_ui_id_from_loc(parent_id = editor_ui_id);
             maybe_set_hot_or_active(cursor_number_id, hover_rect, .NORMAL);
             if is_hovering_over(cursor_number_id) {
                 draw_tooltip_bottom_left(tprint("Cursors off screen: %", cursors_off_screen), top_right(cursor_rect));
@@ -2255,7 +2279,13 @@ File_Info_Draw_Flags :: enum_flags {
     default :: file_name | modified | deleted_on_disk | modified_on_disk | read_only | folder | folder_separator;
 }
 
-draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, dry_run := false, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
+File_Info_Font_Variant :: enum {
+    normal;
+    bold;
+    bold_italic;
+}
+
+draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, font_variant: File_Info_Font_Variant = .bold, dry_run := false, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
     file_name_color := Color.UI_DEFAULT;
     if buffer.modified then file_name_color = Color.UI_WARNING;
 
@@ -2270,7 +2300,9 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         width += font_icons.em_width * 1.2;
 
         pen.x += width + padding;
-        file_name_font := ifx bold then font_ui_bold else font_ui;
+        file_name_font := font_ui;
+        if      font_variant == .bold        then file_name_font = font_ui_bold;
+        else if font_variant == .bold_italic then file_name_font = font_ui_bold_italic;
         width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
         if !dry_run then Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
     }
@@ -3323,7 +3355,7 @@ draw_finder :: () {
                 push_scissor(filename_scissor);
                 defer pop_scissor();
 
-                width, pen = draw_file_info(buffer, width, padding, pen, bold = false);
+                width, pen = draw_file_info(buffer, width, padding, pen, font_variant = .normal);
             }
 
             // Line number

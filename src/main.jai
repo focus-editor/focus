@@ -447,6 +447,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .split_bottom;                                     split_active_pane(.bottom);                         return true;
 
         case .reopen_closed_editor;                             action_reopen_closed_editor();                      return true;
+        case .keep_editor;                                      action_keep_editor();                               return true;
 
         case .rotate_panes_clockwise;                           rotate_panes(editors.root, .clockwise);             return true;
         case .rotate_panes_counterclockwise;                    rotate_panes(editors.root, .counterclockwise);      return true;
@@ -519,6 +520,9 @@ init_fonts_and_dependent_things :: () {
 
     font_ui_bold = Simp.get_font_at_size(loaded_fonts.ui_bold.name, loaded_fonts.ui_bold.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
+
+    font_ui_bold_italic = Simp.get_font_at_size(loaded_fonts.ui_bold_italic.name, loaded_fonts.ui_bold_italic.data, cast(int) (font_ui_size * dpi_scale));
+    assert(font_ui_bold != null, "Couldn't init bold italic ui font\n");
 
     font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
@@ -879,6 +883,7 @@ XMARK_ICON          :: #run to_string(*convert_utf32_to_utf8(0xf057));
 font_main:             *Simp.Dynamic_Font;
 font_ui:               *Simp.Dynamic_Font;
 font_ui_bold:          *Simp.Dynamic_Font;
+font_ui_bold_italic:   *Simp.Dynamic_Font;
 font_ui_big:           *Simp.Dynamic_Font;
 font_ui_small:         *Simp.Dynamic_Font;
 font_ui_very_small:    *Simp.Dynamic_Font;
@@ -898,9 +903,10 @@ DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
 DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
 loaded_fonts: struct {
-    main:    Loaded_Font = FONT_MAIN;
-    ui:      Loaded_Font = FONT_UI;
-    ui_bold: Loaded_Font = FONT_UI_BOLD;
+    main:           Loaded_Font = FONT_MAIN;
+    ui:             Loaded_Font = FONT_UI;
+    ui_bold:        Loaded_Font = FONT_UI_BOLD;
+    ui_bold_italic: Loaded_Font = FONT_UI_BOLD_ITALIC;
 };
 
 // can be changed in the config file
@@ -1148,10 +1154,11 @@ DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider i
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
 
 // Embed default fonts
-FONT_MAIN    :: #run load_font("FiraCode-Retina.ttf");
-FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
-FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
-FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+FONT_MAIN           :: #run load_font("FiraCode-Retina.ttf");
+FONT_UI             :: #run load_font("OpenSans-Regular.ttf");
+FONT_UI_BOLD        :: #run load_font("OpenSans-SemiBold.ttf");
+FONT_UI_BOLD_ITALIC :: #run load_font("OpenSans-SemiBoldItalic.ttf");
+FONT_ICONS          :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 #scope_file
 
