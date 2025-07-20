@@ -530,6 +530,8 @@ apply_config :: () {
     Clamp(*config.settings.scrollbar_fade_in_sensitivity,       0.0, 100.0);
     Clamp(*config.settings.scrollbar_fade_out_delay_seconds,    0.0, 1000.0);
 
+    Clamp(*config.settings.cursor_position_after_jump,  0.0,  1.0);
+
     if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
     if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
     if config.settings.window_x      != -1000 clamp_and_warn(*config.settings.window_x,     -500, 10000, "Window X clamped to %");
@@ -721,6 +723,7 @@ Settings :: struct {
     comment_highlight_words3                                := "";      @v19
     comment_highlight_words4                                := "";      @v19
     enable_temporary_editors                                := true;    @v23
+    cursor_position_after_jump                              := 0.45;    @v23
 
     // TODO
     // load_last_session_on_start:         true

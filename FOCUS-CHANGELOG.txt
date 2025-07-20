@@ -8,6 +8,8 @@
         + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
     + New commands: `center_pane_splitter` and `center_all_pane_splitters`.
         + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
+    + New settings:
+        + `cursor_position_after_jump` (defaults to `0.45`) - controls where the cursor will end up after jumping to a search result 0.0 is top, 1.0 is bottom
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
     + Fixed a crash when trying to jump to build error if build output has been cleared

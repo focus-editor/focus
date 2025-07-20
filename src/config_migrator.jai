@@ -514,6 +514,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 19, "comment_highlight_words4",                           "# words to highlight using `code_comment_highlight4`" },
 
     .{ 23, "enable_temporary_editors",                           "true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor" },
+    .{ 23, "cursor_position_after_jump",                         "0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
