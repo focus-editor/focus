@@ -251,12 +251,13 @@ base_commands := #run -> [] Command {
         cmd( "Toggle Block Comment",              .toggle_block_comment,             .Single ),
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),
         cmd( "Toggle Line Numbers",               .toggle_line_numbers,              .Single ),
+        cmd( "Toggle Pane Numbers",               .toggle_pane_numbers,              .Single ),
         cmd( "Toggle Fullscreen",                 .toggle_fullscreen,                .None   ),
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
         cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
-        cmd( "Build: Toggle Build Panel",         .build_panel_toggle,               .None   ),
-        cmd( "Build: Toggle Build Panel Focus",   .build_panel_toggle_focus,         .None   ),
+        cmd( "Build: Toggle Build Panel",         .toggle_build_panel,               .None   ),
+        cmd( "Build: Toggle Build Panel Focus",   .toggle_build_panel_focus,         .None   ),
 
         cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
 

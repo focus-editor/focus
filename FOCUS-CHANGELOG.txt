@@ -6,12 +6,15 @@
     + prefer_system_file_dialogs now works on macOS (thanks @caztanj)
     + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
         + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
-    + New commands: `center_pane_splitter` and `center_all_pane_splitters`.
-        + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
+    + New commands:
+        + `center_pane_splitter` and `center_all_pane_splitters`.
+            + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
+        + `toggle_pane_numbers` - use to temporarily switch pane numbers on or off.
     + New settings:
         + `cursor_position_after_jump` (defaults to `0.45`) - controls where the cursor will end up after jumping to a search result 0.0 is top, 1.0 is bottom
         + `closing_last_editor_in_pane_should_close_pane` (defaults to `true`)
         + `closing_last_editor_should_exit_program` (defaults to `false`)
+        + `show_pane_numbers` (defaults to `false`) - set to `true` to always display pane numbers next to file info
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
     + Fixed a crash when trying to jump to build error if build output has been cleared
@@ -37,6 +40,9 @@
     + Adding subdirectories of existing directories in the workspace is now allowed
     + When max_editor_width is used, the scrollbar will be positioned outside the editor area if there's available space for it
     + Improved example error regexes in the default config (thanks @victor-Lopez25)
+    + Renamed actions:
+        + `build_panel_toggle` -> `toggle_build_panel`
+        + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
 
 
 # RELEASES ==================================================================

@@ -1988,6 +1988,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     }
 
     // Draw status bar
+    file_info_offset := 0.0;  // when pane numbers are drawn we will use this to offset the pane editors popup
     if has_status_bar {
         status_bar_bg_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, status_bar_bg_color, extra_draw_info = .{is_background = true});
@@ -1995,15 +1996,15 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
         }
-        draw_status_bar(editor, buffer, pane, ui_id, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
+        file_info_offset = draw_status_bar(editor, buffer, pane, ui_id, status_bar_rect, status_bar_bg_color, buffer_settings, text_offset, cursors_off_screen);
     }
 
     if should_show_pane_editors(pane) {
-        draw_pane_editors(pane, main_area, status_bar_rect, text_offset);
+        draw_pane_editors(pane, main_area, status_bar_rect, text_offset, file_info_offset);
     }
 }
 
-draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect, text_offset: Vector2) {
+draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect, text_offset: Vector2, file_info_offset: float) {
     margin  := floor(8 * dpi_scale);
     padding := floor(4 * dpi_scale);
 
@@ -2040,6 +2041,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
     // Align the first entry with the status bar file name
     entry_rect := cut_left(main_area, real_width);
     entry_rect  = cut_bottom(entry_rect, entry_height);
+    entry_rect.x += file_info_offset;
     pen := Vector2.{
         entry_rect.x + text_offset.x,
         status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
@@ -2127,11 +2129,12 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
 
 }
 
-draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, editor_ui_id: Ui_Id, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) {
+draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, editor_ui_id: Ui_Id, rect: Rect, status_bar_bg_color: Color, buffer_settings: *Settings, text_offset: Vector2, cursors_off_screen: int) -> file_info_offset: float {
     push_scissor(rect);
     defer pop_scissor();
 
     status_bar_rect := shrink_x(rect, text_offset.x);
+    file_info_offset := 0.0;
 
     width   := 0.0;
     padding := floor(4 * dpi_scale);
@@ -2149,6 +2152,23 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
         status_bar_rect.x,
         status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
     };
+
+    // Maybe draw pane number
+    if config.settings.show_pane_numbers {
+        pen_x_old := pen.x;
+
+        width := Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, tprint("%", pane.number), xx Color.UI_DEFAULT);
+        pen.x += width;
+
+        // Separator
+        pen.x += text_offset.x;
+        rect := cut_right(status_bar_rect, 1);
+        rect.x = pen.x;
+        draw_rect(rect, Color.BACKGROUND_0);
+        pen.x += text_offset.x;
+
+        file_info_offset = pen.x - pen_x_old;
+    }
 
     // Draw file name and path
     is_temporary_editor := pane.editor_index == pane.temporary_editor_index && config.settings.enable_temporary_editors;
@@ -2262,6 +2282,8 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             draw_rect(fadeout_rect, status_bar_bg_color, extra_draw_info = .{is_background = true, is_translucent_on_the_right = true});
         }
     }
+
+    return file_info_offset;
 }
 
 File_Info_Draw_Flags :: enum_flags {

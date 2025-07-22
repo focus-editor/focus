@@ -517,6 +517,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 23, "cursor_position_after_jump",                         "0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center" },
     .{ 23, "closing_last_editor_in_pane_should_close_pane",      "true"  },
     .{ 23, "closing_last_editor_should_exit_program",            "false" },
+    .{ 23, "show_pane_numbers",                                  "false" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -731,8 +732,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type"      },
     .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type_fast" },
 
-    .{ 13, "common",   "toggle_build_panel",                        "build_panel_toggle" },
-
     .{ 14, "search dialog", "go_to_next_input",                     "focus_next_ui_element"     },
     .{ 14, "search dialog", "go_to_previous_input",                 "focus_previous_ui_element" },
 
@@ -762,6 +761,9 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
     .{ 17, "common",    "go_to_next_build_error_on_the_side",       "go_to_next_build_error_in_side_pane" },
     .{ 17, "common",    "go_to_previous_build_error_on_the_side",   "go_to_previous_build_error_in_side_pane" },
+
+    .{ 23, "common",    "build_panel_toggle",                       "toggle_build_panel"       },  // for consistency
+    .{ 23, "common",    "build_panel_toggle_focus",                 "toggle_build_panel_focus" },  // for consistency
 ];
 
 #if !NO_OUTPUT_BUILD {

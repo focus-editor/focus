@@ -228,8 +228,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .revert_select_word_or_create_another_cursor; revert_select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .move_selection_to_next_word;                 move_selection_to_next_word(editor, buffer);                 keep_selection = true;
 
-        case .toggle_line_wrap;                 action_toggle_line_wrap                 (editor);
-        case .toggle_line_numbers;              action_toggle_line_numbers              ();
+        case .toggle_line_wrap;                 action_toggle_line_wrap(editor);
+        case .toggle_line_numbers;              action_toggle_line_numbers();
+        case .toggle_pane_numbers;              action_toggle_pane_numbers();
+
         case .copy_current_line_info;           action_copy_current_line_info           (editor, buffer);
         case .center_viewport_on_cursor;        action_center_viewport_on_cursor        (editor, buffer);
         case .move_cursor_to_viewport_center;   action_move_cursor_to_viewport_center   (editor, buffer);
@@ -4835,6 +4837,10 @@ action_toggle_line_numbers :: () {
     }
 
     config.settings.show_line_numbers = !config.settings.show_line_numbers;
+}
+
+action_toggle_pane_numbers :: () {
+    config.settings.show_pane_numbers = !config.settings.show_pane_numbers;
 }
 
 action_copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {

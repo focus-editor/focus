@@ -42,8 +42,8 @@ ACTIONS_COMMON :: string.[
     "show_default_config",
 
     "toggle_fullscreen",
-    "build_panel_toggle",
-    "build_panel_toggle_focus",
+    "toggle_build_panel",
+    "toggle_build_panel_focus",
     "build_kill_running_command",
     "build_clear_output",
     "show_troubleshooting_info",
@@ -209,6 +209,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "go_to_next_buffer",
     "toggle_line_wrap",
     "toggle_line_numbers",
+    "toggle_pane_numbers",
     "copy_current_line_info",
 
     "indentation_detect_from_buffer_contents",

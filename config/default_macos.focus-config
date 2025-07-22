@@ -314,7 +314,7 @@ Escape                          escape  # combines close_dialog and remove_addit
 
 Cmd-Shift-L                     toggle_expand
 
-Cmd-B                           build_panel_toggle
+Cmd-B                           toggle_build_panel
 
 Enter                           open_entry
 Cmd-Enter                       open_entry_in_side_pane

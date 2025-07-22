@@ -411,7 +411,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .switch_between_open_files;                        show_open_file_dialog(.open_editors);               return true;
 
         case .show_commands;                                    show_dialog(*commands_dialog);                      return true;
-        case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
+        case .toggle_fullscreen;                                action_toggle_fullscreen();                         return true;
 
         case .cursor_go_back;                                   action_cursor_go_back();                            return true;
         case .cursor_go_forward;                                action_cursor_go_forward();                         return true;
@@ -419,8 +419,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .go_to_previous_buffer;                            action_go_to_previous_buffer(event);                return true;
         case .go_to_next_buffer;                                action_go_to_next_buffer(event);                    return true;
 
-        case .build_panel_toggle;                               build_panel_toggle();                               return true;
-        case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
+        case .toggle_build_panel;                               action_toggle_build_panel();                        return true;
+        case .toggle_build_panel_focus;                         action_toggle_build_panel_focus();                  return true;
 
         case .build_kill_running_command;                       build_kill_running_command();                       return true;
         case .build_clear_output;                               build_clear_output();                               return true;
@@ -665,7 +665,7 @@ update_mouse_state :: () {
     update_button(*mouse.x2,     .MOUSE_BUTTON_X2);
 }
 
-editor_toggle_fullscreen :: () {
+action_toggle_fullscreen :: () {
     fullscreen = !fullscreen;
     toggle_fullscreen(window, fullscreen, *fullscreen_state);  // platform-specific
 }

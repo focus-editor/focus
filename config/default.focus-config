@@ -334,7 +334,7 @@ Escape                      escape  # combines close_dialog and remove_additiona
 
 Ctrl-Shift-L                toggle_expand
 
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 
 F11                         toggle_fullscreen
 

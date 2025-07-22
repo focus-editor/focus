@@ -222,7 +222,7 @@ build_system_update :: () {
     }
 }
 
-build_panel_toggle :: () {
+action_toggle_build_panel :: () {
     if build_panel_is_shown {
         hide_build_panel();
     } else {
@@ -271,7 +271,7 @@ build_panel_grab_focus :: () {
     cursors_start_blinking();
 }
 
-build_panel_toggle_focus :: () {
+action_toggle_build_panel_focus :: () {
     if active_global_widget == .build_panel {
         build_panel_lose_focus();
     } else {
