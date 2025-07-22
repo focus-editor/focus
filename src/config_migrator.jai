@@ -1303,7 +1303,7 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -1387,6 +1387,11 @@ comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a c
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
 comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
+enable_temporary_editors:                        true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor
+cursor_position_after_jump:                      0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center
+closing_last_editor_in_pane_should_close_pane:   true
+closing_last_editor_should_exit_program:         false
+show_pane_numbers:                               false
 
 FOCUS_CONFIG
 
@@ -1404,7 +1409,7 @@ SETTINGS_2 :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [2]
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
@@ -1446,7 +1451,7 @@ SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [2]
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
@@ -1531,6 +1536,11 @@ comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a c
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
 comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
+enable_temporary_editors:                        true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor
+cursor_position_after_jump:                      0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center
+closing_last_editor_in_pane_should_close_pane:   true
+closing_last_editor_should_exit_program:         false
+show_pane_numbers:                               false
 
 FOCUS_CONFIG
 
@@ -1574,7 +1584,7 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -1913,6 +1923,11 @@ comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a c
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
 comment_highlight_words4:                        # words to highlight using `code_comment_highlight4`
+enable_temporary_editors:                        true  # when enabled, any editors are opened temporarily until an edit, a save, or a keep_editor command is used. Any newly opened editor will replace the existing temporary editor
+cursor_position_after_jump:                      0.45  # controls where the cursor ends up relatively to the viewport after jumping to a search result or an error. 0.0 is top of the screen, 1.0 - bottom, 0.5 - center
+closing_last_editor_in_pane_should_close_pane:   true
+closing_last_editor_should_exit_program:         false
+show_pane_numbers:                               false
 
 [[keymap]]
 # ...
@@ -2155,6 +2170,7 @@ Ctrl-Alt-D ArrowRight       duplicate_editor_right
 Ctrl-Alt-D ArrowUp          duplicate_editor_top
 Ctrl-Alt-D ArrowDown        duplicate_editor_bottom
 Ctrl-Shift-T                reopen_closed_editor
+Ctrl-Alt-S Enter            keep_editor
 
 [open file dialog]
 Tab                         open_directory
@@ -2171,7 +2187,7 @@ Ctrl-Tab                    switch_between_open_files
 Ctrl-Alt-P                  switch_to_project
 
 # Added after migration to version [!latest!]
-Ctrl-B                      build_panel_toggle
+Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
