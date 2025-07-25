@@ -125,7 +125,12 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
                         print_to_builder(*b, "%\n", it);   // add as is
                     } else {
                         extension := trim_left(trim(it), ".");
-                        if !is_known_text_file_extension(extension) then print_to_builder(*b, "*.%\n", extension);  // convert to a wildcard
+                        text_file_extensions :: string.[
+                            "jai", "c", "cpp", "h", "hpp", "cc", "cs", "d", "txt", "md", "ini", "csv", "log",
+                            "sql", "py", "m", "html", "xml", "plist", "js", "jsx", "ts", "tsx", "json", "yml",
+                            "yaml", "toml", "zig", "odin", "focus-config", "focus-theme",
+                        ];
+                        if !array_find(text_file_extensions, extension) then print_to_builder(*b, "*.%\n", extension);  // convert to a wildcard
                     }
                 }
                 allow_contents = trim(builder_to_string(*b));
@@ -143,7 +148,13 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
                         print_to_builder(*b, "%\n", it);   // add as is
                     } else {
                         extension := trim_left(trim(it), ".");
-                        if !is_known_binary_file_extension(extension) then print_to_builder(*b, "*.%\n", extension);  // convert to a wildcard
+                        binary_extensions :: string.[
+                            "exe", "pdb", "ttf", "otf", "eot", "woff", "dll", "lib", "dylib", "so", "a", "o", "pdf",
+                            "jpg", "png", "gif", "jpeg", "ico", "tif", "tiff", "tga", "bmp", "webp", "mp3", "wav", "ogg",
+                            "wma", "blend", "blend1", "obj", "fbx", "dae", "3ds", "dat", "msh2", "mpg", "mpeg", "psd", "codex",
+                            "webm", "zip", "rar", "7z", "bin", "sys", "iso", "nib", "exp", "pyc", "rpyc", "DS_Store", "dmg",
+                        ];
+                        if !array_find(binary_extensions, extension) then print_to_builder(*b, "*.%\n", extension);  // convert to a wildcard
                     }
                 }
                 ignore_contents = trim(builder_to_string(*b));

@@ -123,8 +123,11 @@ should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool
     // If we haven't decided yet whether to ignore or allow, do some extra checks
     extension, found_extension := get_lowercase_extension(path);
     if found_extension {
-        if is_known_text_file_extension  (extension) return false;
-        if is_known_binary_file_extension(extension) return true;
+        known, file_type := is_known_file_extension(extension);
+        if known {
+            if file_type == .text   return false;
+            if file_type == .binary return true;
+        }
     }
 
     #if OS != .WINDOWS {
@@ -158,107 +161,42 @@ should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool
     // We're not using read_entire_file here because this function is used when scanning workspace
     // and obtaining file lists in the Navigate to File dialog, so large binary files could really trip us up here
     found_zeroes := read_a_chunk_of_file_and_scan_for_zeroes(path);
-    if found_zeroes return true;
 
-    return false;
+    return found_zeroes;
 }
 
-is_known_text_file_extension :: (extension: string) -> bool {
-    if extension == {
-        case "jai";     #through;
-        case "c";       #through;
-        case "cpp";     #through;
-        case "h";       #through;
-        case "hpp";     #through;
-        case "cc";      #through;
-        case "cs";      #through;
-        case "d";       #through;
-        case "txt";     #through;
-        case "md";      #through;
-        case "ini";     #through;
-        case "csv";     #through;
-        case "log";     #through;
-        case "sql";     #through;
-        case "py";      #through;
-        case "m";       #through;
-        case "html";    #through;
-        case "xml";     #through;
-        case "plist";   #through;
-        case "js";      #through;
-        case "jsx";     #through;
-        case "ts";      #through;
-        case "tsx";     #through;
-        case "json";    #through;
-        case "yml";     #through;
-        case "yaml";    #through;
-        case "toml";    #through;
-        case "zig";     #through;
-        case "odin";    #through;
-        case "focus-config"; #through;
-        case "focus-theme";
-            return true;
-    }
-    return false;
+is_known_file_extension :: inline (extension: string) -> bool, Known_Extension_File_Type {
+    ok, type := table_find_new(*known_extensions_table, extension);
+    return ok, type;
 }
 
-is_known_binary_file_extension :: (extension: string) -> bool {
-    if extension == {
-        case "exe";      #through;
-        case "pdb";      #through;
-        case "ttf";      #through;
-        case "otf";      #through;
-        case "eot";      #through;
-        case "woff";     #through;
-        case "dll";      #through;
-        case "lib";      #through;
-        case "dylib";    #through;
-        case "so";       #through;
-        case "a";        #through;
-        case "o";        #through;
-        case "pdf";      #through;
-        case "jpg";      #through;
-        case "png";      #through;
-        case "gif";      #through;
-        case "jpeg";     #through;
-        case "ico";      #through;
-        case "tif";      #through;
-        case "tiff";     #through;
-        case "tga";      #through;
-        case "bmp";      #through;
-        case "webp";     #through;
-        case "mp3";      #through;
-        case "wav";      #through;
-        case "ogg";      #through;
-        case "wma";      #through;
-        case "blend";    #through;
-        case "blend1";   #through;
-        case "obj";      #through;
-        case "fbx";      #through;
-        case "dae";      #through;
-        case "3ds";      #through;
-        case "dat";      #through;
-        case "msh2";     #through;
-        case "mpg";      #through;
-        case "mpeg";     #through;
-        case "psd";      #through;
-        case "codex";    #through;
-        case "webm";     #through;
-        case "zip";      #through;
-        case "rar";      #through;
-        case "7z";       #through;
-        case "bin";      #through;
-        case "sys";      #through;
-        case "iso";      #through;
-        case "nib";      #through;
-        case "exp";      #through;
-        case "pyc";      #through;
-        case "rpyc";     #through;
-        case "DS_Store"; #through;
-        case "dmg";
-            return true;
-    }
-    return false;
+
+#scope_file
+
+Known_Extension_File_Type :: enum { text; binary; }
+
+known_extensions_table :: #run -> Table(string, Known_Extension_File_Type) {
+    table: Table(string, Known_Extension_File_Type);
+
+    text_file_extensions :: string.[
+        "jai", "c", "cpp", "h", "hpp", "cc", "cs", "d", "txt", "md", "ini", "csv", "go", "log",
+        "sql", "py", "m", "html", "xml", "plist", "js", "jsx", "ts", "tsx", "json", "yml",
+        "yaml", "toml", "zig", "odin", "focus-config", "focus-theme",
+    ];
+    for text_file_extensions  table_add(*table, it, .text);
+
+    binary_extensions :: string.[
+        "exe", "pdb", "ttf", "otf", "eot", "woff", "dll", "lib", "dylib", "so", "a", "o", "pdf",
+        "jpg", "png", "gif", "jpeg", "ico", "tif", "tiff", "tga", "bmp", "webp", "mp3", "wav", "ogg",
+        "wma", "blend", "blend1", "obj", "fbx", "dae", "3ds", "dat", "msh2", "mpg", "mpeg", "psd", "codex",
+        "webm", "zip", "rar", "7z", "bin", "sys", "iso", "nib", "exp", "pyc", "rpyc", "DS_Store", "dmg",
+    ];
+    for binary_extensions  table_add(*table, it, .binary);
+
+    return table;
 }
+
+#scope_export
 
 should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool = false {
     path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
