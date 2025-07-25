@@ -1,3 +1,6 @@
+MIN_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 16 };
+MAX_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 99 };
+
 VERSION      :: #run -> string {
     result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
     if revision return sprint("0.3.8-%", trim(revision));
@@ -15,6 +18,8 @@ RELEASE_DATE :: #run -> string {
 #run,stallable build();
 
 build :: () {
+    check_compiler_version();
+
     options := get_build_options();
     options.minimum_os_version = .{10, 13};
     options.temporary_storage_size = 1048576;  // 1 MB per thread
@@ -181,6 +186,30 @@ build :: () {
 
         #import "MacOS_Bundler";
         #import "File";
+    }
+}
+
+check_compiler_version :: () {
+    version_info: Version_Info;
+    version_str := compiler_get_version_info(*version_info);
+
+    min_version_str := tprint("%.%.%", MIN_COMPILER_VERSION.major, MIN_COMPILER_VERSION.minor, MIN_COMPILER_VERSION.micro);
+    max_version_str := tprint("%.%.%", MAX_COMPILER_VERSION.major, MAX_COMPILER_VERSION.minor, MAX_COMPILER_VERSION.micro);
+
+    if version_info.major < MIN_COMPILER_VERSION.major ||
+       version_info.minor < MIN_COMPILER_VERSION.minor ||
+       version_info.micro < MIN_COMPILER_VERSION.micro
+    {
+        error := tprint("Compiler version '%' is below the minimum required version '%'", version_str, min_version_str);
+        compiler_report(error);
+    }
+
+    if version_info.major > MAX_COMPILER_VERSION.major ||
+       version_info.minor > MAX_COMPILER_VERSION.minor ||
+       version_info.micro > MAX_COMPILER_VERSION.micro
+    {
+        error := tprint("Compiler version '%' is above the maximum supported version '%'", version_str, max_version_str);
+        compiler_report(error);
     }
 }
 
