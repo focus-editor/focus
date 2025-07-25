@@ -1031,6 +1031,7 @@ focus_allocator: Allocator;
 #load "utils/ring_buffer.jai";
 #load "utils/utils.jai";
 #load "utils/unicode.jai";
+#load "utils/rw_lock.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";
