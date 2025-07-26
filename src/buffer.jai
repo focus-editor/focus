@@ -23,8 +23,10 @@ refresh_open_buffers :: () {
         if !buffer.readonly then buffer.modified = buffer.meow_hash != calculate_hash(to_view(buffer.bytes));
         if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
 
-        finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
+        if !buffer.internal && !buffer.binary {
+            finder.need_to_refresh_results = true;
+            open_file_dialog.should_refresh_entries = true;
+        }
     }
 }
 

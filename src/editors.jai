@@ -2967,7 +2967,7 @@ action_reload_from_disk :: (buffer_id: s64) {
 
     add_success_message("File contents has been reloaded from\n%", buffer.file.full_path);
 
-    finder.need_to_refresh_results = true;
+    if !(buffer.internal || buffer.binary) then finder.need_to_refresh_results = true;
 }
 
 toggle_expand :: () {
