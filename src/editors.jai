@@ -771,8 +771,11 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
 
     editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
 
+    // We always want to keep the editor if opening in a different pane
+    should_use_temporary_editor := config.settings.enable_temporary_editors && target_pane == editors.active_pane;
+
     // Open the editor in the target pane
-    if target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count && config.settings.enable_temporary_editors {
+    if should_use_temporary_editor && target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count{
         // Remove old temporary editor
         old_temporary_editor_id := target_pane.editor_ids[target_pane.temporary_editor_index];
         remove_editor_from_pane(target_pane, old_temporary_editor_id);
@@ -781,7 +784,7 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     new_index := target_pane.editor_index + 1;
     array_insert_at(*target_pane.editor_ids, editor_id, new_index);
     target_pane.editor_index = new_index;
-    if config.settings.enable_temporary_editors then target_pane.temporary_editor_index = new_index;
+    if should_use_temporary_editor then target_pane.temporary_editor_index = new_index;
 
     // In case we've just opened a previously closed editor, remove it from the closed list
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
@@ -1151,14 +1154,14 @@ action_close_editor :: (event: *Input.Event) {
     defer_action_close_editor(get_active_editor_id());
 }
 
-close_editor_by_id :: (editor_id: s64) {
+close_editor_by_id :: (editor_id: s64) -> *Editor_Pane {
     pane := get_pane_by_editor_id(editor_id);
-    if !pane return;
+    if !pane return null;
 
     if config.settings.closing_last_editor_should_exit_program && pane.editor_ids.count == 1 && pane == editors.root {
         // Do it before actually closing the editor to avoid flickering
         defer_action_quit();
-        return;
+        return null;
     }
 
     active_editor_id := get_active_editor_id();
@@ -1173,7 +1176,7 @@ close_editor_by_id :: (editor_id: s64) {
 
     editor_do_post_close_cleanup(editor_id);
 
-    if config.settings.closing_last_editor_in_pane_should_close_pane && !pane.editor_ids then close_pane(pane);
+    return pane;
 }
 
 editor_do_post_close_cleanup :: (editor_id: s64) {
@@ -1809,6 +1812,8 @@ action_duplicate_editor :: (placement: Editor_Placement) {
     if !target_pane then target_pane = split_active_pane(placement);
     if !target_pane return;
 
+    defer activate_pane(target_pane);
+
     duplicated_editor_id := editors_open_buffer_in_pane(open_editors[active_editor_id].buffer_id, target_pane);
     duplicated_editor := *open_editors[duplicated_editor_id];
     current_editor    := *open_editors[active_editor_id];  // get the pointer again because it could've become invalid
@@ -1873,7 +1878,9 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane, *Editor_Pane
     active_pane.editor_ids   = empty_ids;
     active_pane.editor_index = -1;
 
-    editors.active_pane = new_pane;
+    // We'll actually activate new_pane later. We're not activating it now because
+    // we want to detect that the active pane has changed further down
+    editors.active_pane = other_pane;
 
     return new_pane, other_pane;
 }

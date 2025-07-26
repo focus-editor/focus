@@ -346,7 +346,10 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
 
     _close_editors_for_buffer :: (buffer_id: s64) {
         for editor, editor_id : open_editors {
-            if editor.buffer_id == buffer_id then close_editor_by_id(editor_id);
+            if editor.buffer_id == buffer_id {
+                pane := close_editor_by_id(editor_id);
+                if config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
+            }
         }
     }
 
@@ -497,7 +500,8 @@ execute_wait_for_killed_command_to_stop :: (action: Deferred_Action) -> Action_R
 
 execute_close_editor :: (action: Deferred_Action) -> Action_Result {
     editor_id := action.details.close_editor.editor_id;
-    close_editor_by_id(editor_id);
+    pane := close_editor_by_id(editor_id);
+    if config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
     return .DONE;
 }
 
