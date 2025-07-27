@@ -199,10 +199,10 @@ workspace_update :: () {
     files_changed |= process_changes(*watchers.external_watcher);
     if files_changed {
         // NOTE: these count comparisons are intentional because count can be -1
-        if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
+        if watchers.project_file_modified.count > 0 {
             refresh_buffer_from_disk_by_path(path = watchers.project_file_modified);
         }
-        if watchers.external_file_modified.count > 0 && (!should_ignore_file(watchers.external_file_modified) || is_our_config_file(watchers.external_file_modified)) {
+        if watchers.external_file_modified.count > 0 {
             refresh_buffer_from_disk_by_path(path = watchers.external_file_modified);
         }
 
@@ -213,7 +213,7 @@ workspace_update :: () {
             }
             if file.is_symlink return;
 
-            if should_ignore_file(file.full_name) && !is_our_config_file(file.full_name) return;
+            if !should_watch_file_for_changes(file.full_name) return;
 
             refresh_buffer_from_disk_by_path(path = file.full_name);
         }
@@ -548,8 +548,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         if add_to_queue array_add(*dirs_to_rescan, dir);
     }
 
-    // If the change is in one of the ignored dirs, ignore it
-    if should_ignore_path(change.full_path) && !is_our_config_file(change.full_path) return;
+    if !should_watch_file_for_changes(change.full_path) return;
 
     if watcher == *watchers.external_watcher {
         // If the change is caused by watching a dir containing a standalone file, ignore it
@@ -602,6 +601,12 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
 
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
+}
+
+should_watch_file_for_changes :: inline (path: string) -> bool {
+    return !should_ignore_path(path) ||
+            is_our_config_file(path) ||
+            find_buffer_id_by_path(path) >= 0;  // if buffer is already open, we want to see changes even if it's ignored
 }
 
 #scope_file
