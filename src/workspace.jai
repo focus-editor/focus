@@ -621,7 +621,7 @@ get_scan_pool_allocator :: () -> Allocator {
 watchers : struct {
     initialized := false;
 
-    project_watcher:   File_Watcher;  // recursive
+    project_watcher:  File_Watcher;   // recursive
     external_watcher: File_Watcher;   // non-recursive
 
     project_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,

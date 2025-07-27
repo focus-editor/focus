@@ -2997,7 +2997,7 @@ toggle_editor_expand :: () {
 remember_all_splitter_positions :: () {
     _save_pos :: (using pane: *Editor_Pane) {
         if !pane return;
-        saved_splitter_pos = splitter_pos;
+        saved_splitter_pos = splitter_anim.target;  // don't use splitter_pos because we might be animating it
         _save_pos(child1);
         _save_pos(child2);
     }
