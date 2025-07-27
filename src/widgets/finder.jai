@@ -85,6 +85,7 @@ finder_open :: () {
     input.cursor.sel = 0;
     input.cursor.pos = xx input.text.count;
 
+    active_input = .input;
     case_sensitive_toggled_manually = false;
 
     if need_to_refresh_results {
