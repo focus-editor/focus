@@ -1319,7 +1319,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
         if (key_code >= #char "a") && (key_code <= #char "z") {
             // Uppercase it, since our keyboard codes are uppercase.
-            key_code += (#char "a" - #char "A");
+            key_code -= (#char "a" - #char "A");
         }
 
         if s.count > 0 {

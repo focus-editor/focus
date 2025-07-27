@@ -15,6 +15,7 @@
         + `closing_last_editor_in_pane_should_close_pane` (defaults to `true`)
         + `closing_last_editor_should_exit_program` (defaults to `false`)
         + `show_pane_numbers` (defaults to `false`) - set to `true` to always display pane numbers next to file info
+
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
     + Fixed a crash when trying to jump to build error if build output has been cleared
@@ -23,6 +24,9 @@
     + Fixed a bug with ignore/allow patterns where some allow patterns weren't applied if a folder was ignored
     + Fixed a few bugs with workspace scanning when workspace items overlap
     + Fixed a bug where closing an unsaved file via the open files dialog would not ask for a confirmation
+    + Fixed a bug when search results would reset after printing to the build output window
+    + Fixed a bug with lowercase letters not working in keybinds
+
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
     + Improved C-like number highlighting (thanks @CELLTH)
