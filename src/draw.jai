@@ -535,6 +535,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
 
     // Draw the language list
     if is_valid(langs_rect) {
+        scrollbar_id := get_ui_id_from_loc();
         langs_ui_id := get_ui_id_from_loc();
         pressed := maybe_set_hot_or_active(langs_ui_id, langs_rect, .NORMAL);
 
@@ -549,21 +550,60 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         entry_height := cast(s64) (font_ui_line_height + padding);
         entry_rect := cut_top(langs_rect, xx entry_height);
         entry_rect.y -= padding;
-        x := cast(s64) (entry_rect.x + padding * 1.5);
-        y := cast(s64) (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2.0 + 2);
-        for lang : languages {
+
+        content_height := entry_height * languages.count;
+        max_scroll := max(content_height + padding * 2 - langs_rect.h, 0);
+
+        // Update scrolling.
+        {
+            // Mouse scrolling
+            if (ui.hot_last_frame == langs_ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(langs_rect) {
+                if mouse.scroll_y_delta != 0 {
+                    target := clamp(color_preview_scroll_y_anim.target - mouse.scroll_y_delta, 0, xx max_scroll);
+                    if mouse.smooth_scroll {
+                        start_animation(*color_preview_scroll_y_anim, color_preview_scroll_y, target);
+                    } else {
+                        color_preview_scroll_y_anim.target = target;
+                        color_preview_scroll_y = target;
+                    }
+                }
+            }
+
+            new_scroll_target := get_new_scroll_target_from_scrollbar(langs_rect, xx content_height, color_preview_scroll_y, color_preview_scroll_y_anim.target, 0, xx max_scroll, scrollbar_id);
+            if (new_scroll_target != color_preview_scroll_y_anim.target) {
+                color_preview_scroll_y_anim.target = new_scroll_target;
+                color_preview_scroll_y = new_scroll_target;
+            }
+
+            if color_preview_scroll_y != color_preview_scroll_y_anim.target {
+                color_preview_scroll_y = get_animation_value(color_preview_scroll_y_anim);
+            }
+        }
+
+        first_visible_language_index := color_preview_scroll_y / entry_height;
+        first_visible_language_y_offset := color_preview_scroll_y % entry_height;
+        entry_rect.y += first_visible_language_y_offset;
+
+        text_x := cast(s64) (entry_rect.x + padding * 1.5);
+        text_y := cast(s64) (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2.0 + 2);
+
+        visible_languages := array_view(languages, first_visible_language_index);
+
+        for lang : visible_languages {
             if mouse_pointer_is_within(entry_rect) && is_hovering_over(langs_ui_id) {
                 draw_rect(entry_rect, Color.LIST_CURSOR_LITE);
                 set_pointer_image(.PRESSABLE);
-                if pressed then color_preview_set_language(it_index);
+                if pressed then color_preview_set_language(it_index + first_visible_language_index);
             }
-            if it_index == selected_lang {
+            if it_index + first_visible_language_index == selected_lang {
                 draw_rect(entry_rect, Color.LIST_CURSOR);
             }
-            Simp.draw_text(font_ui, x, y, lang, xx Color.UI_DEFAULT);
-            y -= entry_height;
+            Simp.draw_text(font_ui, text_x, text_y, lang, xx Color.UI_DEFAULT);
+            text_y -= entry_height;
             entry_rect.y -= entry_height;
         }
+
+        draw_scrollbar(langs_rect, xx content_height, color_preview_scroll_y, color_preview_scroll_y, 0, xx max_scroll, scrollbar_id);
     }
 
     draw_editor(editor_id, editor_rect, color_preview_ui_id, has_status_bar = false);
