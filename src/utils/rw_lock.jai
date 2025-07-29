@@ -51,19 +51,25 @@
     // non-recursive, not shared across processes
     RWLock :: pthread_rwlock_t;
 
-    init :: (rwlock: *RWLock) {
-        attr : pthread_rwlockattr_t;
-        error := pthread_rwlockattr_init(*attr);
-        assert(!error);
+    #if OS == .LINUX {
+        init :: (rwlock: *RWLock) {
+            rwlock.* = RWLock.{};
+        }
+    } else {
+        init :: (rwlock: *RWLock) {
+            attr : pthread_rwlockattr_t;
+            error := pthread_rwlockattr_init(*attr);
+            assert(!error);
 
-        error = pthread_rwlockattr_setpshared(*attr, PTHREAD_PROCESS_PRIVATE);
-        assert(!error);
+            error = pthread_rwlockattr_setpshared(*attr, PTHREAD_PROCESS_PRIVATE);
+            assert(!error);
 
-        error = pthread_rwlock_init(rwlock, *attr);
-        assert(!error);
+            error = pthread_rwlock_init(rwlock, *attr);
+            assert(!error);
 
-        error = pthread_rwlockattr_destroy(*attr);
-        assert(!error);
+            error = pthread_rwlockattr_destroy(*attr);
+            assert(!error);
+        }
     }
 
     destroy :: inline (rwlock: *RWLock) {
