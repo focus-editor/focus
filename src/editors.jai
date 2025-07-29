@@ -231,7 +231,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_line_wrap;                 action_toggle_line_wrap(editor);
         case .toggle_line_numbers;              action_toggle_line_numbers();
         case .toggle_pane_numbers;              action_toggle_pane_numbers();
-
+        case .toggle_indent_guides;             action_toggle_indent_guides             ();
         case .copy_current_line_info;           action_copy_current_line_info           (editor, buffer);
         case .center_viewport_on_cursor;        action_center_viewport_on_cursor        (editor, buffer);
         case .move_cursor_to_viewport_center;   action_move_cursor_to_viewport_center   (editor, buffer);
@@ -4848,6 +4848,21 @@ action_toggle_line_numbers :: () {
 
 action_toggle_pane_numbers :: () {
     config.settings.show_pane_numbers = !config.settings.show_pane_numbers;
+}
+
+action_toggle_indent_guides :: () {
+    redraw_requested = true;
+
+    _, buffer := get_active_editor_and_buffer();
+    if buffer {
+        buffer_settings := get_settings(buffer);
+        if buffer_settings != *config.settings {
+            buffer_settings.draw_indent_guides = !buffer_settings.draw_indent_guides;
+            return;
+        }
+    }
+
+    config.settings.draw_indent_guides = !config.settings.draw_indent_guides;
 }
 
 action_copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {

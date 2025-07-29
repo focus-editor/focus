@@ -252,6 +252,7 @@ base_commands := #run -> [] Command {
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),
         cmd( "Toggle Line Numbers",               .toggle_line_numbers,              .Single ),
         cmd( "Toggle Pane Numbers",               .toggle_pane_numbers,              .Single ),
+        cmd( "Toggle Indent Guides",              .toggle_indent_guides,             .Single ),
         cmd( "Toggle Fullscreen",                 .toggle_fullscreen,                .None   ),
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
