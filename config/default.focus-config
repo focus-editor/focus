@@ -265,6 +265,7 @@ Alt-A                       align_cursors
 
 Alt-Z                       toggle_line_wrap
 Alt-Shift-L                 toggle_line_numbers
+Alt-Shift-T                 toggle_indent_guides
 
 Ctrl-Shift-Alt-N            open_another_editor_instance
 

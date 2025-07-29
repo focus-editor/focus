@@ -210,6 +210,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_line_wrap",
     "toggle_line_numbers",
     "toggle_pane_numbers",
+    "toggle_indent_guides",
     "copy_current_line_info",
 
     "indentation_detect_from_buffer_contents",
