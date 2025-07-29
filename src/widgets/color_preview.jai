@@ -270,6 +270,8 @@ color_preview_is_shown := true;
 color_preview_width:  float = 0.5;
 color_preview_height: float = 0.7;
 
+color_preview_scroll_y_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
+color_preview_scroll_y : s32;
 
 #scope_file
 
@@ -348,7 +350,6 @@ parse_config_and_get_offset_of_color_value :: (buffer: Buffer, color_name: strin
 
     return -1;
 }
-
 
 // The ids of the editor and buffer with the color section which triggered the widget
 target_editor_id := -1;
