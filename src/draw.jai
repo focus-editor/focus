@@ -2949,14 +2949,30 @@ draw_theme_dialog :: () {
 
 draw_unsaved_buffers_dialog :: () {
     draw_extra_buffer_names :: (extra_rect: Rect, margin: float, padding: float) {
-        push_scissor(extra_rect);
-        defer pop_scissor();
+        //push_scissor(extra_rect);
+        //defer pop_scissor();
 
         entry_height  := font_ui_line_height + padding * 2;
+        entry_margin  := margin / 2;
         entry_rect := cut_top(extra_rect, entry_height);
 
-        for unsaved_buffers_dialog.buffer_ids {
-            buffer := *open_buffers[it];
+        num_entries := unsaved_buffers_dialog.buffer_ids.count;
+
+        // Need to account for margin, keeping in mind that we don't need the extra empty margin space
+        // at the bottom, after the last entry.
+        //
+        // The naive solution `extra_rect.h / (entry_height + entry_margin)` is not quite right. The
+        // extra margin might be enough to overflow the bounds when there really is enough space for all entries.
+        max_entries := cast(s64)((extra_rect.h * num_entries) / (entry_height * num_entries + entry_margin * (num_entries - 1)));
+
+        num_entries_to_draw := num_entries;
+        if num_entries > max_entries {
+            num_entries_to_draw = max_entries - 1; // -1 so we have space to draw a message at the end.
+        }
+
+        for 0..num_entries_to_draw - 1 {
+            buffer_id := unsaved_buffers_dialog.buffer_ids[it];
+            buffer := *open_buffers[buffer_id];
             {
                 push_scissor(entry_rect);
                 defer pop_scissor();
@@ -2970,6 +2986,20 @@ draw_unsaved_buffers_dialog :: () {
                 width, _ = draw_file_info(buffer, width, padding, pen);
             }
             entry_rect.y -= entry_rect.h + margin / 2;
+        }
+
+        if num_entries_to_draw < num_entries {
+            extra_files_message: string;
+            if num_entries_to_draw > 0 {
+                extra_files_message = tprint("and % additional files...", num_entries - num_entries_to_draw);
+            }
+            else {
+                extra_files_message = tprint("% unsaved files...", num_entries - num_entries_to_draw);
+            }
+
+            x := entry_rect.x + margin;
+            y := entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;
+            Simp.draw_text(font_ui, xx x, xx y, extra_files_message, xx Color.UI_WARNING);
         }
     }
 
@@ -2989,7 +3019,7 @@ draw_unsaved_buffers_dialog :: () {
         header,
         message,
         draw_extra_buffer_names,
-        extra_height = font_ui_medium_line_height * num_unsaved_buffers + margin,
+        extra_height = (font_ui_medium_line_height + margin) * num_unsaved_buffers + margin,
     );
 }
 
@@ -3013,6 +3043,9 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         h = header_height + margin + padding + button_height + margin + (extra_height + margin),
     };
     if message then box_rect.h += entry_height + margin;
+    box_rect.h = min(box_rect.h, screen.h * 0.9);
+    box_rect.h = max(box_rect.h, font_ui_line_height * 8);
+
     box_rect.x = floor((screen.w - box_rect.w) / 2);
     box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
 
@@ -3043,7 +3076,7 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         push_scissor(buffers_rect);
         defer pop_scissor();
 
-        entry_rect := cut_top(buffers_rect, entry_height);
+        entry_rect, extra := cut_top(buffers_rect, entry_height);
 
         if message {
             Simp.draw_text(
@@ -3053,10 +3086,14 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
                 message,
                 xx Color.UI_DEFAULT,
             );
-            entry_rect.y -= entry_rect.h + margin;
+
+            extra.h -= margin;
         }
 
-        if draw_extra != null then draw_extra(entry_rect, margin, padding);
+        //extra.y += button_height;
+        //extra.h -= button_height;
+
+        if draw_extra != null then draw_extra(extra, margin, padding);
     }
 
     // Buttons
