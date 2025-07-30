@@ -249,8 +249,6 @@ Opt-Cmd-A                       align_cursors
 
 Opt-Cmd-Z                       toggle_line_wrap
 Opt-Cmd-L                       toggle_line_numbers
-Opt-Cmd-T                       toggle_indent_guides
-
 
 Opt-Cmd-Shift-N                 open_another_editor_instance
 
