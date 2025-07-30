@@ -3053,7 +3053,7 @@ draw_unsaved_buffers_dialog :: () {
         header,
         message,
         draw_extra_buffer_names,
-        extra_height = (font_ui_line_height + padding * 2) * num_unsaved_buffers + (margin / 2) * (num_unsaved_buffers - 1),
+        extra_height = (font_ui_line_height + padding * 2 + margin / 2) * num_unsaved_buffers,
     );
 }
 
