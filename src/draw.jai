@@ -2949,26 +2949,22 @@ draw_theme_dialog :: () {
 
 draw_unsaved_buffers_dialog :: () {
     draw_extra_buffer_names :: (extra_rect: Rect, margin: float, padding: float) {
-        //push_scissor(extra_rect);
-        //defer pop_scissor();
-
         entry_height  := font_ui_line_height + padding * 2;
         entry_margin  := margin / 2;
         entry_rect := cut_top(extra_rect, entry_height);
 
         num_entries := unsaved_buffers_dialog.buffer_ids.count;
+        max_entries := cast(s64)(extra_rect.h / (entry_height + entry_margin));
 
-        // Need to account for margin, keeping in mind that we don't need the extra empty margin space
-        // at the bottom, after the last entry.
-        //
-        // The naive solution `extra_rect.h / (entry_height + entry_margin)` is not quite right. The
-        // extra margin might be enough to overflow the bounds when there really is enough space for all entries.
-        max_entries := cast(s64)((extra_rect.h * num_entries) / (entry_height * num_entries + entry_margin * (num_entries - 1)));
-
+        // >, not >= because if there's only one extra file, we might as well just draw that rather than
+        // "1 additional file". We only show the "additional files" text when there are 2+ unsaved files
+        // that cannot be displayed.
         num_entries_to_draw := num_entries;
         if num_entries > max_entries {
             num_entries_to_draw = max_entries - 1; // -1 so we have space to draw a message at the end.
         }
+
+        num_entries_to_draw = max(num_entries_to_draw, 1);
 
         for 0..num_entries_to_draw - 1 {
             buffer_id := unsaved_buffers_dialog.buffer_ids[it];
@@ -2985,20 +2981,16 @@ draw_unsaved_buffers_dialog :: () {
 
                 width, _ = draw_file_info(buffer, width, padding, pen);
             }
-            entry_rect.y -= entry_rect.h + margin / 2;
+            entry_rect.y -= entry_rect.h + entry_margin;
         }
 
         if num_entries_to_draw < num_entries {
-            extra_files_message: string;
-            if num_entries_to_draw > 0 {
-                extra_files_message = tprint("and % additional files...", num_entries - num_entries_to_draw);
-            }
-            else {
-                extra_files_message = tprint("% unsaved files...", num_entries - num_entries_to_draw);
-            }
+            extra_files_message := tprint("and % additional files...", num_entries - num_entries_to_draw);
 
             x := entry_rect.x + margin;
             y := entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;
+            y = max(y, extra_rect.y + font_ui.character_height / 2); // Clamp to bottom of dialog.
+
             Simp.draw_text(font_ui, xx x, xx y, extra_files_message, xx Color.UI_WARNING);
         }
     }
@@ -3012,6 +3004,7 @@ draw_unsaved_buffers_dialog :: () {
     }
 
     margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
 
     draw_generic_confirm_dialog(
         *unsaved_buffers_dialog,
@@ -3019,7 +3012,7 @@ draw_unsaved_buffers_dialog :: () {
         header,
         message,
         draw_extra_buffer_names,
-        extra_height = (font_ui_medium_line_height + margin) * num_unsaved_buffers + margin,
+        extra_height = (font_ui_line_height + padding * 2) * num_unsaved_buffers + (margin / 2) * (num_unsaved_buffers - 1),
     );
 }
 
