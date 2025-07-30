@@ -576,6 +576,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
             }
 
             if color_preview_scroll_y != color_preview_scroll_y_anim.target {
+                redraw_requested = true;
                 color_preview_scroll_y = get_animation_value(color_preview_scroll_y_anim);
             }
         }
