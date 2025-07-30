@@ -724,8 +724,6 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 18, "editors", "reopen_closed_editor",                       "Ctrl-Shift-T",                 "Cmd-Shift-T" },
 
     .{ 23, "editors", "keep_editor",                                "Ctrl-Alt-S Enter",             "Cmd-Opt-S Enter" },
-
-    .{ 24, "editors", "toggle_indent_guides",                       "Alt-Shift-T",                  "Opt-Cmd-T"  },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
