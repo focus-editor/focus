@@ -195,15 +195,61 @@ workspace_update :: () {
     }
 
     // Check for any changes to the files we care about
-    files_changed := process_changes(*watchers.project_watcher);
-    files_changed |= process_changes(*watchers.external_watcher);
+    array_reset_keeping_memory(*watchers.project_changes);
+    array_reset_keeping_memory(*watchers.external_changes);
+
+    files_changed :=  process_changes(*watchers.project_watcher);
+    files_changed ||= process_changes(*watchers.external_watcher);
+
     if files_changed {
-        // NOTE: these count comparisons are intentional because count can be -1
-        if watchers.project_file_modified.count > 0 {
-            refresh_buffer_from_disk_by_path(path = watchers.project_file_modified);
+        using watchers;
+
+        // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
+        // In this case we don't want to rescan anything, but only if no other events were received in the same frame
+        if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
+            change := pop(*project_changes);
+            refresh_buffer_from_disk_by_path(path = change.full_path);
         }
-        if watchers.external_file_modified.count > 0 {
-            refresh_buffer_from_disk_by_path(path = watchers.external_file_modified);
+        if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
+            change := pop(*external_changes);
+            parent_dir := get_parent_dir_path(change.full_path);
+            if dir_is_within_project(parent_dir) || file_is_watched(change.full_path) {
+                // We only want to refresh if the modified event is for a file we care about
+                refresh_buffer_from_disk_by_path(path = change.full_path);
+            }
+        }
+
+        // TODO! Check for moves
+
+
+        // Maybe add to scanning queue
+        dirs_to_scan: [..] string;
+        dirs_to_scan.allocator = temp;
+
+        maybe_add_to_queue :: (dirs_to_scan: *[..] string, dir: string) {
+            add_to_queue := true;
+            for dirs_to_scan.* {
+                if begins_with_nocase(dir, it) {
+                    add_to_queue = false;  // parent or itself is already in the queue
+                    break;
+                }
+                if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
+            }
+            if add_to_queue array_add(dirs_to_scan, dir);
+        }
+
+        for change : project_changes {
+            dir: string;
+            if change.events & .SCAN_CHILDREN {
+                dir = change.full_path;  // we got an event for a dir within the project
+            } else if should_watch_file_for_changes(change.full_path) {
+                dir = get_parent_dir_path(change.full_path);
+            }
+            if dir && dir_is_within_project(dir) then maybe_add_to_queue(*dirs_to_scan, dir);
+        }
+
+        for change : external_changes {
+            if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
         }
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
@@ -218,14 +264,9 @@ workspace_update :: () {
             refresh_buffer_from_disk_by_path(path = file.full_name);
         }
 
-        // @Speed: it should be ok to rescan everything recursively, because
-        // most of the files will already be loaded and they won't refresh if unchanged
-        for dirs_to_rescan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
+        // @Speed: this may be super expensive on crazy projects like Unreal
+        for dirs_to_scan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
     }
-
-    array_reset(*dirs_to_rescan);
-    watchers.project_file_modified = "";
-    watchers.external_file_modified = "";
 }
 
 abort_workspace_scanning_and_shut_down_threads :: () {
@@ -433,14 +474,14 @@ init_file_watcher :: () {
     if watchers.initialized return;
 
     watchers.project_watcher = File_Watcher.{};
-    if !init(*watchers.project_watcher, file_change_callback, watch_recursively = true) {
+    if !init(*watchers.project_watcher, file_changed_callback, watch_recursively = true) {
         add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
         watchers.initialized = false;
         return;
     }
 
     watchers.external_watcher = File_Watcher.{};
-    if !init(*watchers.external_watcher, file_change_callback, watch_recursively = false) {
+    if !init(*watchers.external_watcher, file_changed_callback, watch_recursively = false) {
         add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
         watchers.initialized = false;
         deinit(*watchers.project_watcher);
@@ -521,9 +562,6 @@ start_file_watcher :: () {
         if !added log_error("Couldn't start watching directory '%'", it);
     }
 
-    // Setting it here at runtime before anything has a chance to use it
-    dirs_to_rescan.allocator = temp;
-
     // Add directories that contain standalone files which we want to watch
     for watch_dirs {
         if dir_is_within_project(it) {
@@ -535,72 +573,13 @@ start_file_watcher :: () {
     }
 }
 
-file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-    maybe_add_to_queue :: (dir: string) {
-        add_to_queue := true;
-        for dirs_to_rescan {
-            if begins_with_nocase(dir, it) {
-                add_to_queue = false;  // parent or itself is already in the queue
-                break;
-            }
-            if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
-        }
-        if add_to_queue array_add(*dirs_to_rescan, dir);
-    }
-
-    if !should_watch_file_for_changes(change.full_path) return;
-
-    if watcher == *watchers.external_watcher {
-        // If the change is caused by watching a dir containing a standalone file, ignore it
-        if !is_directory(change.full_path) {
-            parent_dir := get_parent_dir_path(change.full_path);
-            if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) return;
-        }
-
-        watchers.external_file_modified = copy_temporary_string(change.full_path);
-    } else {
-        assert(watcher == *watchers.project_watcher);
-
-        // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
-        // In this case we don't want to rescan anything, but only if no other events were received in the same frame
-        if change.events == .MODIFIED && !watchers.project_file_modified {
-            watchers.project_file_modified = copy_temporary_string(change.full_path);
-        } else {
-            // There are other events - maybe rollback and add dir to the rescan queue
-            if watchers.project_file_modified.count > 0 {  // NOTE: this count comparison is intentional because count can be -1
-                dir := get_parent_dir_path(watchers.project_file_modified);
-                maybe_add_to_queue(dir);
-                watchers.project_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
-            }
-
-            dir: string = ---;
-            if change.events & .SCAN_CHILDREN {
-                dir = copy_temporary_string(change.full_path);
-            } else {
-                dir = get_parent_dir_path(change.full_path);
-            }
-            if dir_is_within_project(dir) then maybe_add_to_queue(dir);
-        }
-    }
-
-    // NOTE: Instead of processing individual events and using the flags we're simply
-    // adding folders to the queue for scanning, because the original events seem to be
-    // not very reliable. E.g. when a file W:/focus-zig/src/Editors.zig was changed using Sublime Text,
-    // here's the list of events we've got:
-    // {"W:/focus-zig/src/Editors.zig", MODIFIED, 51.72142}
-    // {"W:/focus-zig/src/nPTuLLfc1yEADcLL", ADDED | MODIFIED | MOVED | MOVED_FROM, 52.296619}
-    // {"W:/focus-zig/src/Editors.zig", MOVED | MOVED_TO | REMOVED, 52.296619}
-    // {"W:/focus-zig/src", MODIFIED | SCAN_CHILDREN, 52.29665}
-    // That's probably how Sublime Text modifies files, but still, processing each message here would
-    // be harder than just rescanning the containing folder.
-    // So instead of processing each event the easiest option here would be to add W:/focus-zig/src
-    // to the scanning queue
-
-    // if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
-    // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
-    // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
-
-    if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
+file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
+    dest := ifx watcher == *watchers.project_watcher then *watchers.project_changes else *watchers.external_changes;
+    array_add(dest, File_Change.{
+        full_path = copy_temporary_string(change.full_path),
+        events = change.events,
+        time_of_last_change = change.time_of_last_change,
+    });
 }
 
 should_watch_file_for_changes :: inline (path: string) -> bool {
@@ -624,13 +603,10 @@ watchers : struct {
     project_watcher:  File_Watcher;   // recursive
     external_watcher: File_Watcher;   // non-recursive
 
-    project_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
-                                    // otherwise it won't be used and a scan will be done instead
-
-    external_file_modified: string;
+    project_changes:  [..] File_Change;
+    external_changes: [..] File_Change;
 }
 
-dirs_to_rescan: [..] string;    // will use temporary storage
 
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch

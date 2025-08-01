@@ -1387,9 +1387,6 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     is_dir, is_dir_success := is_directory(path);
     if is_dir || !is_dir_success || !file_exists(path) {
         // Either this is a dir, or a deleted dir, or a deleted file.
-        // So many checks are needed because if a dir gets deleted then
-        // it will get to this point and could get itself a buffer
-        // if we didn't do it.
 
         // Find if there's an existing buffer already and mark it as deleted
         lock(*open_buffers_lock);
