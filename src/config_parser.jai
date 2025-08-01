@@ -847,7 +847,8 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             // Exit early if variables are used in path
                             vars_used := false;
                             var_names := string.[
-                                "%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%", "%PROJECT_CONFIG_DIR%",
+                                "%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%",
+                                "%FILE_LINE%", "%FILE_COLUMN%", "%PROJECT_CONFIG_DIR%",
                             ];
                             for var : var_names {
                                 start_index := 0;
@@ -898,6 +899,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         code := #string JAI
                             var_names := string.[
                                 "%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%",
+                                "%FILE_LINE%", "%FILE_COLUMN%",
                                 "%BUILD_WORKING_DIR%", "%RUN_WORKING_DIR%", "%PROJECT_CONFIG_DIR%",
                             ];
                             for var : var_names {
