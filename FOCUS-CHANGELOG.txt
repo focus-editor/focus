@@ -10,6 +10,7 @@
         + `center_pane_splitter` and `center_all_pane_splitters`.
             + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
         + `toggle_pane_numbers` - use to temporarily switch pane numbers on or off.
+        + `toggle_indent_guides` - use to temporarily switch indent guides on or off (thanks @fbjerno)
     + New settings:
         + `cursor_position_after_jump` (defaults to `0.45`) - controls where the cursor will end up after jumping to a search result 0.0 is top, 1.0 is bottom
         + `closing_last_editor_in_pane_should_close_pane` (defaults to `true`)
@@ -27,6 +28,7 @@
     + Fixed a bug when search results would reset after printing to the build output window
     + Fixed a bug with lowercase letters not working in keybinds
     + External changes to ignored files which were opened explicitly will now be shown (previously they were ignored)
+    + Fixed a visual issue with the unsaved files dialog (thanks @fbjerno)
 
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
