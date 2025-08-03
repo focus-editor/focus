@@ -219,8 +219,11 @@ workspace_update :: () {
             }
         }
 
-        // TODO! Check for moves
-
+        // When a file or a folder is renamed or moved, we should receive 2 MOVED events in a single batch.
+        // On Windows they will be tagged as MOVED_FROM and MOVED_TO, but e.g. on macos they won't be, so
+        // we can't rely on that, therefore we'll have to check for file existence instead
+        maybe_process_file_or_directory_moves(*project_changes);
+        maybe_process_file_or_directory_moves(*external_changes);
 
         // Maybe add to scanning queue
         dirs_to_scan: [..] string;
@@ -235,17 +238,20 @@ workspace_update :: () {
                 }
                 if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
             }
-            if add_to_queue array_add(dirs_to_scan, dir);
+            if add_to_queue array_add_if_unique(dirs_to_scan, dir);
         }
 
         for change : project_changes {
             dir: string;
-            if change.events & .SCAN_CHILDREN {
+            is_directory, success := is_directory(change.full_path);
+            if success && is_directory {
                 dir = change.full_path;  // we got an event for a dir within the project
             } else if should_watch_file_for_changes(change.full_path) {
                 dir = get_parent_dir_path(change.full_path);
             }
             if dir && dir_is_within_project(dir) then maybe_add_to_queue(*dirs_to_scan, dir);
+
+            if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
         }
 
         for change : external_changes {
@@ -264,10 +270,60 @@ workspace_update :: () {
             refresh_buffer_from_disk_by_path(path = file.full_name);
         }
 
-        // @Speed: this may be super expensive on crazy projects like Unreal
-        for dirs_to_scan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
+        if dirs_to_scan {
+            print("Scanning dirs: %\n", dirs_to_scan);
+        }
+
+        // @Speed: this may be super expensive on crazy projects like Unreal,
+        // TODO! do this asynchronously
+        for dirs_to_scan {
+            visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
+        }
     }
 }
+
+#scope_file
+
+maybe_process_file_or_directory_moves :: (changes_ptr: *[] File_Change) {
+    changes := changes_ptr.*;
+
+    // Find all MOVED events in the batch
+    change1, change2: File_Change;
+    num_moved_events := 0;
+    for changes {
+        if !(it.events & .MOVED) continue;
+        if      num_moved_events == 0  change1 = it;
+        else if num_moved_events == 1  change2 = it;
+        num_moved_events += 1;
+    }
+    // We only handle the case when there are exactly 2 MOVED events, otherwise we fall back to scanning
+    if num_moved_events != 2 return;
+
+    moved_from, moved_to := change1.full_path, change2.full_path;
+    if file_exists(moved_from) then moved_from, moved_to = moved_to, moved_from;
+
+    // In fact these could be just due to a race (imagine if some program keeps renaming files very quickly),
+    // but there's not much we can do in that case, so we just give up
+    if file_exists(moved_from) {
+        log_error("Potential File Watcher bug: got 2 MOVED events for files that both exist: %, %\n", change1, change2);
+        return;
+    }
+    if !file_exists(moved_to) {
+        log_error("Potential File Watcher bug: got 2 MOVED events, but the target doesn't exist: %, %\n", change1, change2);
+        return;
+    }
+
+    // At this point we've determined that we have 2 correct MOVED events
+    if is_directory(moved_to) {
+        // Move dir (TODO)
+        print("Moving dir '%' to '%'\n", moved_from, moved_to);
+    } else {
+        // Move file
+        print("Moving file '%' to '%'\n", moved_from, moved_to);
+    }
+}
+
+#scope_export
 
 abort_workspace_scanning_and_shut_down_threads :: () {
     if file_list_thread_group.initted {
@@ -551,6 +607,12 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
     return .CONTINUE;
 }
 
+file_watch_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    // TODO
+
+    return .CONTINUE;
+}
+
 start_file_watcher :: () {
     if !watchers.initialized {
         log_error("Trying to start the file watcher, but it's not initialized. This is a bug.\n");
@@ -583,7 +645,7 @@ file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, us
 }
 
 should_watch_file_for_changes :: inline (path: string) -> bool {
-    return !should_ignore_path(path) ||
+    return !should_ignore_file(path) ||
             is_our_config_file(path) ||
             find_buffer_id_by_path(path) >= 0;  // if buffer is already open, we want to see changes even if it's ignored
 }
@@ -611,8 +673,9 @@ watchers : struct {
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch
 
-file_list_thread_group: Thread_Group;
-scanner_thread_group: Thread_Group;
+file_list_thread_group:     Thread_Group;
+scanner_thread_group:       Thread_Group;
+file_watch_thread_group:    Thread_Group;
 
 scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
