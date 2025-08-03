@@ -57,9 +57,9 @@
         assert(!error);
 
         #if OS == .LINUX {
-            error = pthread_rwlockattr_setpshared(*attr, PTHREAD_PROCESS_PRIVATE);
+            error = pthread_rwlockattr_setpshared(*attr, cast(s32) PTHREAD_PROCESS.PRIVATE);
         } else {
-            error = pthread_rwlockattr_setpshared(*attr, xx PTHREAD_PROCESS.PRIVATE);
+            error = pthread_rwlockattr_setpshared(*attr, PTHREAD_PROCESS_PRIVATE);
         }
         assert(!error);
 
