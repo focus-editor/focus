@@ -1012,6 +1012,7 @@ focus_allocator: Allocator;
 #load "pointer_image.jai";
 #load "files.jai";
 #load "workspace.jai";
+#load "file_watcher.jai";
 #load "config.jai";
 #load "config_parser.jai";
 #load "config_migrator.jai";
