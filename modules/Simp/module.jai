@@ -156,6 +156,13 @@ set_hinting :: (value: bool) {
     font_hinting = value;
 }
 
+set_show_tabs :: (value: bool) {
+    if value != font_show_tabs {
+        font_show_tabs = value;
+        refresh_tab_glyph_for_all_fonts();
+    }
+}
+
 // @Cleanup: This has a lot of overlap with Window_Creation’s "get_dimensions"
 get_render_dimensions :: (window: Window_Type) -> (width: s32, height: s32) {
     #if OS == .WINDOWS {
@@ -197,6 +204,7 @@ find_window_info :: (window: Window_Type) -> *Window_Info {
 COLOR_MAP: [] Vector4;
 font_anti_aliasing: Font_Anti_Aliasing = .lcd;
 font_hinting := true;
+font_show_tabs := true;
 
 #scope_file
 
