@@ -195,6 +195,8 @@ platform_get_troubleshooting_info :: () -> string {
     return "<not implemented>";
 }
 
+using,except(session) POSIX :: #import "POSIX";
+
 #scope_file
 
 dark_string  :: "NSAppearanceNameDarkAqua";
@@ -214,7 +216,6 @@ monitors : [..] Monitor;
 #import "Process";
 #import "Hash_Table";
 #import "Math";
-#import "POSIX";
 
 // We need to store the association between `Focus_Timer` instances and `NSTimer` instances externally
 // since currently we can't properly do instance variables for Cocoa classes (see the warning at the
