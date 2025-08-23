@@ -564,6 +564,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Java;         return tokenize_c_like_lang_for_indentation(buffer, get_next_java_token);
         case .Js;           return tokenize_js_for_indentation(buffer);
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
+        case .Powershell;   return tokenize_powershell_for_indentation(buffer);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
         case .Swift;        return tokenize_swift_for_indentation(buffer);
@@ -1611,6 +1612,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Json;                 return tokenize_json;
         case .Lua;                  return tokenize_lua;
         case .Odin;                 return tokenize_odin;
+        case .Powershell;           return tokenize_powershell;
         case .Python;               return tokenize_python;
         case .RenPy;                return tokenize_renpy;
         case .Rust;                 return tokenize_rust;
@@ -1865,6 +1867,7 @@ Buffer :: struct {
         Json;
         Lua;
         Odin;
+        Powershell;
         Python;
         RenPy;
         Rust;
