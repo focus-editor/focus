@@ -490,21 +490,18 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
 }
 
 substitute_variables :: (using work: *Build_Thread_Work) {
-    // Figure out the current file
+    // Figure out the current file and cursor coords
     file := "";
-    coords_under_cursor: Coords;
+    cursor_coords: Coords;
+
     active_pane_editor_id := get_active_editor_id();
     if active_pane_editor_id > 0 {
         buffer := open_buffers[open_editors[active_pane_editor_id].buffer_id];
-        if buffer.has_file
-        {
-            file = copy_string(buffer.file.full_path);
-            if buffer.cursors.count > 0
-            {
-                cursor := buffer.cursors[0];
-                coords_under_cursor = offset_to_real_coords(buffer, cursor.pos);
-            }
-        }
+        if buffer.has_file then file = copy_string(buffer.file.full_path);
+
+        editor := *open_editors[active_pane_editor_id];
+        main_cursor := editor.cursors[editor.main_cursor];
+        cursor_coords = offset_to_real_coords(buffer, main_cursor.pos);
     }
 
     file_vars_are_used := false;
@@ -520,8 +517,8 @@ substitute_variables :: (using work: *Build_Thread_Work) {
 
         file_dir, file_name_no_extension, _, file_name := path_decomp(file);
         file_dir = trim_right(file_dir, "/");
-        file_line := sprint("%", coords_under_cursor.line + 1);
-        file_column := sprint("%", coords_under_cursor.col + 1);
+        file_line := sprint("%", cursor_coords.line + 1);
+        file_column := sprint("%", cursor_coords.col + 1);
 
         build_working_dir = replace(build_working_dir, "%FILE%",                   file);
         build_working_dir = replace(build_working_dir, "%FILE_DIR%",               file_dir);
