@@ -129,7 +129,7 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
 }
 
 platform_get_fonts_dir :: inline () -> string {
-    return "/Library/Fonts";
+    return "/System/Library/Fonts";
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
