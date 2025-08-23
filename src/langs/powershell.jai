@@ -1,4 +1,4 @@
-token_powershell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_powershell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
   tokenizer := get_powershell_tokenizer(buffer, start_offset, count);
 
   while true {
@@ -13,7 +13,7 @@ token_powershell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> 
 }
 
 
-token_powershell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_powershell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
   tokens: [..] Indentation_Token;
   tokens.allocator = temp;
 
@@ -74,7 +74,7 @@ get_next_token :: (using tokenizer: *PowerShell_Tokenizer) -> Token {
 
   char := t.*;
 
-  if char == #char "@" && t + 1 < max_t && (t + 1).* == #char '"' || (t + 1).* == #char "'" {
+  if char == #char "@" && t + 1 < max_t && (t + 1).* == #char "\"" || (t + 1).* == #char "'" {
     parse_here_string(tokenizer, *token);
   } else if ascii_is_alpha(char) {
     // To correctly handle PowerShell's `Verb-Noun` cmdlets (e.g. `Write-Host`) as a single
@@ -98,8 +98,8 @@ get_next_token :: (using tokenizer: *PowerShell_Tokenizer) -> Token {
   } else if char == {
     case #char  "#"; parse_comment(tokenizer, *token);
     case #char  "$"; parse_variable(tokenizer, *token);
-    case '"': parse_string_literal(tokenizer, *token, end_char = '"');
-    case '\'': parse_string_literal(tokenizer, *token, end_char = '\'');
+    case #char "\""; parse_string_literal(tokenizer, *token, end_char = #char "\"");
+    case #char "\\"; parse_string_literal(tokenizer, *token, end_char = #char "\\");
     case #char  "-"; parse_hyphenated(tokenizer, *token);
 
     // Punctuation
@@ -118,11 +118,11 @@ get_next_token :: (using tokenizer: *PowerShell_Tokenizer) -> Token {
     case #char "*"; token.type = .operation; token.operation = .asterisk; t += 1;
     case #char "/"; token.type = .operation; token.operation = .slash;    t += 1;
     case #char "%"; token.type = .operation; token.operation = .percent;  t += 1;
-    case '|': token.type = .operation; token.operation = .pipe; t += 1;
-    case '>':
+    case #char "|"; token.type = .operation; token.operation = .pipe; t += 1;
+    case #char ">";
         token.type = .operation;
         t += 1;
-        if t < max_t && t.* == '>' {
+        if t < max_t && t.* == #char ">" {
             token.operation = .redirect_append;
             t += 1;
         } else {
@@ -191,7 +191,7 @@ parse_variable :: (using tokenizer: *Tokenizer, token: *Token) {
 
   // Reconstruct the full name with the '$' to look up special automatic variables like $true.
   b: String_Builder;
-  init_string_builder(*b, temp);
+  init_string_builder(*b,, temp);
   append(*b, "$");
   append(*b, variable_name);
   full_variable_name := builder_to_string(*b);
