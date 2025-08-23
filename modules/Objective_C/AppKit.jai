@@ -119,7 +119,7 @@ NSApplication :: struct {
         func :: #type (*void, Selector, NSUInteger) #c_call;
         (cast(func) objc_msgSend)(self, _sel.replyToOpenOrPrint_, reply);
     }
-    
+
     // Added for Focus
     setServicesProvider :: (self: *NSApplication, dg: id) #no_context {
         func :: #type (*void, Selector, id) -> void #c_call;
@@ -256,6 +256,12 @@ NSEvent :: struct {
         func: (self: *void, op: Selector) -> NSEventPhase #c_call;
         func = xx objc_msgSend;
         return func(self, _sel.momentumPhase);
+    }
+
+    locationInWindow :: (self: *NSEvent) -> NSPoint {
+        func: (self: *void, op: Selector) -> NSPoint #c_call;
+        func = xx objc_msgSend;
+        return func(self, _sel.locationInWindow);
     }
 }
 
@@ -857,13 +863,13 @@ NSMenu :: struct {
         func = xx objc_msgSend;
         return func(self, _sel.addItemWithTitle_action_keyEquivalent_, title, action, keyEquivalent);
     }
-    
+
     // Added for Focus
     setTitle :: (self: *NSMenu, title: *NSString) -> id {
         func :: #type (*void, Selector, *NSString) -> id #c_call;
         return (cast(func) objc_msgSend)(self, _sel.setTitle_, title);
     }
-    
+
     // helper functions. Added for Focus
     setTitle :: (self: *NSMenu, title: string) -> id {
         nsstring := NSString.initWithString(objc_alloc(NSString), title);
@@ -1003,7 +1009,7 @@ NSView :: struct {
     convertPoint :: (self: id, point: NSPoint, fromView: *NSView) -> NSPoint {
         func: (*void, Selector, NSPoint, *NSView) -> NSPoint #c_call;
         func = xx objc_msgSend;
-        return func(class(NSEvent), _sel.convertPoint_fromView_, point, fromView);
+        return func(self, _sel.convertPoint_fromView_, point, fromView);
     }
 
     drawRect :: (self: id, dirtyRect: NSRect) {
@@ -1586,6 +1592,7 @@ _sel: struct #type_info_no_size_complaint {
     hasPreciseScrollingDeltas: Selector;
     phase: Selector;
     momentumPhase: Selector;
+    locationInWindow: Selector;
     setFrame_display_animate_: Selector;
     visibleFrame: Selector;
     screen: Selector;
