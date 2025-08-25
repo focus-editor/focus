@@ -650,6 +650,26 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     }
 }
 
+refresh_tab_glyph_for_all_fonts :: ()
+{
+    utf32 : u32 = #char "\t";
+
+    // All the different possible variations of the glyph.
+    hash_key_1 := glyph_hash(utf32, Font_Anti_Aliasing.lcd,    hinting = true);
+    hash_key_2 := glyph_hash(utf32, Font_Anti_Aliasing.lcd,    hinting = false);
+    hash_key_3 := glyph_hash(utf32, Font_Anti_Aliasing.normal, hinting = true);
+    hash_key_4 := glyph_hash(utf32, Font_Anti_Aliasing.normal, hinting = false);
+
+    for dynamic_fonts {
+        // Remove the glyph from the hash map so it will be recreated in find_or_create_glyph().
+        // This feels a bit dirty but I don't want be intrusive and change lots of code.
+        table_remove(*it.glyph_lookup, hash_key_1);
+        table_remove(*it.glyph_lookup, hash_key_2);
+        table_remove(*it.glyph_lookup, hash_key_3);
+        table_remove(*it.glyph_lookup, hash_key_4);
+    }
+}
+
 #scope_file
 
 ft_library    : FT_Library;
@@ -764,13 +784,25 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     font_line.page.dirty = true;
 }
 
+glyph_hash :: inline (utf32: u32, anti_aliasing: Font_Anti_Aliasing, hinting: bool) -> u64 {
+    hash_key := (cast(u64) utf32) | ((cast(u64) anti_aliasing) << 32) | ((cast(u64) hinting) << 36);
+    return hash_key;
+}
+
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
-    hash_key := (cast(u64) utf32) | ((cast(u64) font_anti_aliasing) << 32) | ((cast(u64) font_hinting) << 36);
+    hash_key := glyph_hash(utf32, font_anti_aliasing, font_hinting);
 
     success, data := table_find_new(*font.glyph_lookup, hash_key);
     if success  return data;
 
-    if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
+    if utf32 == #char "\t" {
+        if font_show_tabs {
+            utf32 = #char "→";  // draw tabs as arrows
+        } else {
+            utf32 = #char " ";  // hide tabs.
+        }
+    }
+
     if utf32 == #char "\n" then utf32 = #char "¶";  // draw newlines as paragraph symbols
 
     glyph_index := FT_Get_Char_Index(face, utf32);
