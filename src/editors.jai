@@ -232,7 +232,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_line_numbers;              action_toggle_line_numbers();
         case .toggle_pane_numbers;              action_toggle_pane_numbers();
         case .toggle_indent_guides;             action_toggle_indent_guides();
-        
+
         case .copy_current_line_info;           action_copy_current_line_info           (editor, buffer);
         case .center_viewport_on_cursor;        action_center_viewport_on_cursor        (editor, buffer);
         case .move_cursor_to_viewport_center;   action_move_cursor_to_viewport_center   (editor, buffer);
@@ -2258,6 +2258,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "lua";             lang = .Lua;
         case "java";            lang = .Java;
         case "odin";            lang = .Odin;
+        case "ps1";             lang = .Powershell;
         case "py";              lang = .Python;
         case "rpy";             lang = .RenPy;
         case "rs";              lang = .Rust;
@@ -4444,6 +4445,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Lua;
             comment = "--";
 
+        case .Powershell;   #through;
         case .Python;       #through;
         case .RenPy;        #through;
         case .Shell;        #through;
@@ -4686,6 +4688,10 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Markdown;
             comment_start = "<!---";
             comment_end   = "--->";
+
+        case .Powershell;
+            comment_start = "<#";
+            comment_end   = "#>";
 
         // Muilti-line comments are not supported, fallback to multiple single-line comments
         case .Batch;        #through;

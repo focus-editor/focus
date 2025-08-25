@@ -72,6 +72,27 @@ pub struct Structure {
 }
 RUST
 
+SAMPLE_Powershell :: #string POWERSHELL
+# Line comment
+<# Multi-line comment  #>
+
+function Get-MrParameterCount {
+    param (
+        [string[]]$ParameterName
+    )
+
+foreach ($Parameter in $ParameterName) {
+        $Results = Get-Command -ParameterName $Parameter -ErrorAction SilentlyContinue
+
+[pscustomobject]@{
+            ParameterName   = $Parameter
+            NumberOfCmdlets = $Results.Count
+        }
+    }
+}
+
+POWERSHELL
+
 SAMPLE_Python :: #string PYTHON
 # Comment
 from numpy import random
