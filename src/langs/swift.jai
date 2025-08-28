@@ -402,7 +402,7 @@ parse_slash_or_comment :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
             token.operation = .slash_equal;
             t += 1;
         case #char "/";
-            token.operation = .comment;
+            token.type = .comment;
             t += 1;
             while t < max_t && t.* != #char "\n"  t += 1;
         case #char "*";
@@ -552,7 +552,6 @@ OPERATIONS :: string.[
     "ampersand", "double_ampersand", "ampersand_equal",
     "question", "double_question",
     "caret", "caret_equal",
-    "comment",
     "dollar",
 ];
 
