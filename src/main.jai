@@ -1068,6 +1068,7 @@ focus_allocator: Allocator;
 #load "langs/json.jai";
 #load "langs/lua.jai";
 #load "langs/odin.jai";
+#load "langs/powershell.jai";
 #load "langs/python.jai";
 #load "langs/renpy.jai";
 #load "langs/shell.jai";
