@@ -54,8 +54,10 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     return false;
 }
 
-init_open_file_dialog :: () {
-    // There used to be more stuff here
+maybe_init_open_file_dialog :: () {
+    if open_file_dialog.initted return;
+
+    // There used to be more stuff in here
     open_file_dialog.initted = true;
     refresh_entries(clear_input = false);
 }
