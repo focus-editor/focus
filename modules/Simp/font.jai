@@ -250,7 +250,8 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                     color = COLOR_MAP[0];  // always use default color
 
                     // Only draw tabs if they are within a selection
-                    if character_is_selected(start_offset + cast(s32)(t - line.data), selections) {
+                    is_selected := character_is_selected(start_offset + cast(s32)(t - line.data), selections);
+                    if show_tab_characters_in_selection && is_selected {
                         color.w = 0.2;
                     } else {
                         color.w = 0.0;
@@ -650,26 +651,6 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     }
 }
 
-refresh_tab_glyph_for_all_fonts :: ()
-{
-    utf32 : u32 = #char "\t";
-
-    // All the different possible variations of the glyph.
-    hash_key_1 := glyph_hash(utf32, Font_Anti_Aliasing.lcd,    hinting = true);
-    hash_key_2 := glyph_hash(utf32, Font_Anti_Aliasing.lcd,    hinting = false);
-    hash_key_3 := glyph_hash(utf32, Font_Anti_Aliasing.normal, hinting = true);
-    hash_key_4 := glyph_hash(utf32, Font_Anti_Aliasing.normal, hinting = false);
-
-    for dynamic_fonts {
-        // Remove the glyph from the hash map so it will be recreated in find_or_create_glyph().
-        // This feels a bit dirty but I don't want be intrusive and change lots of code.
-        table_remove(*it.glyph_lookup, hash_key_1);
-        table_remove(*it.glyph_lookup, hash_key_2);
-        table_remove(*it.glyph_lookup, hash_key_3);
-        table_remove(*it.glyph_lookup, hash_key_4);
-    }
-}
-
 #scope_file
 
 ft_library    : FT_Library;
@@ -795,14 +776,7 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     success, data := table_find_new(*font.glyph_lookup, hash_key);
     if success  return data;
 
-    if utf32 == #char "\t" {
-        if font_show_tabs {
-            utf32 = #char "→";  // draw tabs as arrows
-        } else {
-            utf32 = #char " ";  // hide tabs.
-        }
-    }
-
+    if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
     if utf32 == #char "\n" then utf32 = #char "¶";  // draw newlines as paragraph symbols
 
     glyph_index := FT_Get_Char_Index(face, utf32);

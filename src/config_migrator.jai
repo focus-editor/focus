@@ -530,7 +530,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 23, "closing_last_editor_should_exit_program",            "false" },
     .{ 23, "show_pane_numbers",                                  "false" },
 
-    .{ 24, "show_tabs",                                          "true" },
+    .{ 24, "show_tab_characters_in_selection",                   "true" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[

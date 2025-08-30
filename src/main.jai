@@ -490,7 +490,7 @@ init_fonts_and_dependent_things :: () {
     Simp.set_anti_aliasing(config.style.font_anti_aliasing);
     Simp.set_hinting(config.style.font_hinting);
 
-    Simp.set_show_tabs(config.settings.show_tabs);
+    Simp.set_show_tab_characters_in_selection(config.settings.show_tab_characters_in_selection);
 
     font_main_size = clamp(font_main_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_size   = clamp(font_ui_size  , MIN_FONT_SIZE, MAX_FONT_SIZE);
