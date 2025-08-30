@@ -156,6 +156,10 @@ set_hinting :: (value: bool) {
     font_hinting = value;
 }
 
+set_show_tab_characters_in_selection :: (value: bool) {
+    show_tab_characters_in_selection = value;
+}
+
 // @Cleanup: This has a lot of overlap with Window_Creation’s "get_dimensions"
 get_render_dimensions :: (window: Window_Type) -> (width: s32, height: s32) {
     #if OS == .WINDOWS {
@@ -194,6 +198,9 @@ find_window_info :: (window: Window_Type) -> *Window_Info {
     return null;
 }
 
+show_tab_characters_in_selection := true;
+
+// Style settings.
 COLOR_MAP: [] Vector4;
 font_anti_aliasing: Font_Anti_Aliasing = .lcd;
 font_hinting := true;

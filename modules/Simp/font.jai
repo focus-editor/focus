@@ -250,7 +250,8 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                     color = COLOR_MAP[0];  // always use default color
 
                     // Only draw tabs if they are within a selection
-                    if character_is_selected(start_offset + cast(s32)(t - line.data), selections) {
+                    is_selected := character_is_selected(start_offset + cast(s32)(t - line.data), selections);
+                    if show_tab_characters_in_selection && is_selected {
                         color.w = 0.2;
                     } else {
                         color.w = 0.0;
@@ -764,8 +765,13 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     font_line.page.dirty = true;
 }
 
+glyph_hash :: inline (utf32: u32, anti_aliasing: Font_Anti_Aliasing, hinting: bool) -> u64 {
+    hash_key := (cast(u64) utf32) | ((cast(u64) anti_aliasing) << 32) | ((cast(u64) hinting) << 36);
+    return hash_key;
+}
+
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
-    hash_key := (cast(u64) utf32) | ((cast(u64) font_anti_aliasing) << 32) | ((cast(u64) font_hinting) << 36);
+    hash_key := glyph_hash(utf32, font_anti_aliasing, font_hinting);
 
     success, data := table_find_new(*font.glyph_lookup, hash_key);
     if success  return data;
