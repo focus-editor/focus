@@ -186,13 +186,13 @@ workspace_update :: () {
             scanner_thread_group = Thread_Group.{};
 
             reset(*scan_memory_pool);
-
-            start_file_watcher();
-            init_open_file_dialog();
-            init_finder();
         }
         return;
     }
+
+    maybe_start_file_watcher();
+    maybe_init_finder();
+    maybe_init_open_file_dialog();
 
     file_watcher_process_changes();
 }

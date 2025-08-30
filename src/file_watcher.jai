@@ -16,19 +16,30 @@ init_file_watcher :: () {
         return;
     }
 
+    init(*file_watch_thread_group, num_threads = 1, file_watch_threadproc);
+
     watchers.initialized = true;
 }
 
 deinit_file_watcher :: () {
     if !watchers.initialized return;
+
+    shutdown(*file_watch_thread_group);
+    file_watch_thread_group = Thread_Group.{};
+
     deinit(watchers.project_watcher);
     deinit(watchers.external_watcher);
     for watch_files  free(it);
     array_reset_keeping_memory(*watch_files);
+    for watch_dirs  free(it);
+    array_reset_keeping_memory(*watch_dirs);
     watchers.initialized = false;
+    watchers.started = false;
 }
 
-start_file_watcher :: () {
+maybe_start_file_watcher :: () {
+    if watchers.started return;
+
     if !watchers.initialized {
         log_error("Trying to start the file watcher, but it's not initialized. This is a bug.\n");
         return;
@@ -48,22 +59,59 @@ start_file_watcher :: () {
         added := add_directories(*watchers.external_watcher, it);
         if !added log_error("Couldn't start watching directory '%'", it);
     }
+
+    // Start watching config files
+    if global_config.loaded  then start_watching_file_if_not_already(global_config.path);
+    if project_config.loaded then start_watching_file_if_not_already(project_config.path);
+
+    start(*file_watch_thread_group);
+    watchers.started = true;
 }
 
 file_watcher_process_changes :: () {
-    // Check for any changes to the files we care about
+    // First, gather events from both file watchers in the main thread
     array_reset_keeping_memory(*watchers.project_changes);
     array_reset_keeping_memory(*watchers.external_changes);
 
     files_changed :=  process_changes(*watchers.project_watcher);
     files_changed ||= process_changes(*watchers.external_watcher);
 
+    // Second, send all the changes to the file watcher thread to process them in the background
+    if files_changed {
+        task := New(File_Watcher_Background_Task);
+        for watchers.project_changes {
+            change := array_add(*task.project_changes);
+            change.* = it;
+            change.full_path = copy_string(it.full_path);
+        }
+        for watchers.external_changes {
+            change := array_add(*task.external_changes);
+            change.* = it;
+            change.full_path = copy_string(it.full_path);
+        }
+        add_work(*file_watch_thread_group, task);
+    }
+
+    // Third, get the resulting actions from the thread and execute them.
+    // The reason we're using a thread is because  we may need to scan a lot of files
+    // and potentially check all open buffers (to detect file deletions when a dir gets removed),
+    // which can be very expensive on large projects and we can't do it in the main thread.
+    // However, the resulting list of actions after all the scanning is done is expected to be small,
+    // so we handle them here in the main thread.
+    results := get_completed_work(*file_watch_thread_group);
+    for results {
+        work := cast(*File_Watcher_Background_Task) it;
+
+        // Free work item
+        for work.project_changes   free(it.full_path);
+        for work.external_changes  free(it.full_path);
+        array_free(work.project_changes);
+        array_free(work.external_changes);
+        free(work);
+    }
+
     if files_changed {
         using watchers;
-
-        // TODO:
-        for project_changes   print("Project change: %\n", it);
-        for external_changes  print("External change: %\n", it);
 
         // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
         // In this case we don't want to rescan anything, but only if no other events were received in the same frame
@@ -244,13 +292,88 @@ maybe_process_file_or_directory_moves :: (changes_ptr: *[] File_Change) {
 }
 
 file_watch_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    // TODO
+    assert(group.worker_info.count == 1);  // should only be only one thread always
+
+    task := cast(*File_Watcher_Background_Task) work;
+    project_changes  := task.project_changes;
+    external_changes := task.external_changes;
+
+    // Possibilities:
+    // - We get a single MODIFIED event for a single file (most common) - no need to scan anything
+    // - We get 2 MOVED events in a single batch (either for files or for dirs) - this indicates a move or rename
+    //     - Usually when this happens we also get another MODIFIED | SCAN_CHILDREN event for the parent dir
+    // - We get a single ADDED event for a file - in this case we might not get an extra SCAN_CHILDREN event for the parent
+    //     - However sometimes we do, depending on what program added the file
+    // - We get a single ADDED event for a dir - then we seem to always get an extra SCAN_CHILDREN for the parent
+    // - We get a single REMOVED event for a dir or a file - then we seem to always get an extra SCAN_CHILDREN for the parent
+
+    // TODO! don't worry about making the code simple and nice right now, ONE STEP AT A TIME (EVEN IF THAT STEP IS INCORRECT)
+    // Just copy whatever functions are needed for thread safety, mark them as such and copy any data required
+    // (config and watch dirs and files)
+
+    // For project changes, collect dirs to scan, then scan the dirs. Do nothing else. Add logging for visibility.
+    // For external changes, collect dirs to scan, but when scanning only react to changes to the specific files we're watching
+    // Only when this works, think whether this can be optimised
+
+    dirs_to_scan: [..] string;
+    dirs_to_scan.allocator = temp;
+
+    for task.project_changes {
+        log("[Project file watcher]: %\n", it);
+        dir: string;
+        is_directory, success := is_directory(it.full_path);
+        if success && is_directory {
+            dir = it.full_path;
+        } else {
+            dir = get_parent_dir_path(it.full_path);
+        }
+        if dir then array_add_if_unique(*dirs_to_scan, dir);
+    }
+
+
+
+
+    for task.external_changes {
+        log("[External file watcher]: %\n", it);
+    }
+
+    // TODO:
+    // Accumulate events for some time, then act on them - avoid double-scanning
+
+    // // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
+    // // In this case we don't want to rescan anything, but only if no other events were received in the same frame
+    // if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
+    //     change := pop(*project_changes);
+    //     array_add(*task.actions, .{ type = .modified, path = change.full_path });
+    // }
+    // if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
+    //     change := pop(*external_changes);
+    //     if file_is_watched(change.full_path) {
+    //         // We only want to refresh if the modified event is for a file we care about
+    //         array_add(*task.actions, .{ type = .modified, path = change.full_path });
+    //     }
+    // }
 
     return .CONTINUE;
 }
 
+File_Watcher_Background_Task :: struct {
+    project_changes:  [..] File_Change;
+    external_changes: [..] File_Change;
+
+    // Resulting actions will be written here by the thread
+    actions: [..] File_Change_Action;
+
+    File_Change_Action :: struct {
+        type: enum { modified; added; removed; moved; };
+        path: string;
+        moved_to: string;
+    }
+}
+
 watchers : struct {
     initialized := false;
+    started     := false;
 
     project_watcher:  File_Watcher;   // recursive
     external_watcher: File_Watcher;   // non-recursive

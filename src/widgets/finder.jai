@@ -1,4 +1,6 @@
-init_finder :: () {
+maybe_init_finder :: () {
+    if finder.initted return;
+    
     num_cpus := get_num_cpus();
     num_threads := max(num_cpus - 1, 1);
 

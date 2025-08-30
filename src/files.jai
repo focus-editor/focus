@@ -250,6 +250,7 @@ path_wildcard_match :: (path: string, pattern: string) -> bool {
 
     #if OS == .WINDOWS {
         // TODO: support case-insensitive Unicode paths
+        // @Speed: avoid allocating here!
         return _wildcard_match(to_lower_copy(path,, temp), to_lower_copy(pattern,, temp));
     }
     return _wildcard_match(path, pattern);
