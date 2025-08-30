@@ -727,7 +727,7 @@ Settings :: struct {
     closing_last_editor_in_pane_should_close_pane           := true;    @v23
     closing_last_editor_should_exit_program                 := false;   @v23
     show_pane_numbers                                       := false;   @v23
-    show_tabs                                               := true;    @v24
+    show_tab_characters_in_selection                       := true;    @v24
 
     // TODO
     // load_last_session_on_start:         true
