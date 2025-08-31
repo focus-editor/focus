@@ -1405,6 +1405,7 @@ cursor_position_after_jump:                      0.45  # controls where the curs
 closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
+show_tab_characters_in_selection:                true
 
 FOCUS_CONFIG
 
@@ -1554,6 +1555,7 @@ cursor_position_after_jump:                      0.45  # controls where the curs
 closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
+show_tab_characters_in_selection:                true
 
 FOCUS_CONFIG
 
@@ -1941,6 +1943,7 @@ cursor_position_after_jump:                      0.45  # controls where the curs
 closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
+show_tab_characters_in_selection:                true
 
 [[keymap]]
 # ...
