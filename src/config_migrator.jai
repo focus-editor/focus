@@ -517,7 +517,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 16, "scrollbar_fade_out_delay_seconds",                   "1.0   # how long the scrollbar stays visible after scrolling" },
     .{ 16, "scroll_behind_first_line",                           "false" },
     .{ 18, "active_pane_border_width",                           "1.0   # set the width to 0.0 to disable" },
-    .{ 18, "inactive_pane_dim_overlay_opacity",                  "0.1   # controls how dim the inactive panes should be" },
+    .{ 18, "inactive_pane_dim_overlay_opacity",                  "0.0   # controls how dim the inactive panes should be" },
 
     .{ 19, "comment_highlight_words1",                           "TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`" },
     .{ 19, "comment_highlight_words2",                           "# words to highlight using `code_comment_highlight2`" },
