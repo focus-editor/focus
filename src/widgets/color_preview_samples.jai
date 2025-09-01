@@ -74,7 +74,9 @@ RUST
 
 SAMPLE_Powershell :: #string POWERSHELL
 # Line comment
-<# Multi-line comment  #>
+<#
+    Multi-line comment
+#>
 
 function Get-MrParameterCount {
     param (
