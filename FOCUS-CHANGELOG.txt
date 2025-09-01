@@ -1,9 +1,27 @@
 # Main Git Branch
 
 + New features:
-    + TODO: add everything related to the multi-pane support here
+    + The editor now supports more than two panes:
+        + Old behaviour still works when there are only 2 panes - hold `Ctrl`/`Cmd` to open on the side, `Ctrl-1` to open on the left, `Ctrl-2` to open on the right
+        + When opening a file using any dialog, it is now possible to choose:
+            + Which existing pane to open it in:
+                + Use the `switch_to_pane_1` (`Ctrl-1`) to `switch_to_pane_9` (`Ctrl-9`) commands
+            + The direction to open it in - if there's a pane in that direction, it will be used, otherwise a new pane will be created:
+                + Use the commands `switch_to_(left|right|top|bottom)_pane` (by default `Ctrl-Alt-Shift-Arrow(Left|Right|Up|Down)`)
+        + To move an existing editor between panes, use the following commands:
+            + `move_editor_(left|right|top|bottom)` (by default `Ctrl-Alt-S Arrow(Left|Right|Up|Down)`)
+        + To split an existing pane, use the following commands:
+            + `split_(left|right|top|bottom)` (by default `Ctrl-Alt-X Arrow(Left|Right|Up|Down)`)
+        + To duplicate an editor in the specified direction:
+            + `duplicate_editor_(left|right|top|bottom)` (by default `Ctrl-Alt-D Arrow(Left|Right|Up|Down)`)
+    + The editor now supports per-pane buffer lists ("tabs"):
+        + Use `go_to_previous_buffer` (`Ctrl-PageUp` by default) or `go_to_next_buffer` (`Ctrl-PageDown`) to switch between buffers in the pane
+        + If an editor is moved to a pane where an editor for the same buffer already exists, it will overwrite the existing one
+    + Newly opened editors will be temporary by default (will be replaced by the next opened editor unless made permanent by editing, double clicking the name or using a `keep_editor` command):
+        + Set the new setting `enable_temporary_editors` to `false` to disable this behaviour if needed
+    + Editor history has been reworked. It is much less granular now and works correctly on edited files
     + It is now possible to specify words which will be highlighted in comments, such as TODO, NOTE etc. (see example in settings)
-    + prefer_system_file_dialogs now works on macOS (thanks @caztanj)
+    + `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
     + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
         + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
     + New commands:
@@ -11,11 +29,22 @@
             + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
         + `toggle_pane_numbers` - use to temporarily switch pane numbers on or off.
         + `toggle_indent_guides` - use to temporarily switch indent guides on or off (thanks @fbjerno)
+        + `keep_editor` - make a temporary editor permanent
+        + `reopen_closed_editor`
     + New settings:
         + `cursor_position_after_jump` (defaults to `0.45`) - controls where the cursor will end up after jumping to a search result 0.0 is top, 1.0 is bottom
         + `closing_last_editor_in_pane_should_close_pane` (defaults to `true`)
         + `closing_last_editor_should_exit_program` (defaults to `false`)
         + `show_pane_numbers` (defaults to `false`) - set to `true` to always display pane numbers next to file info
+        + `show_tab_characters_in_selection` (defaults to `true`) - set to `false` to always hide tab characters (thanks @fbjerno)
+        + `active_pane_border_width` (defaults to `1.0`) - set to `0.0` to disable the border or set to a value larger than `1.0` to make it thicker
+        + `inactive_pane_dim_overlay_opacity` (defaults to `0.0`) - controls how dim the inactive panes should be. Set to a value between `0.0` and `1.0` to see the dim overlay
+        + `comment_highlight_words1` - `comment_highlight_words4` can be used to put words into 4 different groups to highlight them with 4 different colors
+    + New colors:
+        + `inactive_pane_dim_overlay`
+        + `active_pane_border`
+        + `code_comment_highlight1` - `code_comment_highlight4`
+    + New variables to be used in build commands: `%FILE_LINE%` and `%FILE_COLUMN%` (thanks @fda0)
 
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
@@ -29,6 +58,9 @@
     + Fixed a bug with lowercase letters not working in keybinds
     + External changes to ignored files which were opened explicitly will now be shown (previously they were ignored)
     + Fixed a visual issue with the unsaved files dialog (thanks @fbjerno)
+    + Search results will no longer reset when a command prints to the build window
+    + Linux: fixed a scrolling issue on X11/XCB when scrolling horizontally (thanks @ostef)
+    + macOS: fixed an issue where the mouse would not interact with the window after resizing unless clicked (thanks @caztanj)
 
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
@@ -43,6 +75,7 @@
         + Java: Added support for multi-line string highlighting (thanks @LainLayer)
         + Patch/diff (thanks @SentientCoffee)
         + Dart (thanks @fbjerno)
+        + Powershell (thanks @JeremyLullaby and @fda0)
     + New colors: `cursor_line_highlight` and `color_preview_title_bar` for more granular control (thanks @NotKyon)
     + Adding subdirectories of existing directories in the workspace is now allowed
     + When max_editor_width is used, the scrollbar will be positioned outside the editor area if there's available space for it
@@ -50,6 +83,7 @@
     + Renamed actions:
         + `build_panel_toggle` -> `toggle_build_panel`
         + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
+    + macOS: change the dir where the editor looks for system fonts to the correct one (thanks @hovsater)
 
 
 # RELEASES ==================================================================
