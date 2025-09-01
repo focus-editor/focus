@@ -38,8 +38,10 @@ tokenize_powershell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token 
                 case .r_brace;    token.type = .close; token.kind = .brace;
                 case;             continue;
             }
-            case .eof;            token.type = .eof;
-            case;                 token.type = .unimportant;
+            case .multiline_string;     token.type = .maybe_multiline;
+            case .multiline_comment;    token.type = .maybe_multiline;
+            case .eof;                  token.type = .eof;
+            case;                       token.type = .unimportant;
         }
 
         array_add(*tokens, token);
@@ -219,7 +221,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, end_char: u
 }
 
 parse_here_string :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .string_literal;
+    token.type = .multiline_string;
     start_char := (t + 1).*;
     t += 2; // Eat @" or @'
 
