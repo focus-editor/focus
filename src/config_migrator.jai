@@ -1395,7 +1395,7 @@ scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrol
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
-inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+inactive_pane_dim_overlay_opacity:               0.0   # controls how dim the inactive panes should be
 comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
@@ -1545,7 +1545,7 @@ scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrol
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
-inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+inactive_pane_dim_overlay_opacity:               0.0   # controls how dim the inactive panes should be
 comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`
@@ -1933,7 +1933,7 @@ scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrol
 scrollbar_fade_out_delay_seconds:                1.0   # how long the scrollbar stays visible after scrolling
 scroll_behind_first_line:                        false
 active_pane_border_width:                        1.0   # set the width to 0.0 to disable
-inactive_pane_dim_overlay_opacity:               0.1   # controls how dim the inactive panes should be
+inactive_pane_dim_overlay_opacity:               0.0   # controls how dim the inactive panes should be
 comment_highlight_words1:                        TODO, TODO:, NOTE, NOTE:  # a comma-separated list of words to highlight within comments using the color `code_comment_highlight1`
 comment_highlight_words2:                        # words to highlight using `code_comment_highlight2`
 comment_highlight_words3:                        # words to highlight using `code_comment_highlight3`

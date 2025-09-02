@@ -1449,8 +1449,9 @@ Config_Parse_Result :: struct {
     error_msg:  string;  // temp
 
     warnings:   [..] string;
-    highlights: [..] Code_Highlight;
     warnings.allocator   = temp;  // I love jai
+
+    highlights: [..] Code_Highlight;
     highlights.allocator = temp;
 }
 
