@@ -69,7 +69,7 @@ file_watcher_process_changes :: () {
         // In this case we don't want to rescan anything, but only if no other events were received in the same frame
         if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
             change := pop(*project_changes);
-            refresh_buffer_from_disk_by_path(path = change.full_path);
+            if should_watch_file_for_changes(change.full_path) then refresh_buffer_from_disk_by_path(path = change.full_path);
         }
         if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
             change := pop(*external_changes);
