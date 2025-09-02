@@ -48,6 +48,7 @@
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
     + Fixed a crash when trying to jump to build error if build output has been cleared
+    + Fixed a crash when trying add cursors to line starts with line wrap on
     + Fixed a bug where `change case` actions couldn't be undone (thanks @fda0)
     + Fixed a bug with the last directive in file not being highlighted
     + Fixed a bug with ignore/allow patterns where some allow patterns weren't applied if a folder was ignored

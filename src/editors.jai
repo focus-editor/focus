@@ -3915,7 +3915,7 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     pos: s32;
 
     for * line_range : line_ranges {
-        line_num := offset_to_line(editor, buffer, line_range.start);
+        line_num := offset_to_real_line(buffer, line_range.start);
         while true {
             pos = buffer.line_starts[line_num];
             if pos >= line_range.end break;
