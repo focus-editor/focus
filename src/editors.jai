@@ -1973,6 +1973,8 @@ action_go_to_next_buffer :: (event: *Input.Event) {
     if editor_index < 0 || !editor_ids return;
     editor_index = (editor_index + 1) % editor_ids.count;
 
+    make_editor_active(editor_ids[editor_index]);
+
     if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 }
 
@@ -1985,6 +1987,8 @@ action_go_to_previous_buffer :: (event: *Input.Event) {
     if editor_index < 0 || !editor_ids return;
     editor_index -= 1;
     if editor_index < 0 then editor_index = editor_ids.count - 1;
+
+    make_editor_active(editor_ids[editor_index]);
 
     if event then activate_show_pane_editors_action(event.modifier_flags, editors.active_pane);
 }

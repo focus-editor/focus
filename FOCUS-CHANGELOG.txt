@@ -21,7 +21,6 @@
         + Set the new setting `enable_temporary_editors` to `false` to disable this behaviour if needed
     + Editor history has been reworked. It is much less granular now and works correctly on edited files
     + It is now possible to specify words which will be highlighted in comments, such as TODO, NOTE etc. (see example in settings)
-    + `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
     + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
         + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
     + New commands:
@@ -84,6 +83,7 @@
         + `build_panel_toggle` -> `toggle_build_panel`
         + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
     + macOS: change the dir where the editor looks for system fonts to the correct one (thanks @hovsater)
+    + macOS: `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
 
 
 # RELEASES ==================================================================
