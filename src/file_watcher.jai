@@ -48,6 +48,10 @@ start_file_watcher :: () {
         added := add_directories(*watchers.external_watcher, it);
         if !added log_error("Couldn't start watching directory '%'", it);
     }
+
+    // Start watching config files
+    if global_config.loaded  then start_watching_file_if_not_already(global_config.path);
+    if project_config.loaded then start_watching_file_if_not_already(project_config.path);
 }
 
 file_watcher_process_changes :: () {
