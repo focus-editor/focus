@@ -4,7 +4,7 @@ CURRENT_CONFIG_VERSION :: 25;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
-    start_watching_file_if_not_already(config_path);
+    print("LOADING GLOBAL CONFIG: %\n", config_path);  // @Cleanup
 
     if !file_exists(config_path) {
         // Create one with default contents
@@ -20,6 +20,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
         config = Config.{};
         reset_color_map_to_default();
         merge_configs(*config, loaded_config.parsed_config);
+        print("Applying global config\n");  // @Cleanup
         apply_config();
         free_loaded_config(*global_config);
         global_config = loaded_config;
@@ -41,7 +42,7 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
     config_path := copy_string(file_path,, temp);
     path_overwrite_separators(config_path, #char "/");
 
-    start_watching_file_if_not_already(config_path);
+    print("LOADING PROJECT CONFIG: %\n", config_path);  // @Cleanup
 
     loaded_config, changed := load_config(config_path, *project_config, force);
     if !changed && !force return true, false, false;
@@ -57,6 +58,7 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
         }
         // Now mix in the project config
         merge_configs(*config, loaded_config.parsed_config);
+        print("Applying project config\n");  // @Cleanup
         apply_config();
 
         changed := loaded_config.hash != project_config.hash;
