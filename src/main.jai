@@ -40,8 +40,12 @@ main :: () {
 
     init_editors();
     init_buffers();
-    load_global_config(fallback_to_default_on_failure = true);
 
+    focus_executable_args = get_command_line_arguments();
+
+    load_configs_and_start_session(focus_executable_args);
+
+    // Create window
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
     if config.settings.window_width  > 0 then window_width  = xx config.settings.window_width;
@@ -51,89 +55,6 @@ main :: () {
 
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
-
-    // Process command line parameters
-    focus_executable_args = get_command_line_arguments();
-
-    args := focus_executable_args;
-    if args.count == 3 && args[1] == "-project" {
-        // - `focus.exe -project "Project Name"` or `focus.exe -project <path/to/project>` will load a project. No other arguments are allowed.
-        project := args[2];
-        success: bool;
-        if ends_with_nocase(project, ".focus-config") {
-            success = load_project_config(project);
-        } else {
-            config_path := tprint("%/%.focus-config", projects_dir, project);
-            success = load_project_config(config_path);
-        }
-        if !success then add_user_error("Couldn't load project config '%' provided in the command line arguments", project);
-    }
-    else if args.count >= 2 {
-        // - `focus.exe <path1> <path2> ...` will open files or add directories to the workspace
-        dirs_from_args: [..] string;
-        dirs_from_args.allocator = temp;
-
-        for path : array_view(args, 1, args.count - 1) {
-            if is_directory(path) {
-                dir := trim_right(path, "\\/");
-                project_config_path := tprint("%/.focus-config", dir);
-                if !project_config.loaded && file_exists(project_config_path) {
-                    success := load_project_config(project_config_path);
-                    if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
-                } else {
-                    array_add(*dirs_from_args, dir);
-                }
-            } else if file_exists(path) {
-                editors_open_file(path);
-            } else {
-                if path == "-project" {
-                    add_user_error("The '-project' command line argument is used incorrectly.\nCorrect usage: focus -project <project name or path>.\nNo other arguments are allowed in this case.");
-                } else if starts_with(path, "-") {
-                    add_user_error("Invalid command line parameter '%'.", path);
-                } else {
-                    opened := false;
-                    found, file, line_str := split_from_right(path, ":",, temp);
-                    if found {
-                        line, success := parse_int(*line_str);
-                        if success && line >= 0 && file_exists(file) && !is_directory(file) {
-                            editors_open_file(file, line = line);
-                            opened = true;
-                        }
-                    }
-
-                    if !opened add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
-                }
-            }
-        }
-
-        for < dir : dirs_from_args  add_directory_to_workspace(dir, index = 0);
-    }
-
-    // Maybe load project from a .focus-config file in the current directory
-    if !project_config.loaded {
-        if file_exists(".focus-config") {
-            project_config_path, success := get_absolute_path(".focus-config",, temp);
-            if success {
-                success := load_project_config(project_config_path);
-                if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
-            }
-        }
-    }
-
-    if !project_config.loaded && !project_dirs {
-        session = maybe_load_previous_session();
-
-        // Maybe load most recent project
-        if config.settings.load_most_recent_project_on_start {
-            most_recent_projects := get_most_recent_projects();
-            if most_recent_projects {
-                success := load_project_config(most_recent_projects[0]);
-                if !success then add_user_error("Couldn't load most recent project '%'", most_recent_projects[0]);
-            }
-        }
-    } else {
-        session = start_fresh_session();
-    }
 
     if project_config.loaded then update_window_title();
 
@@ -475,6 +396,110 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
     defer_action_build_command(command_id);
 
     return true;
+}
+
+load_configs_and_start_session :: (args: [] string) {
+    load_global_config(fallback_to_default_on_failure = true);
+
+    project_config_path: string;
+    project_config_source: string;
+
+    dirs_from_args: [..] string;
+    dirs_from_args.allocator = temp;
+
+    files_from_args: [..] string;
+    files_from_args.allocator = temp;
+
+    args := focus_executable_args;
+    if args.count == 3 && args[1] == "-project" {
+        // - `focus -project "Project Name"` or `focus -project <path/to/project>` will load a project. No other arguments are allowed.
+        project := args[2];
+        if ends_with_nocase(project, ".focus-config") {
+            project_config_path = project;
+            project_config_source = "path to the config file was passed in the -project argument";
+        } else {
+            project_config_path = tprint("%/%.focus-config", projects_dir, project);
+            project_config_source = "path to the config file was derived from the project name passed in the -project argument";
+        }
+    } else if args.count >= 2 {
+        // - `focus <path1> <path2> ...` will open files or add directories to the workspace
+        for path : array_view(args, 1, args.count - 1) {
+            is_dir, success := is_directory(path);
+            if success && is_dir {
+                dir := trim_right(path, "\\/");
+
+                // If we passed a dir in and it has a .focus-config file in it, load it as a project
+                potential_config_path := tprint("%/.focus-config", dir);
+                if !project_config_path && file_exists(potential_config_path) {
+                    project_config_path = potential_config_path;
+                    project_config_source = "attempted to load it because it's a .focus-config file in a directory passed in as an argument";
+                } else {
+                    array_add(*dirs_from_args, dir);
+                }
+            } else if path == "-project" {
+                add_user_error("The '-project' command line argument is used incorrectly.\nCorrect usage: focus -project <project name or path>.\nNo other arguments are allowed in this case.");
+            } else if starts_with(path, "-") {
+                add_user_error("Invalid command line parameter '%'.", path);
+            } else {
+                array_add(*files_from_args, path);
+            }
+        }
+    }
+
+    // Maybe load project from a .focus-config file in the current directory
+    if !project_config_path && file_exists(".focus-config") {
+        potential_config_path, success := get_absolute_path(".focus-config",, temp);
+        if success {
+            project_config_path = potential_config_path;
+            project_config_source = "attempted to load it because it's a .focus-config file in the current directory";
+        }
+    }
+
+    // Start a session
+    if !project_config_path && !dirs_from_args && !files_from_args {
+        session = maybe_load_previous_session();
+
+        // Maybe load most recent project
+        if config.settings.load_most_recent_project_on_start {  // TODO! take this directly from the loaded global config
+            most_recent_projects := get_most_recent_projects();
+            if most_recent_projects {
+                project_config_path = most_recent_projects[0];
+                project_config_source = "it's the most recent project and you have 'load_most_recent_project_on_start' in your global config";
+            }
+        }
+    } else {
+        session = start_fresh_session();
+    }
+
+    // Load project config, if present
+    if project_config_path {
+        success := load_project_config(project_config_path);
+        if !success then add_user_error("Couldn't load project '%'\n(%)", project_config_path, project_config_source);
+    }
+
+    // Add dirs and files
+    for < dir : dirs_from_args  add_directory_to_workspace(dir, index = 0);
+
+    for < path : files_from_args {
+        opened := false;
+
+        if file_exists(path) {
+            editors_open_file(path);
+            opened = true;
+        } else {
+            // Maybe the path contains a line number
+            found_colon, file, line_str := split_from_right(path, ":",, temp);
+            if found_colon {
+                line, success := parse_int(*line_str);
+                if success && line >= 0 && file_exists(file) && !is_directory(file) {
+                    editors_open_file(file, line = line);
+                    opened = true;
+                }
+            }
+        }
+
+        if !opened add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't seem to exist.", path);
+    }
 }
 
 init_fonts_and_dependent_things :: () {
