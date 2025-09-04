@@ -429,7 +429,7 @@ load_configs_and_start_session :: (args: [] string) {
                 dir := trim_right(path, "\\/");
 
                 // If we passed a dir in and it has a .focus-config file in it, load it as a project
-                potential_config_path := tprint("%/.focus-config", dir);
+                potential_config_path := find_focus_config_file_in_directory(dir);
                 if !project_config_path && file_exists(potential_config_path) {
                     project_config_path = potential_config_path;
                     project_config_source = "attempted to load it because it's a .focus-config file in a directory passed in as an argument";
@@ -447,9 +447,9 @@ load_configs_and_start_session :: (args: [] string) {
     }
 
     // Maybe load project from a .focus-config file in the current directory
-    if !project_config_path && file_exists(".focus-config") {
-        potential_config_path, success := get_absolute_path(".focus-config",, temp);
-        if success {
+    if !project_config_path {
+        potential_config_path := find_focus_config_file_in_directory(get_working_directory());
+        if potential_config_path {
             project_config_path = potential_config_path;
             project_config_source = "attempted to load it because it's a .focus-config file in the current directory";
         }

@@ -89,6 +89,7 @@
         + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
     + macOS: change the dir where the editor looks for system fonts to the correct one (thanks @hovsater)
     + macOS: `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
+    + When pointing the editor to a directory it will now load any `*.focus-config` file as its project config provided it's the only config file in that directory (previously it was a hard requirement that the file was called exactly `.focus-config`)
 
 
 # RELEASES ==================================================================
