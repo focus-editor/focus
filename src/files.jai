@@ -25,6 +25,50 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     return info;
 }
 
+find_focus_config_file_in_directory :: (dir_path: string) -> string /* temp */ {
+    is_dir, success := is_directory(dir_path);
+    if !is_dir || !success return "";
+
+    config_files: [..] string;
+    config_files.allocator = temp;
+
+    visitor_func :: (file: *File_Visit_Info, config_files: *[..] string) {
+        if ends_with_nocase(file.full_name, ".focus-config") {
+            full_path := copy_temporary_string(file.full_name);
+            path_overwrite_separators(full_path, #char "/");
+            array_add_if_unique(config_files, full_path);
+        }
+    }
+
+    visit_files(dir_path, recursive = false, *config_files, visitor_func, visit_directories = false);
+
+    if !config_files return "";
+
+    if config_files.count == 1 return config_files[0];  // found exactly one file, this is what we want
+
+    result := "";
+
+    if config_files.count > 1 {
+        for config_files {
+            path, basename, extension, name := path_decomp(it);
+            if platform_path_equals(name, ".focus-config") {
+                result = it;  // if the config file is named exactly `.focus-config`, it takes priority
+                break;
+            }
+        }
+        error_message := tprint("Found multiple .focus-config files:%", join(..config_files, separator = "\n- ", before_first = true));
+        if result {
+            error_message = tprint("%\nUsed '%' as config", error_message, result);
+            add_user_warning(error_message);
+        } else {
+            error_message = tprint("%\nNo config was loaded.", error_message);
+            add_user_error(error_message);
+        }
+    }
+
+    return result;
+}
+
 get_file_icon :: (name: string, extension: string) -> Icon {
     icon := Icon.file_unknown;
 
