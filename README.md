@@ -6,21 +6,9 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 ![focus-0 3 0](https://github.com/focus-editor/focus/assets/119373822/49a80c5a-f24a-469e-bbbb-88c315f9b391)
 
-
 ## Quick start
 
-1. [Download the executable](https://github.com/focus-editor/focus/releases) and put it somewhere where it will live.
-
-2. Launch the executable. Once launched, it will generate its configuration files.
-    * On **Windows**, it will create a `global.focus-config` file and a `projects` folder next to itself.
-    * On **macOS**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
-    * On **Linux**, these files will be found in `${XDG_CONFIG_HOME}/focus-editor/` (which usually expands to `${HOME}/.config/focus-editor`).
-
-3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
-
-4. This editor expects that you tell it what folders it should add to the workspace. You do it by either editing the global config file for your default workspace, or by creating a project (see below)
-
-5. A project in this editor is just a config file that lives in `projects/Project Name.focus-config`. There's an example project config file provided. You just edit the file and then activate the project by using the `Switch To Project` command.
+Basic information can be found here https://focus-editor.dev/docs.html
 
 NOTE: if you are on a newer macOS you may have to run `xattr -d com.apple.quarantine /Applications/Focus.app` in order to be able to run the editor, until we are able to sign the executable.
 
