@@ -137,6 +137,24 @@ load_config_new :: (config_path: string) -> Loaded_Config {
     return loaded_config;
 }
 
+// Only used when global config fails to load or parse
+load_default_config_fallback :: () -> Loaded_Config {
+    loaded_config: Loaded_Config;
+    loaded_config.memory_pool = New(Flat_Pool);
+
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
+    push_allocator(allocator);
+
+    loaded_config.path = copy_string("[default config]");
+
+    parse_result := parse_config(loaded_config.path, loaded_config.path, DEFAULT_CONFIG_FILE_DATA);
+
+    loaded_config.parsed_config = parse_result.config;
+    loaded_config.loaded = true;
+
+    return loaded_config;
+}
+
 merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) {
     // Merge configs into one
     new_config: Config;
