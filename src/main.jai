@@ -399,7 +399,21 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 }
 
 load_configs_and_start_session :: (args: [] string) {
-    load_global_config(fallback_to_default_on_failure = true);
+    global_config_path := get_global_config_path();
+
+    // Create global config if it doesn't exist
+    if !file_exists(global_config_path) {
+        success := write_entire_file(global_config_path, DEFAULT_CONFIG_FILE_DATA);
+        if !success {
+            error_msg := tprint("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);
+            log_error(error_msg);
+            add_user_error(error_msg);
+        }
+    }
+
+    // Load global config
+    log("Loading global config '%'", global_config_path);
+    loaded_global_config := load_config_new(global_config_path);
 
     project_config_path: string;
     project_config_source: string;
@@ -432,7 +446,7 @@ load_configs_and_start_session :: (args: [] string) {
                 potential_config_path := find_focus_config_file_in_directory(dir);
                 if !project_config_path && file_exists(potential_config_path) {
                     project_config_path = potential_config_path;
-                    project_config_source = "attempted to load it because it's a .focus-config file in a directory passed in as an argument";
+                    project_config_source = "it's a .focus-config file in a directory passed in as an argument";
                 } else {
                     array_add(*dirs_from_args, dir);
                 }
@@ -451,7 +465,7 @@ load_configs_and_start_session :: (args: [] string) {
         potential_config_path := find_focus_config_file_in_directory(get_working_directory());
         if potential_config_path {
             project_config_path = potential_config_path;
-            project_config_source = "attempted to load it because it's a .focus-config file in the current directory";
+            project_config_source = "it's a .focus-config file in the current directory";
         }
     }
 
@@ -460,11 +474,11 @@ load_configs_and_start_session :: (args: [] string) {
         session = maybe_load_previous_session();
 
         // Maybe load most recent project
-        if config.settings.load_most_recent_project_on_start {  // TODO! take this directly from the loaded global config
+        if loaded_global_config.parsed_config.settings.load_most_recent_project_on_start {
             most_recent_projects := get_most_recent_projects();
             if most_recent_projects {
                 project_config_path = most_recent_projects[0];
-                project_config_source = "it's the most recent project and you have 'load_most_recent_project_on_start' in your global config";
+                project_config_source = "it's the most recent project and 'load_most_recent_project_on_start' is set in the global config";
             }
         }
     } else {
@@ -472,10 +486,19 @@ load_configs_and_start_session :: (args: [] string) {
     }
 
     // Load project config, if present
+    loaded_project_config_ptr: *Loaded_Config = null;
     if project_config_path {
-        success := load_project_config(project_config_path);
-        if !success then add_user_error("Couldn't load project '%'\n(%)", project_config_path, project_config_source);
+        log("Loading project config '%' (%)", project_config_path, project_config_source);
+        loaded_project_config := load_config_new(project_config_path);
+        if !loaded_project_config.loaded then add_user_error("Couldn't load project '%'\n(%)", project_config_path, project_config_source);
+        // Get a pointer to indicate we attempted to load it regardless of errors,
+        // because passing null to the merge_and_apply_configs function indicates there's no project config at all
+        loaded_project_config_ptr = *loaded_project_config;
     }
+
+    // TODO! make sure to always load global config here, even if default
+
+    merge_and_apply_configs(*loaded_global_config, loaded_project_config_ptr);
 
     // Add dirs and files
     for < dir : dirs_from_args  add_directory_to_workspace(dir, index = 0);

@@ -2,15 +2,13 @@
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
 CURRENT_CONFIG_VERSION :: 25;
 
-load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
-    config_path := tprint("%/global.focus-config", config_dir);
-    print("LOADING GLOBAL CONFIG: %\n", config_path);  // @Cleanup
+get_global_config_path :: inline () -> string /* temp */ {
+    return tprint("%/global.focus-config", config_dir);
+}
 
-    if !file_exists(config_path) {
-        // Create one with default contents
-        success := write_entire_file(config_path, DEFAULT_CONFIG_FILE_DATA);
-        if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", config_path);
-    }
+load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
+    config_path := get_global_config_path();
+    print("LOADING GLOBAL CONFIG: %\n", config_path);  // @Cleanup
 
     loaded_config, changed := load_config(config_path, *global_config, force = force);
     if !changed && !force return true, false, false;
@@ -73,6 +71,125 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
         free_loaded_config(*loaded_config);
         return false, false, false;
     }
+}
+
+load_config_new :: (config_path: string) -> Loaded_Config {
+    loaded_config: Loaded_Config;
+    loaded_config.memory_pool = New(Flat_Pool);
+
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
+    push_allocator(allocator);
+
+    path := copy_string(config_path);
+
+    file_data, success_read := read_entire_file(path);
+    if !success_read {
+        error_msg := tprint("Couldn't read the config file '%'", path);
+        log_error(error_msg);
+        add_user_error(error_msg);
+        return loaded_config;
+    }
+
+    // Convert to absolute path if we can
+    abs_path, ok := get_absolute_path(path,, temp);
+    if ok then path = copy_string(abs_path);
+    path_overwrite_separators(path, #char "/");
+    loaded_config.path = path;
+
+    // Attempt a migration
+    migrated, new_file_data := maybe_migrate_config(path, file_data);
+    if migrated {
+        // Try parsing after migration to verify it's OK
+        result := parse_config(path, path, new_file_data);
+        if !result.success {
+            add_user_error("We attempted to migrate config file '%' to version [%],\nbut it doesn't parse after migration. Please migrate manually using the default config as a reference.", path, CURRENT_CONFIG_VERSION);
+            return loaded_config;
+        }
+
+        // All good
+        write_entire_file(tprint("%.bak", path), file_data);
+        file_data = new_file_data;
+
+        // Replace the old config's file
+        success := write_entire_file(path, new_file_data);
+        if success {
+            add_success_message("Config file '%' has been migrated to version [%]", path, CURRENT_CONFIG_VERSION);
+        } else {
+            add_user_error("We migrated config file '%' to version [%],\nbut could't save the file. Is it writable?", path, CURRENT_CONFIG_VERSION);
+        }
+    }
+
+    parse_result := parse_config(path, path, file_data);
+    if !parse_result.success {
+        if !parse_result.error_msg then panic_messagebox("No error message on a config error. This is a bug.");
+        add_user_error(parse_result.error_msg, tag = .config);
+        return loaded_config;
+    }
+    if parse_result.warnings {
+        add_success_message(tprint("Config file % loaded with warnings", path), dismiss_in_seconds = 30, tag = .config);
+        for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
+        loaded_config.there_were_warnings = true;
+    }
+
+    loaded_config.loaded = true;
+    loaded_config.parsed_config = parse_result.config;
+
+    return loaded_config;
+}
+
+merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) {
+    // Merge configs into one
+    new_config: Config;
+
+    if new_global.loaded {
+        log("Using global config '%'", new_global.path);  // @cleanup
+        merge_configs(*new_config, new_global.parsed_config);
+    } else {
+        log_error("Using previous global config because new one (%) failed to load", new_global.path);
+        merge_configs(*new_config, global_config.parsed_config);
+    }
+
+    if new_project && new_project.loaded {
+        log("Using project config '%'", new_project.path);
+        merge_configs(*new_config, new_project.parsed_config);
+        add_to_most_recent_projects(new_project.path);
+    } else if new_project && !new_project.loaded {
+        if project_config.loaded {
+            log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
+            merge_configs(*new_config, project_config.parsed_config);
+        } else {
+            log_error("Not using project config because it failed to load and there was no previous version");
+        }
+    }
+
+    config_diff := compare_configs(config, new_config);
+
+    if !config_diff.changed {
+        free_loaded_config(new_global);
+        free_loaded_config(new_project);
+        log("Merged config unchanged, skip applying");
+        return;
+    }
+
+    // Apply the resulting config if changed
+    reset_color_map_to_default();
+
+    // !!!!!!!!!!!!!!!!!
+}
+
+Config_Diff :: struct {
+    changed:                         bool;
+
+    workspace_members_changed:       bool;
+    allow_ignore_changed:            bool;
+    file_associations_changed:       bool;
+    comment_highlight_words_changed: bool;
+    build_commands_changed:          bool;
+}
+
+compare_configs :: (old: Config, new: Config) -> Config_Diff {
+    // TODO!
+    return Config_Diff.{ changed = true };
 }
 
 maybe_defer_refresh_config_or_theme :: (path: string) {
@@ -169,6 +286,10 @@ refresh_config :: (path: string) {
         }
         defer_action_reload_workspace(automatic = true);
     }
+
+    // !!!!!!!!
+    // TODO! try to do this at the time when configs are applied
+    // !!!!!!!!
 
     // Detect changes in file associations
     file_associations_changed := config.workspace.file_associations.count != old_file_associations.count;
@@ -663,7 +784,7 @@ Loaded_Config :: struct {
     loaded := false;
     there_were_warnings := false;
     path: string;
-    hash: u64;
+    hash: u64;  // !!!!! TODO: remove
     parsed_config: Parsed_Config;
     memory_pool: *Flat_Pool;  // must be valid for the lifetime of the config
 }
@@ -928,7 +1049,6 @@ Build_Command :: struct {
     timeout_in_seconds:                 int = -1;
 }
 
-#scope_file
 
 #if OS == .MACOS {
     DEFAULT_CONFIG_NAME :: "default_macos.focus-config";
@@ -936,9 +1056,6 @@ Build_Command :: struct {
     DEFAULT_CONFIG_NAME :: "default.focus-config";
 }
 EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
-
-
-#scope_export
 
 #if !NO_OUTPUT_BUILD {
     read_default_config_data :: (name: string) -> string {
