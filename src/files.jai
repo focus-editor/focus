@@ -36,7 +36,9 @@ find_focus_config_file_in_directory :: (dir_path: string) -> string /* temp */ {
         if ends_with_nocase(file.full_name, ".focus-config") {
             full_path := copy_temporary_string(file.full_name);
             path_overwrite_separators(full_path, #char "/");
-            array_add_if_unique(config_files, full_path);
+            if !platform_path_equals(full_path, get_global_config_path()) {  // make sure we don't use our global config file!
+                array_add_if_unique(config_files, full_path);
+            }
         }
     }
 
