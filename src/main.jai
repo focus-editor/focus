@@ -414,6 +414,11 @@ load_configs_and_start_session :: (args: [] string) {
     // Load global config
     log("Loading global config '%'", global_config_path);
     loaded_global_config := load_config_new(global_config_path);
+    if !loaded_global_config.loaded {
+        log_error("Falling back to default config as global config '%' failed to load", global_config_path);
+        loaded_global_config = load_default_config_fallback();
+        assert(loaded_global_config.loaded);
+    }
 
     project_config_path: string;
     project_config_source: string;
@@ -495,8 +500,6 @@ load_configs_and_start_session :: (args: [] string) {
         // because passing null to the merge_and_apply_configs function indicates there's no project config at all
         loaded_project_config_ptr = *loaded_project_config;
     }
-
-    // TODO! make sure to always load global config here, even if default
 
     merge_and_apply_configs(*loaded_global_config, loaded_project_config_ptr);
 
