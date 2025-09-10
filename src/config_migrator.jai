@@ -995,6 +995,7 @@ MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
     run_test("Keybinds from [1]",             "global.focus-config",  KEYBINDS_1,               KEYBINDS_1_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
+    // !!!!!!!!!!!
     // run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 
