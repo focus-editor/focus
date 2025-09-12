@@ -60,7 +60,7 @@
     + Fixed a visual issue with the unsaved files dialog (thanks @fbjerno)
     + Search results will no longer reset when a command prints to the build window
     + Linux: fixed a scrolling issue on X11/XCB when scrolling horizontally (thanks @ostef)
-    + macOS: fixed an issue where the mouse would not interact with the window after resizing unless clicked (thanks @caztanj)
+    + macOS: fixed an issue where the mouse would not interact with the window after resizing unless clicked and improved mouse pointer behaviour (thanks @caztanj)
 
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
