@@ -3,6 +3,7 @@
 
 window_minimized := false; // @@ Hack.
 window_did_just_resize := false;
+window_is_being_moved := false;
 
 // this stuff is managed by the App_Delegate and Window_Delegate in Window_Creation.
 // It is generally safe for this to not be protected by a mutex as long as the user doesnt call
@@ -430,6 +431,8 @@ update_cocoa_window_events :: () {
 
                         array_add(*events_this_frame, event);
                     }
+                } else {
+                    window_is_being_moved = true;
                 }
 
             case NSEventTypeLeftMouseUp; #through;
@@ -459,6 +462,8 @@ update_cocoa_window_events :: () {
 
                     array_add(*events_this_frame, event);
                 }
+
+                window_is_being_moved = false;
 
             case NSEventTypeMouseMoved;
                 mouse_delta_x += cast(int) NSEvent.deltaX(nsevent);
