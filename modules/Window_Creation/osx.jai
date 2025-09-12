@@ -3,6 +3,10 @@
 #import "Objective_C/AppKit";
 #import "Objective_C/LightweightRenderingView";
 
+#scope_file
+
+Input :: #import "Input";
+
 #scope_export
 
 application_initialized := false;
@@ -43,11 +47,11 @@ init_mac_app :: () {
     // Apple menu items
     // app_menu.addItem(app_menu, services_menu_item);
     app_menu.addItem(app_menu, NSMenuItem.separatorItem());
-    
+
     fullscreen_item := app_menu.addItemWithTitle(app_menu, S("Enter Full Screen"), selector("toggleFullScreen:"), S("f"));
     NSMenuItem.setKeyEquivalentModifierMask(fullscreen_item, NSEventModifierFlagControl | NSEventModifierFlagCommand);
     app_menu.addItemWithTitle(app_menu, S("Quit Focus"), selector("terminate:"), S("q"));
-    
+
     app_menu_item.setSubmenu(app_menu_item, app_menu);
 
     // Window menu
@@ -60,9 +64,9 @@ init_mac_app :: () {
     // Window menu items
     window_menu.addItemWithTitle(window_menu, S("Minimize"), selector("miniaturize:"), S("m"));
     window_menu.addItemWithTitle(window_menu, S("Hide"), selector("hide:"), S("h"));
-    
+
     window_menu_item.setSubmenu(window_menu_item, window_menu);
-    
+
     // Services menu
     services_menu_item := app_menu.addItemWithTitle(menu_bar, S(""), null, S(""));
     autorelease(services_menu_item);
@@ -71,7 +75,7 @@ init_mac_app :: () {
     services_menu.setTitle(services_menu, S("Services"));
     services_menu_item.setSubmenu(services_menu_item, services_menu);
     NSApplication.setServicesMenu(NSApp, services_menu);
-    
+
     NSApplication.setAppleMenu(NSApp, app_menu);
     NSApplication.finishLaunching(NSApp);
     application_initialized = true;
@@ -188,6 +192,13 @@ toggle_fullscreen :: (win: *NSWindow, desire_fullscreen: bool, saved: *Saved_Win
 }
 
 get_mouse_pointer_position :: (window: *NSWindow, right_handed: bool) -> x: int, y: int, success: bool {
+    // While the window is being moved NSWindow.mouseLocationOutsideOfEventStream
+    // may return outdated or incorrect values because the window's frame hasn't
+    // updated yet. This can cause mouse position desynchronization relative to the
+    // actual window position on screen. To avoid this inconsistency, we skip mouse
+    // tracking during window movement.
+    if Input.window_is_being_moved return 0, 0, false;
+
     pt := NSWindow.mouseLocationOutsideOfEventStream(window);
 
     view := NSWindow.contentView(window);
