@@ -779,12 +779,22 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         save_buffer(buffer, buffer_id);
     } else {
         // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
-        success := write_entire_file(file_path, to_string(buffer.bytes));
+        
+        buffer_settings := get_settings(buffer);
+        
+        success := false;
+        if buffer_settings.line_endings == .crlf {
+            success = write_buffer_crlf(buffer, file_path);
+        } else {
+            success = write_entire_file(file_path, to_string(buffer.bytes));
+        }
+        
         if !success {
             buffer.error_when_saving = true;
             log_error("Couldn't write to file %", file_path);
             return;
         }
+        
         refresh_buffer_from_disk_by_path(file_path);
         new_id, created := find_or_create_buffer(file_path);
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
@@ -812,6 +822,32 @@ save :: (buffer_id: s64) {
     }
 }
 
+write_buffer_crlf :: (using buffer: *Buffer, file_path: string) -> success: bool {
+    line_ending :: "\r\n";
+    
+    out_file, success := file_open(file_path, for_writing=true, keep_existing_content=false);
+    if !success return false;
+
+    defer file_close(*out_file);
+
+    for 0..line_starts.count-1 {
+        line := get_real_line_as_string(buffer, it);
+        
+        if !line.count continue;
+        
+        if line.data[line.count - 1] != #char "\n" {
+            if !file_write(*out_file, line.data, line.count) return false;
+            continue;
+        }
+
+        line.count -= 1;        
+        if !file_write(*out_file, line.data, line.count) return false;
+        if !file_write(*out_file, line_ending.data, line_ending.count) return false;
+    }
+
+    return true;
+}
+
 save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     if readonly return;
 
@@ -824,7 +860,18 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     }
     if buffer_settings.insert_final_newline_on_save then insert_final_newline(buffer);  // important to do it after stripping
 
-    success := write_entire_file(file.full_path, to_string(bytes));
+    success := false;
+    
+    buffer_settings = get_settings(buffer);
+    
+    if (crlf && buffer_settings.line_endings == .preserve) || buffer_settings.line_endings == .crlf {
+        success = write_buffer_crlf(buffer, file.full_path);
+        crlf    = true;
+    } else {
+        success = write_entire_file(file.full_path, to_string(bytes));
+        crlf    = false;
+    }
+
     if success {
         modified = false;
         modified_on_disk = false;
@@ -833,10 +880,10 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
         meow_hash = calculate_hash(to_view(bytes));
 
         error_when_saving = false;
-        crlf = false;
     } else {
         error_when_saving = true;
     }
+
     remember_last_mod_info(buffer);
     active_editor_id := get_active_editor_id();
     if active_editor_id >= 0 && active_editor_id < open_editors.count then update_window_title(open_editors[active_editor_id].buffer_id);
@@ -1143,6 +1190,10 @@ create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     init_buffer(buffer);
     buffer.has_file = false;
 
+    if config.settings.line_endings == .crlf {
+        buffer.crlf = true;
+    }
+    
     // These values will be overwritten later if `detect_intentation` is true
     buffer.indentation.type = config.settings.indent_using;
     buffer.indentation.size = 0;
