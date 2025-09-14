@@ -531,6 +531,8 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 23, "show_pane_numbers",                                  "false" },
 
     .{ 24, "show_tab_characters_in_selection",                   "true" },
+
+    .{ 25, "line_endings",                                       "lf" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[

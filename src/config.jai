@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 24;
+CURRENT_CONFIG_VERSION :: 25;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -756,6 +756,7 @@ Settings :: struct {
     status_bar_show_cursors_off_screen                      := true;                                                @v11 @overridable
     status_bar_show_selected_text_length                    := false;                                               @v3  @overridable
     show_scrollbar_marks                                    := true;                                                @v15 @overridable
+    line_endings                                            := Line_Endings.lf;                                     @v25 @overridable
 }
 
 // Generate a struct for the settings that can be overridden
@@ -804,6 +805,7 @@ Status_Bar_Position       :: enum { bottom; top; }
 Strip_Trailing_Whitespace :: enum { except_lines_with_cursor; all; disabled; }
 Color_Preview_Popup       :: enum { enabled; minimized; disabled; }
 Projects_Sorting_Order    :: enum { most_recent_first; alphabetical; alphabetical_no_case; }
+Line_Endings              :: enum { lf; crlf; preserve; }
 
 Font_Anti_Aliasing        :: enum { lcd; normal; }
 #poke_name Simp Font_Anti_Aliasing;

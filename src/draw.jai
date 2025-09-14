@@ -2273,6 +2273,18 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
         }
 
+        // Draw line separator type
+        if buffer_settings.status_bar_show_indentation {
+            _maybe_draw_separator();
+            label := "LF";
+            if buffer.crlf {
+                label = "CRLF";
+            }
+            width = xx Simp.prepare_text(font_ui_bold, label);
+            pen_x -= width;
+            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+        }
+
         // Draw indentation type
         if buffer_settings.status_bar_show_indentation {
             _maybe_draw_separator();
@@ -2398,9 +2410,17 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
 
-    if buffer.crlf && (flags & .crlf_warning) {
+    settings := get_settings(buffer);
+
+    if buffer.crlf && settings.line_endings == .lf && (flags & .crlf_warning) {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
+        if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+    }
+
+    if !buffer.crlf && settings.line_endings == .crlf && (flags & .crlf_warning) {
+        pen.x += width + padding;
+        width = xx Simp.prepare_text(font_ui, "[LF will be replaced with CRLF on save]");
         if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
