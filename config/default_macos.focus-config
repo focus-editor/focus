@@ -98,6 +98,8 @@ cursor_position_after_jump:                         0.45  # controls where the c
 closing_last_editor_in_pane_should_close_pane:      true
 closing_last_editor_should_exit_program:            false
 
+line_endings:                                       preserve  # options: lf, crlf, preserve
+
 # NOTE: some settings can be specified for a subset of files, based on their language or a wildcard,
 # for example:
 # [file: <wildcard1>, <wildcard2>, ...]

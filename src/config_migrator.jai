@@ -532,7 +532,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 24, "show_tab_characters_in_selection",                   "true" },
 
-    .{ 25, "line_endings",                                       "lf" },
+    .{ 25, "line_endings",                                       "preserve  # options: lf, crlf, preserve" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -1408,6 +1408,7 @@ closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
+line_endings:                                    preserve  # options: lf, crlf, preserve
 
 FOCUS_CONFIG
 
@@ -1558,6 +1559,7 @@ closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
+line_endings:                                    preserve  # options: lf, crlf, preserve
 
 FOCUS_CONFIG
 
@@ -1946,6 +1948,7 @@ closing_last_editor_in_pane_should_close_pane:   true
 closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
+line_endings:                                    preserve  # options: lf, crlf, preserve
 
 [[keymap]]
 # ...
