@@ -272,6 +272,9 @@ base_commands := #run -> [] Command {
         cmd( "Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
         cmd( "Indentation: Convert File Indentation To Tabs",   .indentation_convert_to_tabs_for_buffer,   .Single),
         cmd( "Indentation: Convert File Indentation To Spaces", .indentation_convert_to_spaces_for_buffer, .Single),
+
+        cmd( "Line Endings: Convert Buffer To CRLF",            .convert_buffer_to_crlf,                   .Single),
+        cmd( "Line Endings: Convert Buffer To LF",              .convert_buffer_to_lf,                     .Single),
     ];
 
     linux_commands := Command.[

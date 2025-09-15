@@ -44,6 +44,9 @@
         + `active_pane_border`
         + `code_comment_highlight1` - `code_comment_highlight4`
     + New variables to be used in build commands: `%FILE_LINE%` and `%FILE_COLUMN%` (thanks @fda0)
+    + CRLF line endings support (thanks @filippocrocchini):
+        + New setting `line_endings` (options: `preserve`, `lf`, `crlf`)
+        + New commands: `convert_buffer_to_crlf`, `convert_buffer_to_lf`
 
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)

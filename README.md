@@ -51,7 +51,6 @@ The editor is in beta. This means you may encounter some bugs here and there, an
 
 - Only 64-bit systems are supported, Windows 8+, Linux (WIP), macOS (WIP).
 - This editor is not designed for editing very large files (it is expected that editing might start lagging upwards of 100K LOC). 2GB files is a hard limit right now.
-- CRLF will be converted to LF on save. It's time to move on.
 - Multi-codepoint Unicode symbols are not supported.
 - Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
 

@@ -219,6 +219,9 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "indentation_convert_to_spaces_for_buffer",
     "reload_from_disk",
 
+    "convert_buffer_to_crlf",
+    "convert_buffer_to_lf",
+
     "split_left",
     "split_right",
     "split_top",

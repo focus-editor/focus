@@ -1073,6 +1073,18 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
     buffer.indentation.size = cast(u8) buffer_settings.tab_size;
 }
 
+action_convert_buffer_to_crlf :: (buffer: *Buffer) {
+    if buffer.crlf return;
+    buffer.crlf = true;
+    buffer.modified = true;
+}
+
+action_convert_buffer_to_lf :: (buffer: *Buffer) {
+    if !buffer.crlf return;
+    buffer.crlf = false;
+    buffer.modified = true;
+}
+
 insert_final_newline :: (using buffer: *Buffer) {
     if !bytes return;
     if bytes[bytes.count - 1] == #char "\n" return;  // already there
