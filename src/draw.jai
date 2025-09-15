@@ -2952,6 +2952,15 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             };
 
+            if entry.show_icon {
+                icon_char := convert_utf32_to_utf8(xx entry.icon);
+                icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+                icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+                Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx Color.UI_DEFAULT);
+    
+                pen.x += xx font_icons.em_width + padding * 1.5;
+            }
+            
             // Draw name
             width := Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.highlights, color = xx Color.UI_DEFAULT, highlight_color = xx Color.LETTER_HIGHLIGHT);
 
