@@ -246,7 +246,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .create_cursors_around;            create_cursors_around                   (editor, buffer);           keep_selection = true;
         case .strip_trailing_whitespace;        strip_trailing_whitespace               (buffer, editor.buffer_id); keep_selection = true;
 
-        case .choose_language;                  show_dialog                         (*language_dialog);
+        case .choose_language;                  show_dialog                             (*language_dialog);
+
+        case .convert_buffer_to_crlf;           action_convert_buffer_to_crlf           (buffer);
+        case .convert_buffer_to_lf;             action_convert_buffer_to_lf             (buffer);
 
         case .indentation_detect_from_buffer_contents;  indentation_detect_from_buffer_contents (buffer);
         case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
