@@ -244,6 +244,8 @@ draw_welcome_screen :: (main_area: Rect) {
             .{ .search_in_project,                  "Search In Workspace" },
         ];
 
+        right_area = shrink(right_area, margin);
+
         padding_v := floor(4 * dpi_scale);
         padding_h := floor(6 * dpi_scale);
         align_x := right_area.w - (right_area.w / GOLDEN_RATIO);
