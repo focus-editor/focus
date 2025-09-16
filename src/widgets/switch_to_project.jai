@@ -25,12 +25,16 @@ open_selected_project :: (_: Editor_Placement) {
 
     entry := filtered[selected];
 
-    defer_action_switch_to_project(entry.path);
+    if entry.type == .new {
+        write_entire_file(entry.path, DEFAULT_CONFIG_FILE_DATA);
+    }
+
+    defer_action_switch_to_project(entry.path, open_project_file = (entry.type == .new));
 }
 
 switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     using switch_to_project_dialog;
-
+    
     assert(context.allocator.proc == flat_pool_allocator_proc, "Non-pool allocator is used in switch_to_project dialog. This is a bug.");
 
     project_configs: [..] Project_Config;
@@ -96,13 +100,13 @@ switch_to_project_add_special_entries :: ()
     using switch_to_project_dialog;
 
     if new_project_name {
-        project_path := sprint("%/%", projects_dir, new_project_name);
-        entry_name   := sprint("New project '%.focus-config'", project_path);
+        project_path := sprint("%/%.focus-config", projects_dir, new_project_name);
+        entry_name   := sprint("New project '%'", project_path);
         
-        fake_project_config := Project_Config.{ name = entry_name, path = project_path, config_parent_dir = projects_dir };
+        fake_project_config := Project_Config.{ type = .new, name = entry_name, path = project_path, config_parent_dir = projects_dir };
         no_highlights       := NewArray(entry_name.count, bool, true);
         
-        entry := array_insert_at(*filtered, .{ details = fake_project_config, highlights = no_highlights, show_icon = true, icon = .save }, 0);
+        entry := array_insert_at(*filtered, .{ details = fake_project_config, highlights = no_highlights, icon = .save }, 0);
     }
 }
 
@@ -155,6 +159,7 @@ compare_alphabetically :: (a : string, b : string, $no_case : bool) -> s64 {
 }
 
 Project_Config :: struct {
+    type: enum { open; new; };
     name: string;
     path: string;
     config_parent_dir: string;

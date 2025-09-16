@@ -10,8 +10,9 @@ execute_deferred_actions :: () {
     }
 }
 
-defer_action_switch_to_project :: (path: string) {
+defer_action_switch_to_project :: (path: string, open_project_file := false) {
     clear_action_queue();
+    defer_action_open_file(path);
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.load_project_config, .{ load_project_config = .{ path = copy_string(path) } });
     push_action(.abort_workspace_scanning);
@@ -112,6 +113,9 @@ defer_action_save_buffers :: (buffer_ids: [] s64) {
     push_action(.save_buffers, .{ save_buffers = .{ buffer_ids = array_copy(buffer_ids) } });
 }
 
+defer_action_open_file :: (path: string, placement: Editor_Placement = .in_place ) {
+    push_action(.open_file, .{ open_file = .{ path = copy_string(path), placement = placement } });
+}
 
 Deferred_Action_Id :: #type,distinct s64;
 
@@ -150,6 +154,7 @@ execute_top_action :: () -> Action_Result {
         case .close_all_editors;                        return execute_close_all_editors(action);
         case .close_pane;                               return execute_close_pane(action);
         case .close_other_panes;                        return execute_close_other_panes(action);
+        case .open_file;                                return execute_open_file(action);
     }
 }
 
@@ -173,6 +178,10 @@ remove_top_action :: () {
             using action.details.save_buffers;
             array_free(buffer_ids);
 
+        case .open_file;
+            using action.details.open_file;
+            if path { free(path); path = ""; }
+            
         // Nothing to free
         case .quit;
         case .save_as;
@@ -216,6 +225,7 @@ Deferred_Action :: struct {
         close_editor:               struct { editor_id: s64; }
         close_editors_for_pane:     struct { pane: *Editor_Pane; except: s64; notify: bool; }
         close_pane:                 struct { pane: *Editor_Pane; }
+        open_file:                  struct { path: string; placement: Editor_Placement; }
     }
 
     Kind :: enum {
@@ -238,6 +248,7 @@ Deferred_Action :: struct {
         close_all_editors;
         close_pane;
         close_other_panes;
+        open_file;
     }
 }
 
@@ -469,7 +480,7 @@ execute_refresh_config_or_theme :: (action: Deferred_Action) -> Action_Result {
 
 execute_reload_workspace :: (action: Deferred_Action) -> Action_Result {
     reload_workspace(action.details.reload_workspace.automatic);
-    return .CANCEL;  // final command
+    return .DONE;
 }
 
 execute_build_command :: (action: Deferred_Action) -> Action_Result {
@@ -540,6 +551,13 @@ execute_close_pane :: (action: Deferred_Action) -> Action_Result {
 
 execute_close_other_panes :: (action: Deferred_Action) -> Action_Result {
     close_other_panes();
+    return .DONE;
+}
+
+execute_open_file :: (action: Deferred_Action) -> Action_Result {
+    print("Before opening file.\n");
+    success := editors_open_file(action.details.open_file.path, action.details.open_file.placement);
+    print("OPENING FILE % -- %\n", action.details.open_file.path, success);
     return .DONE;
 }
 

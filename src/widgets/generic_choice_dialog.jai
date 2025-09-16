@@ -126,7 +126,6 @@ Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     memory_pool: Flat_Pool;
 
     Entry :: struct {
-        show_icon: bool;
         icon: Icon; 
         highlights: [] bool;
         sort_key: u64;

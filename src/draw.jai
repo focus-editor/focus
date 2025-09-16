@@ -2952,7 +2952,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             };
 
-            if entry.show_icon {
+            if entry.icon {
                 icon_char := convert_utf32_to_utf8(xx entry.icon);
                 icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
                 icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
@@ -4343,6 +4343,8 @@ start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
 #scope_export
 
 Icon :: enum u16 {
+    none :: 0x0;
+    
     // File types
     file_unknown :: 0xf15b;
     text         :: 0xf15c;
