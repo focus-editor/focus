@@ -502,7 +502,7 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
         start := cast(s32) (t - buf.data);
         end   := find_index_from_left(buf, identifier_str, start_index = start);
         if end < 0 {
-            end = buf.count - 1;
+            end = buf.count;
             t = max_t;
         } else {
             t = buf.data + end + identifier_str.count;
@@ -510,18 +510,20 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buf
         }
 
         #if do_highlighting {
-            // Maybe add a heredoc region for deferred highlighting
-            potential_lang_name := identifier_str;
-            {
-                // Extract lang from heredoc names like BLAH_BLAH_lang
-                found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
-                if found then potential_lang_name = lang;
-            }
-            lang := get_lang_from_name(potential_lang_name);
-            if lang != .Plain_Text {
-                array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
-            } else {
-                memset(buffer.tokens.data + start, xx Token_Type.multiline_string, end - start);  // highlight everything as string
+            if start < end {
+                // Maybe add a heredoc region for deferred highlighting
+                potential_lang_name := identifier_str;
+                {
+                    // Extract lang from heredoc names like BLAH_BLAH_lang
+                    found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
+                    if found then potential_lang_name = lang;
+                }
+                lang := get_lang_from_name(potential_lang_name);
+                if lang != .Plain_Text {
+                    array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
+                } else {
+                    memset(buffer.tokens.data + start, xx Token_Type.multiline_string, end - start);  // highlight everything as string
+                }
             }
         }
     }
