@@ -315,16 +315,9 @@ main :: () {
                 handled = maybe_execute_a_build_command(action);
             }
 
-            if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
-            #if OS == .MACOS {
-                // @Hack:
-                // On macOS the shortcut Cmd-Q seems to be handled by the system.
-                // If the user presses Cmd-Q, we first get a normal .KEYBOARD and a .TEXT_INPUT events, then a .QUIT event.
-                // Since we're not handling the .KEYBOARD event, we're not ignoring the following .TEXT_INPUT, which
-                // sometimes results in the letter q being pressed.
-                // Unless there's a good simple way to avoid that we have to filter it out ourselves
-                if event.type == .KEYBOARD && event.key_code == #char "Q" && event.key_pressed && event.cmd_meta_pressed then num_text_input_events_to_ignore += 1;
-            }
+            // Ignore text input events if either we've handled a keyboard event for the same combo or the user holds Ctrl/Cmd/Meta
+            // (can't ignore wnen Alt/Opt is held because on macOS this is used to type special characters)
+            if event.type == .KEYBOARD && (handled || event.modifier_flags.packed & Mods.{ctrl_pressed=true, cmd_meta_pressed=true}.packed) then num_text_input_events_to_ignore = event.text_input_count;
 
             handled = key_sequence_input_process_event(event, handled);
 
