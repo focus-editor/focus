@@ -64,6 +64,7 @@
     + Search results will no longer reset when a command prints to the build window
     + Linux: fixed a scrolling issue on X11/XCB when scrolling horizontally (thanks @ostef)
     + macOS: fixed an issue where the mouse would not interact with the window after resizing unless clicked and improved mouse pointer behaviour (thanks @caztanj)
+    + Fix search window not being auto-populated with the selected text in some cases when using line wrap
 
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
