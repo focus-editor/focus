@@ -1457,7 +1457,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     if cursors.count == 1 {
         cursor := cursors[0];
         selected_text := get_selected_string(cursor, buffer);
-        if selected_text && offset_to_line(editor, buffer, cursor.pos) == offset_to_line(editor, buffer, cursor.sel) {
+        if selected_text && offset_to_real_line(buffer, cursor.pos) == offset_to_real_line(buffer, cursor.sel) {
             replace_text(*input, selected_text);
         }
     }
