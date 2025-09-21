@@ -1792,7 +1792,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = xx Color.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
         color := ifx !regex_search || (regex_search && regex_is_valid) then Color.UI_DEFAULT else Color.UI_ERROR_BRIGHT;
-        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 2, color = color);
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 3, color = color);
 
         button_width := input_rect.h;
         pressed, hover_match_case, hover_match_word, hover_regex_search := false, false, false, false;
