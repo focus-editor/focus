@@ -549,9 +549,6 @@ wl_window_handle_resize :: (w: *Wayland_Window, width: s32, height: s32) {
     if w.base.gl.egl.native
         wl_egl_window_resize(w.base.gl.egl.native, w.buffer_width, w.buffer_height, 0, 0);
 
-    wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
-    wl_surface.commit(w.handle);
-
     Input.add_resize_record(xx w, xx w.buffer_width, xx w.buffer_height);
 }
 
