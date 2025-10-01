@@ -880,6 +880,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
                                 // Highlight the bad chunk
                                 for chunk : split(dir_path, "/",, temp) {
+                                    if !chunk continue;
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !dir_prefix continue;
                                     abs_dir_prefix := ifx relative_to_working_dir then tprint("\%/\%", working_dir, dir_prefix) else dir_prefix;
