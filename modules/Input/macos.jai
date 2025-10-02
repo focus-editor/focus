@@ -833,7 +833,8 @@ Window_Delegate :: struct {
         // The backing scale factor might change when the window changes screen so we need to re-compute the width and height of the window. :MacHighResDisplays
         jai_context: #Context;
         push_context jai_context {
-            objc_msgSend(self, selector("windowDidResize:"), notification);
+            func :: #type (*void, Selector, *NSNotification) -> *void #c_call;
+            (cast(func) objc_msgSend)(self, selector("windowDidResize:"), notification);
         }
     } @selector(windowDidChangeScreen:)
 

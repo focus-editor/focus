@@ -103,25 +103,29 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
 
     white_spaces := WHITE_SPACES;
 
-    #asm {
-        chars  : vec === 0;
-        mask   : vec === 1;
-        spaces : vec === 2;
-        result       === a;
-        white_spaces === b;
-        char         === c;
+    #if CPU == .X64 {
+        #asm {
+            chars  : vec === 0;
+            mask   : vec === 1;
+            spaces : vec === 2;
+            result       === a;
+            white_spaces === b;
+            char         === c;
 
-        movq spaces, white_spaces;
+            movq spaces, white_spaces;
 
-        pxor mask, mask;
+            pxor mask, mask;
 
-        // Fill chars with c
-        pinsrb chars, char, 0;
-        pshufb chars, mask;
+            // Fill chars with c
+            pinsrb chars, char, 0;
+            pshufb chars, mask;
 
-        pcmpeqb chars, spaces;
+            pcmpeqb chars, spaces;
 
-        pmovmskb result, chars;
+            pmovmskb result, chars;
+        }
+    } else {
+        return char == " " || char == "\t" || char == "\n" || char == "\r" || char == 0x0C || char == 0x0B;
     }
 
     return cast,no_check(bool) result;
