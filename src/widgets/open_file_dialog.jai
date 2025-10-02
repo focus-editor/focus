@@ -388,7 +388,8 @@ refresh_entries :: (clear_input := true) {
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
     }
 
-    filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
+    filter           := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
+    full_path_exists := false;
 
     if #complete mode == {
         case .save; #through;
@@ -484,6 +485,8 @@ refresh_entries :: (clear_input := true) {
                     is_dir_part: u64 = (cast,trunc(u64) (entry.type == .folder)) << 56;  // directories come first
                     score_part:  u64 = (cast,trunc(u64) score)                   << 16;
                     entry.sort_key = is_dir_part | score_part;
+                    
+                    if it.name == to_string(input.text) then full_path_exists = true;
                 }
             }
 
@@ -500,7 +503,7 @@ refresh_entries :: (clear_input := true) {
             }
     }
 
-    if (mode == .save || mode == .move) && !is_empty(input.text) && path_chunks {
+    if (mode == .save || mode == .move) && !is_empty(input.text) && path_chunks && !full_path_exists {
         entry_name: string;
         if mode == .save {
             entry_name = sprint("Save as '%/%'", get_current_folder_path(), to_string(input.text));
