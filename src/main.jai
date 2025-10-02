@@ -6,10 +6,12 @@ main :: () {
 
     focus_allocator = context.allocator;  // to be used as a default allocator where we need it
 
-    cpu_info = get_cpu_info();
+    #if CPU == .X64 {
+        cpu_info = get_cpu_info();
 
-    // Meow hash relies on AES instruction support, so fall back to a standard hash function
-    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
+        // Meow hash relies on AES instruction support, so fall back to a standard hash function
+        if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
+    }
 
     platform_setup();
 
@@ -169,7 +171,9 @@ main :: () {
     init_logger();
     defer deinit_logger();  // closes log file handles
 
-    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
+    #if CPU == .X64 {
+        if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
+    }
 
     repetition_tester();  // used for development. No-op in production
 
@@ -993,7 +997,9 @@ BUILTIN_THEMES :: #run -> [] Builtin_Theme {
 // A list of files drag-and-dropped into the editor (for the drawing code to use)
 just_dropped_files: [] string;
 
-cpu_info: Cpu_X86;
+#if CPU == .X64 {
+    cpu_info: Cpu_X86;
+}
 
 focus_allocator: Allocator;
 
@@ -1092,6 +1098,10 @@ focus_allocator: Allocator;
     #assert false, "Unsupported OS";
 }
 
+#if CPU == .X64 {
+    #import "Machine_X64";
+}
+
 using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_FREED_MEMORY = false);
 #import "Atomics";
 #import "Compiler";
@@ -1100,7 +1110,6 @@ using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_
 #import "File_Watcher";
 #import "Flat_Pool";
 #import "Math";
-#import "Machine_X64";
 #import "Process";
 #import "Reflection";
 #import "Sloppy_Math";
@@ -1186,4 +1195,10 @@ DEBUG_MEMORY_LEAKS :: false;
     libc :: #system_library "libc";
 } else {
     focus_memcpy :: memcpy;
+}
+
+#if OS == .MACOS && CPU == .ARM64 {
+    // Freetype needs this when linking. I don't know...
+    #program_export
+    __chkstk_darwin :: () #c_call {}
 }
