@@ -415,38 +415,40 @@ rescan_for_lines :: (using buffer: *Buffer) {
 
     s := to_string(bytes);
 
-    // NOTE: this implementation is slightly faster on my machine, but really not by much - need to test on other machines
-    if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
-        // Scan by 16 bytes at a time
-        lf := 0xA; // '\n'
-        #asm AVX2 {
-            movq lf_source:, lf;
-            pbroadcastb.x line_feeds:, lf_source;
-        }
-        data := s.data;
-        count := s.count;
-        while count >= 16 {
-            mask:  u32 = ---;
-            #asm {
-                movdqu      batch:, [data];
-                pcmpeqb.x   batch, line_feeds;
-                pmovmskb.x  mask, batch;
+    #if CPU == .X64 {
+        // NOTE: this implementation is slightly faster on my machine, but really not by much - need to test on other machines
+        if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
+            // Scan by 16 bytes at a time
+            lf := 0xA; // '\n'
+            #asm AVX2 {
+                movq lf_source:, lf;
+                pbroadcastb.x line_feeds:, lf_source;
             }
-            shift := 0;
-            bit_id: u32 = ---;
-            while mask {
+            data := s.data;
+            count := s.count;
+            while count >= 16 {
+                mask:  u32 = ---;
                 #asm {
-                    bsf.d bit_id, mask;
+                    movdqu      batch:, [data];
+                    pcmpeqb.x   batch, line_feeds;
+                    pmovmskb.x  mask, batch;
                 }
-                mask >>= (bit_id + 1);
-                shift += bit_id + 1;
-                add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
+                shift := 0;
+                bit_id: u32 = ---;
+                while mask {
+                    #asm {
+                        bsf.d bit_id, mask;
+                    }
+                    mask >>= (bit_id + 1);
+                    shift += bit_id + 1;
+                    add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
+                }
+                count -= 16;
+                data  += 16;
             }
-            count -= 16;
-            data  += 16;
+            s.data = data;
+            s.count = count;
         }
-        s.data = data;
-        s.count = count;
     }
 
     processed_with_simd := s.data - bytes.data;

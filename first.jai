@@ -179,7 +179,8 @@ build :: () {
         run_command("ln", "-s", "/Applications", DMG_DIR);
 
         // Generate a .DMG using Disk Utility
-        run_command("hdiutil", "create", "-volname", tprint("Focus %", VERSION), "-srcfolder", DMG_DIR, "-ov", "-format", "UDZO", tprint("Focus-%-Intel.dmg", VERSION));
+        file_name := ifx CPU == .X64 tprint("Focus-%-Intel.dmg", VERSION) else tprint("Focus-%-Apple.dmg", VERSION);
+        run_command("hdiutil", "create", "-volname", tprint("Focus %", VERSION), "-srcfolder", DMG_DIR, "-ov", "-format", "UDZO", file_name);
 
         // Remove our temporary directory when we're done
         run_command("rm", "-r", DMG_DIR);
