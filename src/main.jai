@@ -316,8 +316,11 @@ main :: () {
             }
 
             // Ignore text input events if either we've handled a keyboard event for the same combo or the user holds Ctrl/Cmd/Meta
-            // (can't ignore wnen Alt/Opt is held because on macOS this is used to type special characters)
-            if event.type == .KEYBOARD && (handled || (event.modifier_flags.packed & Mods.{ctrl_pressed=true, cmd_meta_pressed=true}.packed && !event.modifier_flags.alt_pressed)) then num_text_input_events_to_ignore = event.text_input_count;
+            // (can't ignore wnen Alt/Opt is held because this is sometimes used to type characters)
+            if event.type == .KEYBOARD {
+                if handled || event.modifier_flags.packed & Mods.{ctrl_pressed=true, cmd_meta_pressed=true}.packed then num_text_input_events_to_ignore = event.text_input_count;
+                if event.modifier_flags.alt_pressed then num_text_input_events_to_ignore = 0;
+            }
 
             handled = key_sequence_input_process_event(event, handled);
 
