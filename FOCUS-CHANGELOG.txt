@@ -90,6 +90,7 @@
         + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
     + macOS: change the dir where the editor looks for system fonts to the correct one (thanks @hovsater)
     + macOS: `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
+    + `move{left|right}_through_word_throttled` will now stop at newline
 
 
 # RELEASES ==================================================================

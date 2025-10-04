@@ -2359,15 +2359,15 @@ select_line :: (cursor: *Cursor, buffer: Buffer) {
     cursor.pos = get_real_line_start_offset(buffer, end_line+1);
 }
 
-scan_through_similar_chars_on_the_left :: inline (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32, moved_through: Char_Type {
+scan_through_similar_chars_on_the_left :: inline (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true, stop_at_newline := true) -> offset: s32, moved_through: Char_Type, stopped_at_newline: bool {
     line_start_offset := line_starts[offset_to_real_line(buffer, offset)];
-    offset, moved_through := scan_through_similar_chars_on_the_left(to_view(buffer.bytes), line_start_offset, offset, char_type, skip_one_space);
-    return offset, moved_through;
+    offset, moved_through, stopped_at_newline := scan_through_similar_chars_on_the_left(to_view(buffer.bytes), line_start_offset, offset, char_type, skip_one_space, stop_at_newline);
+    return offset, moved_through, stopped_at_newline;
 }
 
-scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32, moved_through: Char_Type {
-    offset, moved_through := scan_through_similar_chars_on_the_right(to_view(buffer.bytes), offset, char_type, skip_one_space);
-    return offset, moved_through;
+scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true, stop_at_newline := true) -> offset: s32, moved_through: Char_Type, stopped_at_newline: bool {
+    offset, moved_through, stopped_at_newline := scan_through_similar_chars_on_the_right(to_view(buffer.bytes), offset, char_type, skip_one_space, stop_at_newline);
+    return offset, moved_through, stopped_at_newline;
 }
 
 cursors_start_blinking :: inline () {
@@ -3196,6 +3196,9 @@ move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by
 
     if cursor.pos == 0  return;
 
+    moved_through : Char_Type = ---;
+    stopped_at_newline := false;
+
     if #complete by == {
         case .by_character;
             cursor.pos = prev_char_offset(bytes, cursor.pos);
@@ -3209,12 +3212,10 @@ move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by
             cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
 
         case .through_word_throttled;
-            moved_through : Char_Type = ---;
-            cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
-            if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
+            cursor.pos, moved_through, stopped_at_newline = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
+            if !(moved_through & (.word | .number) || stopped_at_newline)  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
 
         case .through_word;
-            moved_through : Char_Type = ---;
             cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
             while cursor.pos > 0 && moved_through != .word {
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
@@ -3243,6 +3244,9 @@ move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, b
 
     if cursor.pos >= bytes.count  return;
 
+    moved_through : Char_Type = ---;
+    stopped_at_newline := false;
+
     if #complete by == {
         case .by_character;
             cursor.pos = next_char_offset(bytes, cursor.pos);
@@ -3256,12 +3260,10 @@ move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, b
             cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
 
         case .through_word_throttled;
-            moved_through : Char_Type = ---;
-            cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
-            if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
+            cursor.pos, moved_through, stopped_at_newline = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
+            if !(moved_through & (.word | .number) || stopped_at_newline)  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
 
         case .through_word;
-            moved_through : Char_Type = ---;
             cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
             while cursor.pos < bytes.count && moved_through != .word {
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
