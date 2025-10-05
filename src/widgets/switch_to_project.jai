@@ -9,6 +9,9 @@ Switch_To_Project_Dialog :: struct {
     generic_dialog.global_widget_id = .switch_to_project_dialog;
     generic_dialog.refresh_entries  = switch_to_project_refresh_entries;
     generic_dialog.open_entry       = open_selected_project;
+    generic_dialog.after_refresh    = switch_to_project_add_special_entries;
+    
+    new_project_name : string;
 };
 
 
@@ -22,12 +25,16 @@ open_selected_project :: (_: Editor_Placement) {
 
     entry := filtered[selected];
 
-    defer_action_switch_to_project(entry.path);
+    if entry.type == .new {
+        write_entire_file(entry.path, DEFAULT_CONFIG_FILE_DATA);
+    }
+
+    defer_action_switch_to_project(entry.path, open_project_file = (entry.type == .new));
 }
 
 switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     using switch_to_project_dialog;
-
+    
     assert(context.allocator.proc == flat_pool_allocator_proc, "Non-pool allocator is used in switch_to_project dialog. This is a bug.");
 
     project_configs: [..] Project_Config;
@@ -66,15 +73,40 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
         case .alphabetical_no_case;
             quick_sort(project_configs, (a, b) => compare_alphabetically(a.name, b.name, true));
     }
-
+    
+    full_path_exists := false;
+    
     for project : project_configs {
-        score, highlights := fuzzy_match(project.name, filter);
+        score, highlights, exact_match := fuzzy_match(project.name, filter);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);
         entry.details = project;
         entry.highlights = highlights;
         entry.sort_key = cast(u64) (score + project_configs.count - it_index);  // sort by the list order originally
+        
+        if project.name == filter.full_string then full_path_exists = true;
+    }
+    
+    if !full_path_exists {
+        new_project_name = filter.full_string;
+    } else {
+        new_project_name = "";
+    }
+}
+
+switch_to_project_add_special_entries :: () 
+{
+    using switch_to_project_dialog;
+
+    if new_project_name {
+        project_path := sprint("%/%.focus-config", projects_dir, new_project_name);
+        entry_name   := sprint("New project '%'", project_path);
+        
+        fake_project_config := Project_Config.{ type = .new, name = entry_name, path = project_path, config_parent_dir = projects_dir };
+        no_highlights       := NewArray(entry_name.count, bool, true);
+        
+        entry := array_insert_at(*filtered, .{ details = fake_project_config, highlights = no_highlights, icon = .save }, 0);
     }
 }
 
@@ -127,6 +159,7 @@ compare_alphabetically :: (a : string, b : string, $no_case : bool) -> s64 {
 }
 
 Project_Config :: struct {
+    type: enum { open; new; };
     name: string;
     path: string;
     config_parent_dir: string;

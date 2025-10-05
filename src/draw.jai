@@ -182,6 +182,7 @@ draw_welcome_screen :: (main_area: Rect) {
     margin      := logo_rect.x;
     shrink_step := logo_rect.w / 6.5;
 
+    left_y_cursor : float;
     // Draw the left part
     {
         draw_rect(left_area, .BACKGROUND_3, extra_draw_info = .{is_background = true});
@@ -204,25 +205,25 @@ draw_welcome_screen :: (main_area: Rect) {
         }
         if version_width < info_area.w {
             x := (info_area.w - version_width) / 2;
-            y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
-            Simp.draw_prepared_text(font, xx x, xx y, color = xx Color.UI_DIM);
+            left_y_cursor = info_area.y + info_area.h - shrink_step - font_ui_line_height;
+            Simp.draw_prepared_text(font, xx x, xx left_y_cursor, color = xx Color.UI_DIM);
 
             // Copy version when clicking on it
             {
-                version_rect := Rect.{ x, y, version_width, font_ui_line_height};
+                version_rect := Rect.{ x, left_y_cursor, version_width, font_ui_line_height};
                 version_ui_id := get_ui_id_from_loc();
                 clicked := maybe_set_hot_or_active(version_ui_id, version_rect, .PRESSABLE);
                 if clicked {
                     os_clipboard_set_text(version_text);
                     add_success_message("Version copied to clipboard", dismiss_in_seconds = 3);
                 }
-                if is_hovering_over(version_ui_id) then draw_tooltip_bottom_left("Click to copy to clipboard", Vector2.{ mouse.pointer.x, y });
+                if is_hovering_over(version_ui_id) then draw_tooltip_bottom_left("Click to copy to clipboard", Vector2.{ mouse.pointer.x, left_y_cursor });
             }
 
             date_width := Simp.prepare_text(font_ui_medium, RELEASE_DATE);
             x = (info_area.w - date_width) / 2;
-            y -= 1.5 * font_ui_big_line_height;
-            Simp.draw_prepared_text(font_ui_medium, xx x, xx y, color = xx Color.UI_DIM);
+            left_y_cursor -= 1.5 * font_ui_big_line_height;
+            Simp.draw_prepared_text(font_ui_medium, xx x, xx left_y_cursor, color = xx Color.UI_DIM);
         }
     }
 
@@ -234,6 +235,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
         SHORTCUTS_TO_DISPLAY :: Shortcut.[
             .{ .show_commands,                      "Show All Commands" },
+            .{ .switch_to_project,                  "Open or Create a Project" },
             .{ .open_file_by_name,                  "Open File By Name" },
             .{ .navigate_to_file,                   "Navigate To File" },
             .{ .switch_between_open_files,          "Switch Between Open Files" },
@@ -253,10 +255,10 @@ draw_welcome_screen :: (main_area: Rect) {
         line_height = min(line_height, key_height * 3);
 
         total_height := line_height * SHORTCUTS_TO_DISPLAY.count - key_height;
-
-        x := right_area.x;
-        y := logo_rect.y + logo_rect.h - key_height - (logo_rect.h - total_height) / 2;
-
+        
+        logo_and_info_center := (left_y_cursor + logo_rect.y + logo_rect.h) * 0.5; 
+        y := logo_and_info_center + total_height * 0.5 - key_height;
+        
         for shortcut : SHORTCUTS_TO_DISPLAY {
             key_sequence_strings := get_first_matching_key_sequence_from_action(shortcut.action);
 
@@ -278,7 +280,7 @@ draw_welcome_screen :: (main_area: Rect) {
                 }
             }
 
-            x = right_area.x + align_x - key_sequence_width;
+            x := right_area.x + align_x - key_sequence_width;
             text_y := y + padding_v * 1.5;
 
             for combo_strings: key_sequence_strings {
@@ -2952,6 +2954,15 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             };
 
+            if entry.icon {
+                icon_char := convert_utf32_to_utf8(xx entry.icon);
+                icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+                icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+                Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx Color.UI_DEFAULT);
+    
+                pen.x += xx font_icons.em_width + padding * 1.5;
+            }
+            
             // Draw name
             width := Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.highlights, color = xx Color.UI_DEFAULT, highlight_color = xx Color.LETTER_HIGHLIGHT);
 
@@ -4334,6 +4345,8 @@ start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
 #scope_export
 
 Icon :: enum u16 {
+    none :: 0x0;
+    
     // File types
     file_unknown :: 0xf15b;
     text         :: 0xf15c;
