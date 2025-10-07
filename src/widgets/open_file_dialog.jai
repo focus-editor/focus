@@ -501,11 +501,12 @@ refresh_entries :: (clear_input := true) {
     }
 
     if (mode == .save || mode == .move) && !is_empty(input.text) && path_chunks {
+        folder_path := ifx get_current_folder_path() != "/" else "";
         entry_name: string;
         if mode == .save {
-            entry_name = sprint("Save as '%/%'", get_current_folder_path(), to_string(input.text));
+            entry_name = sprint("Save as '%/%'", folder_path, to_string(input.text));
         } else {
-            entry_name = sprint("Move to '%/%'", get_current_folder_path(), to_string(input.text));
+            entry_name = sprint("Move to '%/%'", folder_path, to_string(input.text));
         }
         array_add(*entries.filtered, Entry.{
             file = File_Info.{ full_path = "", name = "", path = "", icon = .save },
@@ -549,13 +550,9 @@ get_current_folder_path :: () -> string {
         path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
         dir_path = sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
     } else {
-        if path_chunks[0] == "/" {
-            path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
-            dir_path = sprint("/%", join(..path_chunks_trimmed, separator = "/"));
-        } else {
-            dir_path = join(..path_chunks, separator = "/");
-        }
+        dir_path = join(..path_chunks, separator = "/");
     }
+    while starts_with(dir_path, "//") advance(*dir_path);
     while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
 
     return dir_path;
