@@ -254,7 +254,7 @@ base_commands := #run -> [] Command {
         cmd( "Toggle Pane Numbers",               .toggle_pane_numbers,              .Single ),
         cmd( "Toggle Indent Guides",              .toggle_indent_guides,             .Single ),
         cmd( "Toggle Fullscreen",                 .toggle_fullscreen,                .None   ),
-        cmd( "Toggle Status Bar",                 .toggle_status_bar,                .None   ),
+        cmd( "Toggle Status Bar",                 .toggle_status_bar,                .Single ),
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
         cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
