@@ -79,6 +79,7 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
+show_status_bar := true;
 draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, unique_pane_id: int) {
     assert(pane != null);
     if !is_valid(rect) return;
@@ -94,7 +95,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             redraw_requested = true;
         }
         if editor_index >= 0 {
-            draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane);
+            draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane, show_status_bar);
         }
         if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
             size := floor(config.settings.active_pane_border_width * dpi_scale);

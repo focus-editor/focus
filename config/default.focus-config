@@ -342,6 +342,8 @@ Ctrl-B                      toggle_build_panel
 
 F11                         toggle_fullscreen
 
+Ctrl-Alt-B                  toggle_status_bar
+
 Enter                       open_entry
 Ctrl-Enter                  open_entry_in_side_pane
 
