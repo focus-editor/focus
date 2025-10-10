@@ -416,6 +416,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .show_commands;                                    show_dialog(*commands_dialog);                      return true;
         case .toggle_fullscreen;                                action_toggle_fullscreen();                         return true;
+        case .toggle_status_bar;                                show_status_bar = !show_status_bar;                 return true;
 
         case .cursor_go_back;                                   action_cursor_go_back();                            return true;
         case .cursor_go_forward;                                action_cursor_go_forward();                         return true;

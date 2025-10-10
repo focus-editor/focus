@@ -42,6 +42,7 @@ ACTIONS_COMMON :: string.[
     "show_default_config",
 
     "toggle_fullscreen",
+    "toggle_status_bar",
     "toggle_build_panel",
     "toggle_build_panel_focus",
     "build_kill_running_command",

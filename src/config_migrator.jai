@@ -728,6 +728,8 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 18, "editors", "reopen_closed_editor",                       "Ctrl-Shift-T",                 "Cmd-Shift-T" },
 
     .{ 23, "editors", "keep_editor",                                "Ctrl-Alt-S Enter",             "Cmd-Opt-S Enter" },
+    
+    .{ 25, "common",  "toggle_status_bar",                         "Ctrl-Alt-B",                    "Cmd-Opt-B" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -1320,6 +1322,7 @@ Ctrl-P                      open_file_by_name
 # Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Alt-B                  toggle_status_bar
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
@@ -1428,6 +1431,7 @@ Ctrl-P                      open_file_by_name
 # Added after migration to version [2]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Alt-B                  toggle_status_bar
 Ctrl-Tab                    switch_between_open_files
 
 [[settings]]
@@ -1473,6 +1477,7 @@ F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
 # Added after migration to version [!latest!]
+Ctrl-Alt-B                  toggle_status_bar
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_in_side_pane
@@ -1605,6 +1610,7 @@ Ctrl-P                      open_file_by_name
 # Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Alt-B                  toggle_status_bar
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
@@ -2210,6 +2216,7 @@ Ctrl-Alt-P                  switch_to_project
 # Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Alt-B                  toggle_status_bar
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
