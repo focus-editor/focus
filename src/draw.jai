@@ -79,7 +79,6 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
-show_status_bar := true;
 draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, unique_pane_id: int) {
     assert(pane != null);
     if !is_valid(rect) return;
@@ -328,7 +327,7 @@ draw_user_messages :: (main_area: Rect) {
     message_rect_src := shrink(main_area, margin);
     if !is_valid(message_rect_src) return;
 
-    if config.settings.status_bar_position == .bottom then message_rect_src.y += status_bar_height;
+    if status_bar_is_drawn_at_the_bottom() then message_rect_src.y += status_bar_height;
 
     for < * user_messages {
         // Figure out message height
@@ -387,7 +386,7 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
     rect_height := cast(float) font_ui_small.character_height + 2 * padding_v;
 
     pen := bottom_left(active_editor_rect) + Vector2.{ margin, margin };
-    if config.settings.status_bar_position == .bottom && editors_get_layout() != .None then pen.y += status_bar_height;
+    if status_bar_is_drawn_at_the_bottom() then pen.y += status_bar_height;
 
     text_y := pen.y + padding_v * 1.5;
 
@@ -455,7 +454,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
 
     color_preview_rect := cut_right(active_editor_rect, active_editor_rect.w * color_preview_width, margin = 2);
     color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
-    if config.settings.status_bar_position == .bottom {
+    if status_bar_is_drawn_at_the_bottom() {
         _, color_preview_rect = cut_bottom(color_preview_rect, status_bar_height);
     }
     if !is_valid(color_preview_rect) return;
@@ -772,7 +771,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     }
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
 
-    if config.settings.status_bar_position == .bottom && editors_get_layout() != .None {
+    if status_bar_is_drawn_at_the_bottom() {
         _, build_panel_rect = cut_bottom(build_panel_rect, status_bar_height);
     }
 
@@ -871,6 +870,14 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -
     }
 
     return align_to_grid(rect), status_bar_rect, line_number_panel;
+}
+
+status_bar_is_drawn_at_the_bottom :: inline () -> bool {
+    return config.settings.status_bar_position == .bottom && show_status_bar && editors_get_layout() != .None;
+}
+
+status_bar_is_drawn_at_the_top :: inline () -> bool {
+    return config.settings.status_bar_position == .top && show_status_bar && editors_get_layout() != .None;
 }
 
 get_text_offset :: inline () -> Vector2 {
@@ -1772,7 +1779,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
         bar_rect.x -= 2 * char_x_advance;
-        if buffer_settings.status_bar_position == .top bar_rect.y -= status_bar_height;
+        if status_bar_is_drawn_at_the_top() then bar_rect.y -= status_bar_height;
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
@@ -2042,11 +2049,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     }
 
     if should_show_pane_editors(pane) {
-        draw_pane_editors(pane, main_area, status_bar_rect, text_offset, file_info_offset);
+        draw_pane_editors(pane, main_area, text_offset, file_info_offset);
     }
 }
 
-draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect, text_offset: Vector2, file_info_offset: float) {
+draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2, file_info_offset: float) {
+    if !pane.editor_ids return;
+
     margin  := floor(8 * dpi_scale);
     padding := floor(4 * dpi_scale);
 
@@ -2069,6 +2078,14 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, status_bar_rect: Rect
             _, pen = draw_file_info(buffer, 0, padding, Vector2.{}, flags = .folder, dry_run = true);
             if max_folder_name_width < pen.x then max_folder_name_width = pen.x;
         }
+    }
+
+    // Get the status bar rect even if it's hidden
+    status_bar_rect: Rect;
+    if config.settings.status_bar_position == .bottom {
+        status_bar_rect = cut_bottom(main_area, status_bar_height);
+    } else {
+        status_bar_rect = cut_top(main_area, status_bar_height);
     }
 
     // Figure out the position and dimensions of the rect
@@ -3596,8 +3613,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     bar_rect = cut_right(bar_rect, width);
     bar_rect.x -= 2 * char_x_advance;
 
-    _, buffer := get_active_editor_and_buffer();
-    if buffer && get_settings(buffer).status_bar_position == .top then bar_rect.y -= status_bar_height;
+    if status_bar_is_drawn_at_the_top() then bar_rect.y -= status_bar_height;
 
     maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
 
@@ -4361,6 +4377,9 @@ Icon :: enum u16 {
 }
 
 PANE_SPLITTER_WIDTH :: 2;
+
+
+show_status_bar := true;
 
 
 #scope_file
