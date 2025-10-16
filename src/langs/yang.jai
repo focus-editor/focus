@@ -62,7 +62,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     sanitized_string := replace(identifier_str, "-", "_");
 
     if sanitized_string.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, sanitized_string);
+        ok, kw_token := table_find(*KEYWORD_MAP, sanitized_string);
         if ok {
             token.type = kw_token.type;
             token.keyword = kw_token.keyword;
@@ -224,4 +224,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     for TYPE_KEYWORDS  { if it.count > result then result = it.count; }
     return xx result;
 }
-

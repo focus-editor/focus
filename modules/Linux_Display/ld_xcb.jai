@@ -750,7 +750,7 @@ xcb_set_cursor_from_theme :: (window: *Window, name: string) {
     xcb_check_usage(null, window);
     xw : *XCB_Window = window;
     xd := xw.display;
-    found, cursor := table_find_new(*xd.cursors, name);
+    found, cursor := table_find(*xd.cursors, name);
     if found {
         attrs: xcb_change_window_attributes_value_list_t;
         attrs.cursor = cursor;
@@ -1009,7 +1009,7 @@ XCB_Device_Info :: struct {
 }
 
 get_device_info :: (xd: *XCB_Display, device_id: xcb_input_device_id_t) -> *XCB_Device_Info {
-    found, ret := table_find_new(*xd.devices, device_id);
+    found, ret := table_find(*xd.devices, device_id);
     if found return ret;
 
     ret = null;
@@ -1033,7 +1033,7 @@ get_device_info :: (xd: *XCB_Display, device_id: xcb_input_device_id_t) -> *XCB_
 
         info := infos_it.data;
 
-        ok, old_dev := table_find_new(*xd.devices, info.deviceid);
+        ok, old_dev := table_find(*xd.devices, info.deviceid);
         if ok {
             ret = old_dev;
             continue;
@@ -1160,7 +1160,7 @@ load_cursors :: (xd: *XCB_Display) -> bool {
 }
 
 atom_name :: (xd: *XCB_Display, atom: xcb_atom_t) -> string {
-    found, name := table_find_new(*xd.atom_names, atom);
+    found, name := table_find(*xd.atom_names, atom);
     if found return name;
 
     xcb_err: *xcb_generic_error_t;

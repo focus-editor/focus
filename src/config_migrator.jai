@@ -274,7 +274,7 @@ DONE
                 if !table_contains(*config_info.colors_present, added.name) && valid_version(added.version, config_info.version) {
                     value := added.default;
                     if added.value_from {
-                        success, source_value := table_find_new(*config_info.colors_present, added.value_from);
+                        success, source_value := table_find(*config_info.colors_present, added.value_from);
                         if success && source_value then value = source_value;
                     }
                     padding := get_tmp_spaces(COLOR_VALUES_INDENT - added.name.count - 1);
@@ -406,7 +406,7 @@ DONE
                                         if valid_version(%3, config_info.version) {
                                             force_value_from := "%4";
                                             if force_value_from {
-                                                success, source_value := table_find_new(*config_info.colors_present, force_value_from);
+                                                success, source_value := table_find(*config_info.colors_present, force_value_from);
                                                 if success && source_value then color_value = source_value;
                                             }
                                             padding  := get_tmp_spaces(COLOR_VALUES_INDENT - "%2".count - 1);

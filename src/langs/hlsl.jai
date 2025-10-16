@@ -94,7 +94,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier_str);
+        ok, kw_token := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 
@@ -107,7 +107,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
         // They are also case insensitive
         pure_semantic_name = to_lower_copy(pure_semantic_name,, allocator = temp);
 
-        ok, semantic := table_find_new(*SEMANTICS_MAP, pure_semantic_name);
+        ok, semantic := table_find(*SEMANTICS_MAP, pure_semantic_name);
         if ok { token.type = .keyword; token.semantic = semantic; return; }
     }
 }
@@ -247,7 +247,7 @@ parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    ok, directive := table_find_new(*DIRECTIVES_MAP, directive_str);
+    ok, directive := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
         token.type = .directive;
         token.directive = directive;
@@ -659,4 +659,3 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
     for PREPROCESSOR_DIRECTIVES { if it.count > result then result = it.count; }
     return xx result;
 }
-

@@ -161,7 +161,7 @@ parse_identifier :: (using tokenizer: *Lua_Tokenizer, token: *Token) {
     ident := read_identifier_string(tokenizer);
 
     if ident.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, ident);
+        ok, kw_token := table_find(*KEYWORD_MAP, ident);
         if ok {
             token.type    = kw_token.type;
             token.keyword = kw_token.keyword;

@@ -183,7 +183,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 
     if ident.count <= MAX_OPCODE_LENGTH {
-        ok, opcode := table_find_new(*OPCODE_MAP, ident);
+        ok, opcode := table_find(*OPCODE_MAP, ident);
         if ok {
             token.type = .keyword;
             token.opcode = opcode;

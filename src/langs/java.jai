@@ -126,7 +126,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier_str);
+        ok, kw_token := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
@@ -542,4 +542,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
     return xx result;
 }
-

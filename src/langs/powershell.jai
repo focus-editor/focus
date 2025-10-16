@@ -153,7 +153,7 @@ parse_identifier_or_keyword :: (using tokenizer: *Tokenizer, token: *Token) {
     identifier := read_identifier_string(tokenizer);
 
     if identifier.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier);
+        ok, kw_token := table_find(*KEYWORD_MAP, identifier);
         if ok {
             token.type = kw_token.type;
             token.keyword = kw_token.keyword;
@@ -195,7 +195,7 @@ parse_dollar_variable :: (using tokenizer: *Tokenizer, token: *Token) {
     variable_name := read_identifier_string(tokenizer);
 
     // Check whether to treat it like a special variable or a regular one.
-    ok, kw_token := table_find_new(*SPECIAL_VARIABLES_MAP, variable_name);
+    ok, kw_token := table_find(*SPECIAL_VARIABLES_MAP, variable_name);
     if ok {
         token.type = kw_token.type;
         token.special_variable = kw_token.special_variable;
@@ -259,7 +259,7 @@ parse_hyphenated :: (using tokenizer: *Tokenizer, token: *Token) {
     word := read_identifier_string(tokenizer);
 
     // Check if it's a known operator.
-    ok, op := table_find_new(*OPERATOR_MAP, word);
+    ok, op := table_find(*OPERATOR_MAP, word);
     if ok {
         token.type = .operation;
         token.operation = op;

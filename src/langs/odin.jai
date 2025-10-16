@@ -241,7 +241,7 @@ parse_identifier :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier_str);
+        ok, kw_token := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
@@ -252,7 +252,7 @@ maybe_parse_attribute :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     attr_str.count = token.len;
 
     if attr_str.count > MAX_ATTRIBUTE_LENGTH then return;
-    ok, attr := table_find_new(*ATTRIBUTES_MAP, attr_str);
+    ok, attr := table_find(*ATTRIBUTES_MAP, attr_str);
     if !ok then return;
 
     token.type = .attribute;
@@ -344,7 +344,7 @@ parse_directive :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    ok, directive := table_find_new(*DIRECTIVES_MAP, directive_str);
+    ok, directive := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
         token.type = .directive;
         token.directive = directive;
