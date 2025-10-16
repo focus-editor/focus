@@ -353,7 +353,7 @@ settings_info: struct {
         for m.system_libraries
             array_add(*link_command, crt_lib_to_static(it));
         for m.user_libraries {
-            if ends_with(it, "freetype.lib")  array_add(*link_command, "modules/freetype/windows/freetype.lib");
+            if ends_with(it, "freetype.lib")  array_add(*link_command, "modules/freetype-bin/windows/freetype.lib");
             else  array_add(*link_command, it);
         }
 

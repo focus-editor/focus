@@ -146,7 +146,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token, check_for_keywo
     identifier := read_identifier_string(tokenizer);
 
     if check_for_keyword && identifier.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, identifier);
+        ok, kw_token := table_find(*KEYWORD_MAP, identifier);
 
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
@@ -368,7 +368,7 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive.count > MAX_DIRECTIVE_LENGTH return;
-    ok, token_directive := table_find_new(*DIRECTIVES_MAP, directive);
+    ok, token_directive := table_find(*DIRECTIVES_MAP, directive);
     if ok {
         token.type = .directive;
         token.directive = token_directive;
@@ -791,4 +791,3 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
     for DIRECTIVES { if it.count > result then result = it.count; }
     return xx result;
 }
-

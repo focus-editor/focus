@@ -61,7 +61,7 @@ parse_value_keyword :: (using tokenizer: *Tokenizer, token: *Token) {
     value_str := read_utf8_identifier_string(tokenizer);
 
     if value_str.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find_new(*KEYWORD_MAP, value_str);
+        ok, kw_token := table_find(*KEYWORD_MAP, value_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
@@ -227,4 +227,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     for VALUE_KEYWORDS { if it.count > result then result = it.count; }
     return xx result;
 }
-

@@ -773,7 +773,7 @@ glyph_hash :: inline (utf32: u32, anti_aliasing: Font_Anti_Aliasing, hinting: bo
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     hash_key := glyph_hash(utf32, font_anti_aliasing, font_hinting);
 
-    success, data := table_find_new(*font.glyph_lookup, hash_key);
+    success, data := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
 
     if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
@@ -816,7 +816,7 @@ temporary_array_reset :: (array: *[..] $T) {
     array.data      = null;
 }
 
-#import "freetype-2.12.1";
+#import "freetype";
 #import "Hash_Table";
 #import "Hash";
 #import "Unicode";

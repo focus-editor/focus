@@ -166,7 +166,7 @@ should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool
 }
 
 is_known_file_extension :: inline (extension: string) -> bool, Known_Extension_File_Type {
-    ok, type := table_find_new(*known_extensions_table, extension);
+    ok, type := table_find(*known_extensions_table, extension);
     return ok, type;
 }
 

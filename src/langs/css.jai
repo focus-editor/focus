@@ -102,7 +102,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     if !(next_token.type == .punctuation && next_token.punctuation == .l_paren) {
         // Maybe it's a tag
         if identifier_str.count <= MAX_TAG_LENGTH {
-            ok, token_type := table_find_new(*TAG_MAP, identifier_str);
+            ok, token_type := table_find(*TAG_MAP, identifier_str);
             if ok { token.type = token_type; return; }
         }
     }

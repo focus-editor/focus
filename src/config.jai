@@ -606,7 +606,7 @@ load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_ital
 
     font_path := find_font_by_name(name);
     if font_path {
-        found, cached_font := table_find_new(*font_cache, font_path);
+        found, cached_font := table_find(*font_cache, font_path);
         if found return cached_font, true;
 
         font_data, success := read_entire_file(font_path);

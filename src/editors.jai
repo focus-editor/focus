@@ -2747,7 +2747,7 @@ align_cursors :: (using editor: *Editor, buffer: *Buffer) {
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
 
         // Keep selections aligned
-        if it.pos < it.sel Swap(*it.pos, *it.sel); // Shouldn't be necessary since it's already reverted in the merge step
+        if it.pos < it.sel swap(*it.pos, *it.sel); // Shouldn't be necessary since it's already reverted in the merge step
         it.pos += xx (str_before.count + str_after.count);
         it.sel = it.pos - largest_selection;
         offset_delta += str_before.count + str_after.count;

@@ -436,7 +436,7 @@ x11_set_icon_from_raw_data :: (window: *Window, data: *u8, width: u32, height: u
 x11_set_cursor_from_theme :: (window: *Window, name: string) {
     win: *X11_Window = window;
     if xcursor_initialized {
-        found, cursor := table_find_new(*win.display.x_cursors, name);
+        found, cursor := table_find(*win.display.x_cursors, name);
         if found {
             X11.XDefineCursor(win.display.handle, win.handle, cursor);
         }
