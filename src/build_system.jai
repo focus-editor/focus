@@ -676,21 +676,15 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         {
             starts := s64.[xx file.data, xx msg.data, xx line.data, xx col.data];
             ends   := s64.[xx (file.data + file.count), xx (msg.data + msg.count), xx (line.data + line.count), xx (col.data + col.count)];
-
-            max_s64_in_array :: (array: [] s64) -> s64 {
-                max := 0;  // can't go below that
-                for array { if max < it then max = it; }
-                return max;
-            }
-
-            min_s64_in_array :: (array: [] s64) -> s64 {
-                min := S64_MAX;
-                for array { if min > it then min = it; }
-                return min;
-            }
-
-            build_error.error_info_start_offset = xx (min_s64_in_array(starts) - cast(s64) buffer.bytes.data);
-            build_error.error_info_end_offset   = xx (max_s64_in_array(ends)   - cast(s64) buffer.bytes.data);
+            
+            start_offset: s64 = xx buffer.bytes.data;
+            for starts { if it >= start_offset then start_offset = it; }
+            
+            end_offset: s64 = (cast(s64) buffer.bytes.data) + buffer.bytes.count;
+            for ends { if it > start_offset && it < end_offset then end_offset = it; }
+            
+            build_error.error_info_start_offset = xx (start_offset - cast(s64) buffer.bytes.data);
+            build_error.error_info_end_offset   = xx (end_offset   - cast(s64) buffer.bytes.data);
         }
 
         array_add(*last_command_result.build_errors, build_error);
