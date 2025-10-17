@@ -1429,6 +1429,35 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind));
         }
 
+        // Draw build errors
+		if !as_build_panel {
+			for region : buffer.errors {
+				if region.end   < visible_offset_range.start continue;
+				if region.start > visible_offset_range.end   break;
+
+				// @ToDo: Add a config option to highlight the entire line.
+				//
+				// start := offset_to_coords(editor, buffer, region.start);
+				// end   := offset_to_coords(editor, buffer, region.end);
+				// lines := end.line - start.line;
+				// x_offset := max((viewport.left / char_x_advance) - 1, 0);
+				
+				// line_rect := Rect.{
+				// 	x = text_origin.x + (x_offset * char_x_advance),
+				// 	y = text_origin.y - (start.line + lines) * line_height,
+				// 	w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
+				// 	h = min(lines, 1) * line_height
+				// };
+				// draw_rect(line_rect, get_region_color(region.kind), extra_draw_info = .{is_background = true});
+				
+				range := Coords_Range.{
+					start = offset_to_coords(editor, buffer, region.start),
+					end   = offset_to_coords(editor, buffer, region.end),
+				};
+				draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind));
+			}
+		}
+
         cursors_active := editor_is_active && active_global_widget == .editors;
 
         if !search_bar_is_open(editor) {
@@ -1660,6 +1689,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
         total_scrollable_lines := content_height / line_height;
 
+        if !is_empty(buffer.errors) {
+			// Buffer errors
+			for buffer.errors {
+			    if (it.end > it.start) {
+				    start := offset_to_coords(editor, buffer, it.start);
+				    pos_from_top := rect.h * cast(float) start.line / total_scrollable_lines;
+				    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
+				    draw_rect_raw(highlight_mark_rect, Color.REGION_ERROR);
+				}
+			}
+		}
+		
         if !is_empty(search_bar.results) {
             // Search results
             for search_bar.results {

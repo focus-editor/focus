@@ -719,6 +719,31 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         tokenize(buffer, start, end - start);
     }
 
+    // Update buffer errors regions
+    for *buffer : open_buffers {
+        reset_keeping_memory(*buffer.errors);
+        for error : last_command_result.build_errors {
+            buffer_id := find_buffer_id_by_path(error.file);
+            if buffer_id > 0 && *open_buffers[buffer_id] == buffer {
+                line_starts := to_view(buffer.line_starts);
+                line_start: s32 = get_real_line_start_offset(buffer, error.line - 1);
+                line_end: s32 = get_real_line_end_offset(buffer, error.line - 1);
+                
+                // We don't use error.col because it can be anywhere on the line. it's better to just highlight the entire text.
+                potential_code_block := trim_both_sides(xx to_view(buffer.bytes, line_start, line_end - line_start));
+                start := cast(s32) (potential_code_block.data - buffer.bytes.data);
+                end := start + cast(s32) potential_code_block.count;
+                
+                error_region := Buffer_Region.{
+                    start = start,
+                    end = end,
+                    kind = .error
+                };
+                add(*buffer.errors, error_region);
+            }
+        }
+    }
+
     #if DEBUG_BUILD_ERRORS for build_errors print("%\n", it);
 }
 
