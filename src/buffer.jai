@@ -68,7 +68,9 @@ delete_range_raw :: (using buffer: *Buffer, start: s32, end: s32, $notify := tru
     lock(*buffer.content_lock);
     delete_range(*bytes, start, len);
     unlock(*buffer.content_lock);
-
+    
+    update_regions(buffer, .{ start, end }, -len);
+    
     #if notify add_edit_notification(buffer, start, end - start, 0);
 
     buffer.dirty = true;
@@ -82,6 +84,8 @@ insert_string_raw :: (buffer: *Buffer, offset: s32, str: string, $notify := true
     lock(*buffer.content_lock);
     insert_at(*buffer.bytes, offset, bytes);
     unlock(*buffer.content_lock);
+
+    update_regions(buffer, .{ offset, offset }, xx str.count);
 
     #if notify add_edit_notification(buffer, offset, 0, str.count);
 
@@ -736,6 +740,40 @@ find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
 offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {
     token := find_closest_indentation_token(tokens, offset);
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
+}
+
+update_region :: (region: *Buffer_Region, range: Offset_Range, change: s32)
+{
+    if range.start <= region.end && range.end <= region.start {
+        // before
+        region.start = region.start + change;
+        region.end = region.end + change;
+    }
+    else if range.start < region.start && range.end > region.end {
+        // outer
+        region.start = range.start;
+        region.end = 0;
+    }
+    else if range.start >= region.start && range.end < region.end {
+        // inner
+        region.end = region.end + change;
+    }
+    else if range.start <= region.start && range.end <= region.start {
+        // left overlapped
+        region.start = region.start + change;
+        region.end = region.end + change;
+    }
+    else if range.start < region.end && range.end >= region.end {
+        // right overlapped
+        region.end = region.end + change;
+    }
+}
+
+update_regions :: (buffer: *Buffer, range: Offset_Range, change: s32) {
+    // Update error regions
+    for *error : buffer.errors
+        update_region(error, range, change);
+    // @ToDo: Add other types of regions here.
 }
 
 save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
@@ -1806,6 +1844,7 @@ Buffer :: struct {
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
     tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
     regions:     Array(Buffer_Region); // for highlighting parts of buffer
+    errors:      Array(Buffer_Region); // for highlighting errors
 
     // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
     // Eventually we'll want to revisit all this and make it not allocate as much.
