@@ -90,7 +90,7 @@
         assert(!error);
     }
 
-    lock_rwlock_scoped :: (rwlock: *RWLock, $read := false) #expand {
+    lock_scoped :: (rwlock: *RWLock, $read := false) #expand {
         lock(rwlock, read);
         `defer unlock(rwlock, read);
     }
