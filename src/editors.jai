@@ -538,18 +538,21 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
                 }
             }
 
-            for *region : buffer.errors {
-                // Adjust or remove regions
-                if edit.start <= region.start && edit.end <= region.start {
-                    region.start = region.start + edit.delta;
-                    region.end = region.end + edit.delta;
-                }
-                else if (edit.start > region.start && edit.end < region.end  ) ||
-                        (edit.start < region.start && edit.end > region.start) ||
-                        (edit.start < region.end   && edit.end > region.start) ||
-                        (edit.start < region.end   && edit.end > region.end  ) {
-                    region.start = 0;
-                    region.end = 0;
+            if edit.editor_id != editor_id // only if we haven't updated this buffer before.
+            {
+                for *region : buffer.errors {
+                    // Adjust or remove regions
+                    if edit.start <= region.start && edit.end <= region.start {
+                        region.start = region.start + edit.delta;
+                        region.end = region.end + edit.delta;
+                    }
+                    else if (edit.start > region.start && edit.end < region.end  ) ||
+                            (edit.start < region.start && edit.end > region.start) ||
+                            (edit.start < region.end   && edit.end > region.start) ||
+                            (edit.start < region.end   && edit.end > region.end  ) {
+                        region.start = 0;
+                        region.end = 0;
+                    }
                 }
             }
         }
