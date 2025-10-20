@@ -192,8 +192,8 @@ apply_edit_notifications :: () {
 
 apply_edit_to_history :: (history: *Editor_History, edit: Buffer.Edit_Notification) {
     for * frame : history {
-        if frame.pos >= edit.offset then frame.pos = max(frame.pos + edit.delta, edit.offset);
-        if frame.sel >= edit.offset then frame.sel = max(frame.sel + edit.delta, edit.offset);
+        if frame.pos >= edit.start then frame.pos = max(frame.pos + edit.delta, edit.start);
+        if frame.sel >= edit.start then frame.sel = max(frame.sel + edit.delta, edit.start);
     }
 }
 

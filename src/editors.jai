@@ -525,15 +525,32 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         // need to be adjusted. The viewport glue point also needs to move.
         for edit : buffer_edit_notifications {
             if edit.buffer_id != buffer_id continue;  // this is a notification for a different buffer
-            if edit.editor_id == editor_id continue;  // this editor's cursors have already moved
 
-            // Adjust viewport
-            using editor.viewport.glue_point;
-            if buffer_pos >= edit.offset then buffer_pos = max(buffer_pos + edit.delta, edit.offset);
+            if edit.editor_id != editor_id // only if this editor's cursors haven't already moved
+            {
+                // Adjust viewport
+                using editor.viewport.glue_point;
+                if buffer_pos >= edit.start then buffer_pos = max(buffer_pos + edit.delta, edit.start);
 
-            for * cursor : editor.cursors {
-                if cursor.pos >= edit.offset then cursor.pos = max(cursor.pos + edit.delta, edit.offset);
-                if cursor.sel >= edit.offset then cursor.sel = max(cursor.sel + edit.delta, edit.offset);
+                for * cursor : editor.cursors {
+                    if cursor.pos >= edit.start then cursor.pos = max(cursor.pos + edit.delta, edit.start);
+                    if cursor.sel >= edit.start then cursor.sel = max(cursor.sel + edit.delta, edit.start);
+                }
+            }
+
+            for *region : buffer.errors {
+                // Adjust or remove regions
+                if edit.start <= region.start && edit.end <= region.start {
+                    region.start = region.start + edit.delta;
+                    region.end = region.end + edit.delta;
+                }
+                else if (edit.start > region.start && edit.end < region.end  ) ||
+                        (edit.start < region.start && edit.end > region.start) ||
+                        (edit.start < region.end   && edit.end > region.start) ||
+                        (edit.start < region.end   && edit.end > region.end  ) {
+                    region.start = 0;
+                    region.end = 0;
+                }
             }
         }
         organise_cursors(editor);
@@ -1499,6 +1516,11 @@ action_escape :: (editor: *Editor) {
         reset_search_results(*editor.search_bar);
         editor.refresh_selection = true;
         return;
+    }
+
+    buffer := *open_buffers[editor.buffer_id];
+    if !is_empty(*buffer.errors) {
+        reset(*buffer.errors);
     }
 
     remove_additional_cursors(editor);  // this will clear selection

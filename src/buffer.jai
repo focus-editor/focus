@@ -68,10 +68,8 @@ delete_range_raw :: (using buffer: *Buffer, start: s32, end: s32, $notify := tru
     lock(*buffer.content_lock);
     delete_range(*bytes, start, len);
     unlock(*buffer.content_lock);
-    
-    update_regions(buffer, .{ start, end }, -len);
-    
-    #if notify add_edit_notification(buffer, start, end - start, 0);
+
+    #if notify add_edit_notification(buffer, start, end, -len);
 
     buffer.dirty = true;
 }
@@ -85,9 +83,7 @@ insert_string_raw :: (buffer: *Buffer, offset: s32, str: string, $notify := true
     insert_at(*buffer.bytes, offset, bytes);
     unlock(*buffer.content_lock);
 
-    update_regions(buffer, .{ offset, offset }, xx str.count);
-
-    #if notify add_edit_notification(buffer, offset, 0, str.count);
+    #if notify add_edit_notification(buffer, offset, offset, cast(s32) str.count);
 
     buffer.dirty = true;
 }
@@ -95,7 +91,7 @@ insert_string_raw :: (buffer: *Buffer, offset: s32, str: string, $notify := true
 replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     delete_range_raw(buffer, start, end, notify = false);
     insert_string_raw(buffer, start, str, notify = false);
-    add_edit_notification(buffer, start, end - start, str.count);
+    add_edit_notification(buffer, start, end, (cast(s32) str.count) - (end - start));
 }
 
 get_char_at_offset :: (using buffer: Buffer, offset: s32) -> u32 {
@@ -740,40 +736,6 @@ find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
 offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {
     token := find_closest_indentation_token(tokens, offset);
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
-}
-
-update_region :: (region: *Buffer_Region, range: Offset_Range, change: s32)
-{
-    if range.start <= region.end && range.end <= region.start {
-        // before
-        region.start = region.start + change;
-        region.end = region.end + change;
-    }
-    else if range.start < region.start && range.end > region.end {
-        // outer
-        region.start = range.start;
-        region.end = 0;
-    }
-    else if range.start >= region.start && range.end < region.end {
-        // inner
-        region.end = region.end + change;
-    }
-    else if range.start <= region.start && range.end <= region.start {
-        // left overlapped
-        region.start = region.start + change;
-        region.end = region.end + change;
-    }
-    else if range.start < region.end && range.end >= region.end {
-        // right overlapped
-        region.end = region.end + change;
-    }
-}
-
-update_regions :: (buffer: *Buffer, range: Offset_Range, change: s32) {
-    // Update error regions
-    for *error : buffer.errors
-        update_region(error, range, change);
-    // @ToDo: Add other types of regions here.
 }
 
 save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
@@ -1740,11 +1702,25 @@ get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at
     return lang_names;
 }
 
+add_error_regions :: (buffer: *Buffer)
+{
+    lock(*buffer.content_lock);
+    reset(*buffer.errors);
+    unlock(*buffer.content_lock);
+}
+
+reset_errors :: (buffer: *Buffer)
+{
+    lock(*buffer.content_lock);
+    reset(*buffer.errors);
+    unlock(*buffer.content_lock);
+}
+
 #scope_file
 
 Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
-add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
+add_edit_notification :: (buffer: *Buffer, start: s32, end: s32, delta: s32) {
     editor_id := context.current_editor_id;
     buffer_id := context.current_buffer_id;
 
@@ -1760,16 +1736,15 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
     notification := Buffer.Edit_Notification.{
         buffer_id = cast(s32) buffer_id,
         editor_id = cast(s32) editor_id,
-        offset    = cast(s32) (offset + min(old_count, new_count)),
-        delta     = cast(s32) (new_count - old_count),
+        start     = start,
+        end       = end,
+        delta     = delta,
     };
 
     history_add_edit_notification_to_batch(notification);
 
-    if buffer.num_editors_open >= 2 {
-        // Notify other editors
-        add(*buffer_edit_notifications, notification);
-    }
+    // Notify other editors
+    add(*buffer_edit_notifications, notification);
 }
 
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
@@ -1941,7 +1916,7 @@ Buffer :: struct {
     Edit_Notification :: struct {
         buffer_id: s32;
         editor_id: s32;
-        offset:    s32;
+        using range: Offset_Range;
         delta:     s32;
     }
 

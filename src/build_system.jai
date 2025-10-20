@@ -676,13 +676,13 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         {
             starts := s64.[xx file.data, xx msg.data, xx line.data, xx col.data];
             ends   := s64.[xx (file.data + file.count), xx (msg.data + msg.count), xx (line.data + line.count), xx (col.data + col.count)];
-            
+
             start_offset: s64 = xx buffer.bytes.data;
             for starts { if it >= start_offset then start_offset = it; }
-            
+
             end_offset: s64 = (cast(s64) buffer.bytes.data) + buffer.bytes.count;
             for ends { if it > start_offset && it < end_offset then end_offset = it; }
-            
+
             build_error.error_info_start_offset = xx (start_offset - cast(s64) buffer.bytes.data);
             build_error.error_info_end_offset   = xx (end_offset   - cast(s64) buffer.bytes.data);
         }
@@ -722,24 +722,34 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
     // Update buffer errors regions
     for *buffer : open_buffers {
         reset_keeping_memory(*buffer.errors);
+
         for error : last_command_result.build_errors {
             buffer_id := find_buffer_id_by_path(error.file);
+
             if buffer_id > 0 && *open_buffers[buffer_id] == buffer {
                 line_starts := to_view(buffer.line_starts);
                 line_start: s32 = get_real_line_start_offset(buffer, error.line - 1);
                 line_end: s32 = get_real_line_end_offset(buffer, error.line - 1);
-                
-                // We don't use error.col because it can be anywhere on the line. it's better to just highlight the entire text.
-                potential_code_block := trim_both_sides(xx to_view(buffer.bytes, line_start, line_end - line_start));
-                start := cast(s32) (potential_code_block.data - buffer.bytes.data);
-                end := start + cast(s32) potential_code_block.count;
-                
-                error_region := Buffer_Region.{
+
+                // We don't use error.col because it can be anywhere on the line. It's better to just highlight the entire text.
+                code_block := trim_both_sides(xx to_view(buffer.bytes, line_start, line_end - line_start));
+
+                start := line_start;
+                end := line_start;
+                // It's possible the code block is empty.
+                if (code_block.data != null) {
+                    start = cast(s32) (code_block.data - buffer.bytes.data);
+                    end = start + cast(s32) code_block.count;
+                }
+
+                region := Buffer_Region.{
                     start = start,
                     end = end,
+                    note = code_block,
                     kind = .error
                 };
-                add(*buffer.errors, error_region);
+
+                add(*buffer.errors, region);
             }
         }
     }
