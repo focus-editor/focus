@@ -40,6 +40,12 @@ build :: () {
     build_dir := "build_debug";
     options.output_executable_name = "focus";
 
+    success:, plugins_to_create:, args = parse_plugin_arguments(args);
+    if !success {
+        compiler_report("Failed to parse plugin arguments.\n");
+        exit(1);
+    }
+
     for arg: args {
         if arg == {
           case "release";
@@ -83,7 +89,18 @@ build :: () {
         }
     }
 
-    compiler_begin_intercept(w);
+    success = init_plugins(plugins_to_create, *plugins, w);
+    if !success {
+        compiler_report("A plugin init() failed. Exiting.\n");
+        exit(1);
+    }
+
+    intercept_flags: Intercept_Flags;
+    for plugins if it.before_intercept it.before_intercept(it, *intercept_flags);
+
+    compiler_begin_intercept(w, intercept_flags);
+
+    for plugins if it.add_source it.add_source(it);
 
     add_build_file("src/main.jai", w);
 
@@ -106,6 +123,9 @@ build :: () {
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
+
+        for plugins if it.message it.message(it, message);
+
         if message.kind == {
             case .TYPECHECKED;
                 if options.output_type != .NO_OUTPUT {
@@ -144,6 +164,9 @@ build :: () {
     }
 
     compiler_end_intercept(w);
+
+    for plugins if it.finish   it.finish  (it);
+    for plugins if it.shutdown it.shutdown(it);
 
     // Don't try to set icon or manifest if we failed compilation
     if failed then return;
@@ -310,9 +333,12 @@ settings_info: struct {
     }
 }
 
+plugins: [..] *Metaprogram_Plugin;
+
 #import "Compiler";
 #import "Basic";
 #import "File";
+#import "Metaprogram_Plugins";
 #import "Process";
 #import "String";
 
