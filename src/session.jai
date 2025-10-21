@@ -229,6 +229,9 @@ deinit_logger :: () {
 
     file_close(*logger_data.log_file);
     file_close(*logger_data.log_error_file);
+
+    // Some plugins, such as Iprof, will log after our session logger has been closed.
+    context.logger = runtime_support_default_logger;
 }
 
 session_notify_modified_buffer :: (buffer_id: s64) {
