@@ -115,7 +115,7 @@ platform_data_dir :: () -> string {
     #if DEBUG {
         data_dir = sprint("%/debug", data_dir);
     }
-    make_directory_if_it_does_not_exist(data_dir);
+    make_directory_if_it_does_not_exist(data_dir, true);
 
     return data_dir;
 }
@@ -125,7 +125,7 @@ platform_config_dir :: () -> string {
     #if DEBUG {
         config_dir = sprint("%/debug", config_dir);
     }
-    make_directory_if_it_does_not_exist(config_dir);
+    make_directory_if_it_does_not_exist(config_dir, true);
 
     return config_dir;
 }
