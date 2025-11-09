@@ -1287,7 +1287,7 @@ X11_Lib :: struct #type_info_no_size_complaint {
         _NET_WM_NAME                    : Atom;
         _NET_WM_ICON_NAME               : Atom;
 
-        _DUMMY : Atom; @opts(actual_name=JXSelectionWindowProperty)
+        _DUMMY : Atom; @opts(actual_name=JXSelectionWindowProperty,must_exist=false)
     }
 
     Xdnd_Stage :: enum {
