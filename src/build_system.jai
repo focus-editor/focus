@@ -609,7 +609,7 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
     // - but if it's missing because it's shifted away by printing too much, fall back to 0
     // NOTE: we used to save output ranges of every command, but that wasn't very robust when the build output limit was reached
     output_range := Offset_Range.{ start = 0, end = buffer.bytes.count };
-    for #v2 < buffer.regions {
+    for < buffer.regions {
         if it.kind == .header {
             output_range.start = it.range.end;
             break;

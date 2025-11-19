@@ -15,7 +15,7 @@ Switch_To_Project_Dialog :: struct {
 #scope_file
 
 open_selected_project :: (_: Editor_Placement) {
-    hide_dialog(*switch_to_project_dialog);
+    hide_dialog(switch_to_project_dialog);
 
     using switch_to_project_dialog;
     if selected >= filtered.count return;

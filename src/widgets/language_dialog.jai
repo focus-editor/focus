@@ -16,7 +16,7 @@ Language_Dialog :: struct {
 
 apply_selected_language :: (_: Editor_Placement) {
     using language_dialog;
-    defer hide_dialog(*language_dialog);
+    defer hide_dialog(language_dialog);
 
     if build_panel_is_active() return;  // shouldn't ever be active
 
