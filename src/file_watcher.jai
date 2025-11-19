@@ -12,7 +12,7 @@ init_file_watcher :: () {
     if !init(*watchers.external_watcher, file_changed_callback, watch_recursively = false) {
         add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
         watchers.initialized = false;
-        deinit(*watchers.project_watcher);
+        deinit(watchers.project_watcher);
         return;
     }
 

@@ -3,7 +3,7 @@ commands_dialog_handle_event :: (event: Input.Event) -> handled: bool {
 }
 
 commands_execute_selected :: (placement: Editor_Placement = .in_place) {
-    hide_dialog(*commands_dialog);
+    hide_dialog(commands_dialog);
 
     using commands_dialog;
     if selected >= filtered.count return;
@@ -50,7 +50,7 @@ commands_open_in_pane :: (number: s64) {
         case;                                                   handled = false;
     }
 
-    hide_dialog(*commands_dialog);
+    hide_dialog(commands_dialog);
 }
 
 commands_refresh_after_config_change :: () {

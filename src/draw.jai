@@ -1109,7 +1109,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 if mouse_coords.line >= editor_initial_middle_mouse_coords.line {
                     for   editor_initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 } else {
-                    for #v2 < mouse_coords.line..editor_initial_middle_mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                    for < mouse_coords.line..editor_initial_middle_mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 }
             }
 
@@ -2559,7 +2559,7 @@ draw_open_file_dialog :: () {
                 case .navigate;
                     label = ifx !path_chunks then " Navigate to file" else "";
                 case .save;
-                    label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
+                    label = tprint(" Choose where to save '%'", get_buffer_name(open_buffers[buffer_id_to_save]));
                 case .move;
                     label = " Move to";
             }

@@ -705,7 +705,7 @@ find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
 
     balance := 0;
     if direction < 0 {
-        for #v2 < i : 0 .. pos {
+        for < i : 0 .. pos {
             if tokens[i] != .punctuation continue;
 
             byte := bytes[i];
@@ -1410,7 +1410,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     // E.g. if we have some 2-space indents and some 4-space indents, we might want to count those 4-space indents in favour of 2 because 2 is the common denominator.
     // However, we don't want to do this if there's one 2-space indent and two hundred 4-space indents because it's likely that the 2 space indent is just an exception.
     DIVISOR_RATIO :: 0.1;  // example: if the number of 2-space indents divided by the number of 4 space indents is greater than this ratio, we compress to 2 spaces
-    for #v2 < * smaller_indent, i : non_zero_indents {
+    for < * smaller_indent, i : non_zero_indents {
         if smaller_indent.level <= 1 continue;  // if we allowed 1 here it would compress everything
 
         for j : i+1 .. non_zero_indents.count-1 {
