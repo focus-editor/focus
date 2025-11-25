@@ -408,10 +408,8 @@ parse_slash_or_comment :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
-            if t >= max_t  return;
-
-            while t + 1 < max_t {
-                if t.* == #char "*" && (t + 1).* == #char "/" {
+            while t < max_t {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                     t += 2;
                     break;
                 }
