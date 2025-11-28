@@ -743,7 +743,7 @@ DIRECTIVES :: string.[
     "dump", "dynamic_specialize", "elsewhere", "expand", "file", "filepath", "foreign", "library", "system_library",
     "if", "ifx", "import", "insert", "insert_internal", "intrinsic", "line", "load",
     "location", "modify", "module_parameters", "must", "no_abc", "no_aoc", "no_alias", "no_context", "no_padding", "no_reset",
-    "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
+    "overlay", "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
     "type_info_no_size_complaint", "type_info_none", "type_info_procedures_are_void_pointers",
     "compile_time", "no_debug", "procedure_name", "discard", "entry_point", "Context", "exists",
