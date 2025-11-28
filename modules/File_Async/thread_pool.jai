@@ -416,7 +416,7 @@ worker_pthread_start :: (arg: *void, $User_Data: Type) -> *void #c_call {
     #if OS == .MACOS then setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_IMPORTANT);
 
     // Hopefully our context is now good to go!
-    push_context *td.thread_context {
+    push_context td.thread_context {
         worker_thread_start(td.queue, td.thread_id);
     }
     return null;
