@@ -136,16 +136,9 @@ x11_wait_for_events :: (display: *Display) {
 
     x11_display: *X11_Display = display;
     xev: X11.XEvent;
-    needs_flush := true;
-    while true {
-        // If this returns non-zero, we already know for a fact that there are some
-        // events that we need to handle, so just don't bother with a poll
-        if X11.XQLength(x11_display.handle) {
-            break;
-        }
 
-        if needs_flush X11.XFlush(x11_display.handle);
-
+    done := false;
+    while !done {
         pfd: [3]pollfd;
         pfd[0].fd = x11_display.file_descriptor;
         pfd[0].events = POLLIN;
@@ -177,26 +170,17 @@ x11_wait_for_events :: (display: *Display) {
 
         if pfd[2].revents & POLLIN {
             consume_loop_wakeup_event(display);
-            break;
+            done = true;
         }
 
         if pfd[1].revents & POLLIN {
             timers_tick();
-            break;
+            done = true;
         }
 
         if pfd[0].revents & POLLIN {
-            queue_length := X11.XPending(x11_display.handle);
-
-            if queue_length == 0 {
-                // We don't need to do XFlush at the start of the next wait iteration
-                // because XPending does one if the queue is empty
-                needs_flush = false;
-                continue;
-            }
-            break;
+            done = true;
         }
-        needs_flush = true;
     }
 }
 
