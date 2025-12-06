@@ -50,7 +50,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         // We'll look at identifiers which start with UTF8 letters later when we've already checked for more probable possibilities
         parse_identifier(tokenizer, *token);
     } else if ascii_is_digit(char) {
-        parse_number_c_like(tokenizer, *token);
+        parse_number(tokenizer, *token);
     } else if char == {
         case #char "=";  parse_equal                 (tokenizer, *token);
         case #char "-";  parse_minus                 (tokenizer, *token);
@@ -67,6 +67,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent               (tokenizer, *token);
         case #char "@";  parse_at                    (tokenizer, *token);
         case #char "^";  parse_caret                 (tokenizer, *token);
+        case #char ".";  parse_period_or_number      (tokenizer, *token);
 
         case #char ":";  token.type = .operation;   token.operation   = .colon;     t += 1;
         case #char "?";  token.type = .operation;   token.operation   = .question;  t += 1;
@@ -76,7 +77,6 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char "\\"; token.type = .punctuation; token.punctuation = .backslash; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
-        case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;   t += 1;
         case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;   t += 1;
@@ -98,6 +98,127 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     token.len = cast(s32) (t - start_t);
 
     return token;
+}
+
+parse_period_or_number :: (using tokenizer: *Tokenizer, token: *Token) {
+    t += 1;
+
+    if t >= max_t || !is_digit(t.*) {
+        token.type        = .punctuation;
+        token.punctuation = .period;
+    } else {
+        // for cases like .1 which is a valid floating point number
+        token.type = .number;
+        while t < max_t && (is_digit(t.*) || t.* == "_")
+            t += 1;
+
+        if handle_exponent_in_number(tokenizer, token) return;
+
+        check_if_number_has_type_suffix(tokenizer, "f", "F", "d", "D");
+    }
+}
+
+check_if_number_has_type_suffix :: inline (using tokenizer: *Tokenizer, $suffixes: ..u8) {
+    if t >= max_t return;
+
+    if array_find(suffixes, t.*)
+        t += 1;
+}
+
+handle_exponent_in_number :: inline (using tokenizer: *Tokenizer, token: *Token) -> skipped_exponent: bool {
+    if t >= max_t return false;
+
+    if t.* == {
+        case "e"; #through;
+        case "E"; #through;
+        case "p"; #through; // p/P are "binary exponants" https://docs.oracle.com/javase/specs/jls/se24/html/jls-3.html#jls-BinaryExponent
+        case "P";
+            t += 1;
+            if t < max_t && (t.* == "-" || t.* == "+")
+                t +=1 ;
+            parse_number(tokenizer, token);
+            return true;
+    }
+
+    return false;
+}
+
+parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .number;
+
+    start_char := t.*;
+
+    t += 1;
+    if t >= max_t return;
+
+    parse_decimal_or_float :: (using tokenizer: *Tokenizer, token : *Token) {
+        while t < max_t && (is_digit(t.*) || t.* == "_")
+            t += 1;
+
+        if handle_exponent_in_number(tokenizer, token) return;
+
+        // its a floating point literal!
+        if t < max_t && t.* == "." {
+            t += 1;
+
+            while t < max_t && (is_digit(t.*) || t.* == "_")
+                t += 1;
+
+            if handle_exponent_in_number(tokenizer, token) return;
+
+            check_if_number_has_type_suffix(tokenizer, "f", "F", "d", "D");
+        } else {
+            check_if_number_has_type_suffix(tokenizer, "l", "L", "f", "F", "d", "D");
+        }
+    }
+
+    // I'm not checking for octal, I dont think its needed for syntax highlighting.
+
+    if start_char == "0" {
+        if t.* == "x" || t.* == "X" {
+            t += 1;
+
+            while t < max_t && (is_hex(t.*) || t.* == "_")
+                t += 1;
+
+            if handle_exponent_in_number(tokenizer, token) return;
+
+            // Handle hex floating point literals (those exist for some reason)
+            // https://docs.oracle.com/javase/specs/jls/se24/html/jls-3.html#jls-HexadecimalFloatingPointLiteral
+            if t < max_t && t.* == "." {
+                t += 1;
+
+                while t < max_t && (is_hex(t.*) || t.* == "_")
+                    t += 1;
+
+                if handle_exponent_in_number(tokenizer, token) return;
+
+                check_if_number_has_type_suffix(tokenizer, "f", "F", "d", "D");
+            } else {
+                check_if_number_has_type_suffix(tokenizer, "l", "L");
+            }
+
+        } else if t.* == "b" || t.* == "B" {
+            t += 1;
+
+            while t < max_t && (t.* == "0" || t.* == "1" || t.* == "_")
+                t += 1;
+
+            if handle_exponent_in_number(tokenizer, token) return;
+
+            check_if_number_has_type_suffix(tokenizer, "l", "L");
+
+        } else if is_digit(t.*) || t.* == "_" || t.* == "." {
+            parse_decimal_or_float(tokenizer, token);
+        } else {
+            // for the case of just '0L'
+            check_if_number_has_type_suffix(tokenizer, "l", "L", "f", "F", "d", "D");
+        }
+    } else {
+        assert(is_digit(start_char));
+
+        parse_decimal_or_float(tokenizer, token);
+    }
 }
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -161,7 +282,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if ascii_is_digit(t.*) parse_number_c_like(tokenizer, token);
+            if ascii_is_digit(t.*) parse_number(tokenizer, token);
     }
 }
 
@@ -179,6 +300,8 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
         case #char "+";
             token.operation = .plus_plus;
             t += 1;
+        case;
+            if ascii_is_digit(t.*) parse_number(tokenizer, token);
     }
 }
 
