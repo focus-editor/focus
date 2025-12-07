@@ -5022,10 +5022,10 @@ Editor_Pane :: struct {
     child1: *Editor_Pane;
     child2: *Editor_Pane;
 
-    #place child1; left:   *Editor_Pane;
-    #place child2; right:  *Editor_Pane;
-    #place child1; top:    *Editor_Pane;
-    #place child2; bottom: *Editor_Pane;
+    #overlay (child1) left:   *Editor_Pane;
+    #overlay (child2) right:  *Editor_Pane;
+    #overlay (child1) top:    *Editor_Pane;
+    #overlay (child2) bottom: *Editor_Pane;
 
     Layout :: enum u8 {
         single      :: 0;
