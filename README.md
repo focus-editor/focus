@@ -24,7 +24,7 @@ https://discord.gg/eSXquAzTmW
 
 (NOTE: it's `- release`, not `-release`)
 
-Minimum Jai version: `0.2.018` (the language is currently in closed beta, but it will hopefully go into open beta soon)
+Minimum Jai version: `0.2.020` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
 **On macOS:**
 
