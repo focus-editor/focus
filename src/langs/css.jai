@@ -28,7 +28,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     start_t = t;
 
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    char := t.*;
 
     if ascii_is_alpha(char) {
         parse_identifier(tokenizer, *token);
@@ -78,12 +78,12 @@ read_css_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     identifier: string;
     identifier.data = t;
 
-    if !ascii_is_alnum(<<t) && <<t != #char "@" && <<t != #char "!" return identifier;
+    if !ascii_is_alnum(t.*) && t.* != #char "@" && t.* != #char "!" return identifier;
 
     t += 1;
     if t >= max_t then t = max_t;
 
-    while t < max_t && (ascii_is_alnum(<<t) || <<t == #char "-") {
+    while t < max_t && (ascii_is_alnum(t.*) || t.* == #char "-") {
         t += 1;
     }
     if t >= max_t then t = max_t;
@@ -137,7 +137,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     // Unit
-    if <<t == #char "%" {
+    if t.* == #char "%" {
         t += 1;
         return;
     }
@@ -161,14 +161,14 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
 
             while t < max_t {
-              if <<t == #char "*" {
-                if t + 1 < max_t && <<(t + 1) == #char "/" {
+              if t.* == #char "*" {
+                if t + 1 < max_t && (t + 1).* == #char "/" {
                   t += 2; // Both the * and /
                   break;
                 }
@@ -181,7 +181,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type = .comment;
             t += 1;
 
-            while t < max_t && <<t != #char "\n"  t += 1;
+            while t < max_t && t.* != #char "\n"  t += 1;
     }
 }
 
@@ -197,9 +197,9 @@ parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token
     escape_seen := false;
 
     t += 1;
-    while t < max_t && << t != #char "\n" {
-        if <<t == #char "\"" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+    while t < max_t && t.* != #char "\n" {
+        if t.* == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
     }
     if t >= max_t return;
@@ -213,9 +213,9 @@ parse_single_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token
     escape_seen := false;
 
     t += 1;
-    while t < max_t && << t != #char "\n" {
-        if <<t == #char "'" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+    while t < max_t && t.* != #char "\n" {
+        if t.* == #char "'" && !escape_seen break;
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
     }
     if t >= max_t return;
@@ -236,7 +236,7 @@ parse_hex_color :: (using tokenizer: *Tokenizer, token: *Token) -> bool {
 
     if temp_t >= max_t  return false;
 
-    while is_hex(<<temp_t) {
+    while is_hex(temp_t.*) {
         temp_t += 1;
         if temp_t >= max_t  return false;
     }
@@ -267,7 +267,7 @@ parse_dash :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t  return;
 
     // CSS variable
-    if <<t == #char "-" {
+    if t.* == #char "-" {
         token.type = .identifier;
 
         t += 1;

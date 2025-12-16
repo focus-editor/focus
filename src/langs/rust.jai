@@ -529,14 +529,14 @@ parse_slash_or_comment :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
             t += 1;
             num_open_comments := 0;
             while t < max_t {
-                if t.* == #char "*" && (t + 1) < max_t && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                     if num_open_comments == 0 {
                         t += 2;
                         break;
                     } else {
                         num_open_comments -= 1;
                     }
-                } else if t.* == #char "/" && (t + 1) < max_t && << (t + 1) == #char "*" {
+                } else if t.* == #char "/" && (t + 1) < max_t && (t + 1).* == #char "*" {
                     num_open_comments += 1;
                     t += 1;
                 }

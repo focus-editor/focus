@@ -37,7 +37,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     start_t = t;
 
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    char := t.*;
 
     if ascii_is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
@@ -102,12 +102,12 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if ascii_is_digit(<< t) {
+    if ascii_is_digit(t.*) {
         // Decimal
         t += 1;
         seen_decimal_point := false;
-        while t < max_t && (ascii_is_digit(<< t) || << t == #char ".") {
-            if << t == #char "." {
+        while t < max_t && (ascii_is_digit(t.*) || t.* == #char ".") {
+            if t.* == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
             }
@@ -116,16 +116,16 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         if t >= max_t return;
 
         // exponent
-        if << t == #char "e" || << t == #char "E" {
+        if t.* == #char "e" || t.* == #char "E" {
             t += 1;
             if t >= max_t return;
 
-            if << t == #char "+" || << t == #char "-" {
+            if t.* == #char "+" || t.* == #char "-" {
               t += 1;
               if t >= max_t return;
             }
 
-            while t < max_t && ascii_is_digit(<< t) {
+            while t < max_t && ascii_is_digit(t.*) {
                 t += 1;
             }
             if t >= max_t return;
@@ -133,41 +133,41 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
 
         // suffixes
         if seen_decimal_point {
-            if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
+            if t.* == #char "f" || t.* == #char "F" || t.* == #char "d" || t.* == #char "D" {
               t += 1;
             }
         } else {
 
           // This is getting kindof hard to follow...
-          if << t == #char "l" || << t == #char "L" {             // l
+          if t.* == #char "l" || t.* == #char "L" {             // l
               t += 1;
               if t >= max_t return;
 
-              if << t == #char "l" || << t == #char "L" {         // ll
+              if t.* == #char "l" || t.* == #char "L" {         // ll
                   t += 1;
                   if t >= max_t return;
 
-                  if << t == #char "u" || << t == #char "U" {     // llu
+                  if t.* == #char "u" || t.* == #char "U" {     // llu
                     t += 1;
                   }
-              } else if << t == #char "u" || << t == #char "U" {  // lu
+              } else if t.* == #char "u" || t.* == #char "U" {  // lu
                 t += 1;
               }
-          } else if  << t == #char "u" || << t == #char "U" {     // u
+          } else if  t.* == #char "u" || t.* == #char "U" {     // u
               t += 1;
           }
 
         }
 
-    } else if << t == #char "x" || << t == #char "X" {
+    } else if t.* == #char "x" || t.* == #char "X" {
         // Hex
         t += 1;
-        while t < max_t && (is_hex(<< t)) t += 1;
+        while t < max_t && (is_hex(t.*)) t += 1;
 
-    } else if << t == #char "b" || << t == #char "B" {
+    } else if t.* == #char "b" || t.* == #char "B" {
         // Binary
         t += 1;
-        while t < max_t && (<< t == #char "1" || << t == #char "0") t += 1;
+        while t < max_t && (t.* == #char "1" || t.* == #char "0") t += 1;
     }
 }
 
@@ -190,7 +190,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";  token.operation = .equal_equal; t += 1;
     }
 }
@@ -202,7 +202,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .minus_equal;
             t += 1;
@@ -213,7 +213,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if ascii_is_digit(<< t) parse_number(tokenizer, token);
+            if ascii_is_digit(t.*) parse_number(tokenizer, token);
     }
 }
 
@@ -224,7 +224,7 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .plus_equal;
             t += 1;
@@ -241,7 +241,7 @@ parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .asterisk_equal;
             t += 1;
@@ -255,7 +255,7 @@ parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .less_than_equal;
             t += 1;
@@ -272,7 +272,7 @@ parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .greater_than_equal;
             t += 1;
@@ -286,7 +286,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .bang_equal;
             t += 1;
@@ -297,7 +297,7 @@ parse_raw_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .raw_string;
 
     t += 1;
-    while t < max_t && << t != #char "`" {
+    while t < max_t && t.* != #char "`" {
         t += 1;
     }
     if t >= max_t return;
@@ -311,9 +311,9 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1;
-    while t < max_t && << t != #char "\n" {
-        if <<t == #char "\"" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+    while t < max_t && t.* != #char "\n" {
+        if t.* == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
     }
     if t >= max_t return;
@@ -327,15 +327,15 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1; //
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
-    if << t == #char "\\" {
+    if t.* == #char "\\" {
       escape_seen = true;
       t += 1;
-      if t >= max_t || << t == #char "\n" return;
+      if t >= max_t || t.* == #char "\n" return;
     }
 
-    if << t == #char "'" && !escape_seen {
+    if t.* == #char "'" && !escape_seen {
       // not escaped single quote without a character
       token.type = .invalid;
       t += 1; // the invalid '
@@ -343,7 +343,7 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 
     t += 1; // the char
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
     t += 1; // ending '
 }
@@ -355,19 +355,19 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .slash_equal;
             t += 1;
         case #char "/";
             token.type = .comment;
             t += 1;
-            while t < max_t && << t != #char "\n" t += 1;
+            while t < max_t && t.* != #char "\n" t += 1;
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
             while t < max_t {
-                if << t == #char "*" && (t + 1) < max_t && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                   t += 2;
                   break;
                 }
@@ -383,7 +383,7 @@ parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .ampersand_equal;
             t += 1;
@@ -400,7 +400,7 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .pipe_equal;
             t += 1;
@@ -417,7 +417,7 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .percent_equal;
             t += 1;
@@ -431,7 +431,7 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .caret_equal;
             t += 1;

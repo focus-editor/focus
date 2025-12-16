@@ -24,7 +24,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     start_t = t;
 
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    char := t.*;
 
     if char == {
         case #char "+";  parse_done_line        (tokenizer, *token);

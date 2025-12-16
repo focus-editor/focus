@@ -25,7 +25,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
     start_t = t;
 
-    char := << t;
+    char := t.*;
 
     if ascii_is_alpha(char) {
         parse_identifier(tokenizer, *token);
@@ -77,12 +77,12 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if ascii_is_digit(<< t) || << t == #char "_" {
+    if ascii_is_digit(t.*) || t.* == #char "_" {
         // Decimal
         t += 1;
         seen_decimal_point := false;
-        while t < max_t && (ascii_is_digit(<< t) || << t == #char "_" || << t == #char ".") {
-            if << t == #char "." {
+        while t < max_t && (ascii_is_digit(t.*) || t.* == #char "_" || t.* == #char ".") {
+            if t.* == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
             }
@@ -97,16 +97,16 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "/";
             token.type = .comment;
             t += 1;
-            while t < max_t && << t != #char "\n" t += 1;
+            while t < max_t && t.* != #char "\n" t += 1;
         case #char "*";
             token.type = .comment;
             t += 1;
             while t < max_t {
-                if << t == #char "*" && (t + 1) < max_t && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                   t += 2;
                   break;
                 }
@@ -122,9 +122,9 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #c
      t += 1;
 
      while t < max_t {
-        char := << t;
+        char := t.*;
         if char == quote && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
         if t >= max_t return;
      }
@@ -136,7 +136,7 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     ret.data = t;
 
     while t < max_t {
-        c := <<t;
+        c := t.*;
         if ascii_is_alnum(c) || c == #char "-"  { t += 1; continue; }
         break;
     }

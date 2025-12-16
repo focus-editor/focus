@@ -106,7 +106,7 @@ initialize_queue :: ($User_Data: Type) -> *Queue(User_Data), result := Error.{} 
     completion_entries.count = params.cq_entries;
 
     new_queue := New(Queue(User_Data), false);
-    <<new_queue = queue;
+    new_queue.* = queue;
 
     return new_queue;
 }
@@ -120,7 +120,7 @@ destroy_queue :: (using queue: *Queue) {
 
 open_file :: (queue: *Queue($T), file_path: string, keep_existing_content := true) -> File(T), result := Error.{} {
     file: File(T) = ---;
-    file.internal = New(type_of(<<file.internal));
+    file.internal = New(type_of(file.internal.*));
 
     operation := New(File_Operation(queue.User_Data));
     operation.file = file;
@@ -156,7 +156,7 @@ close_file :: inline (queue: *Queue, file: File) {
 
 read_entire_file :: (queue: *Queue($T), file_path: string, user_data: T) -> result := Error.{} {
     file: File(T) = ---;
-    file.internal = New(type_of(<<file.internal));
+    file.internal = New(type_of(file.internal.*));
     file.unfinished_operations = 2;
 
     operation := New(File_Operation(queue.User_Data));
@@ -196,7 +196,7 @@ read_entire_file :: (queue: *Queue($T), file_path: string, user_data: T) -> resu
 }
 write_entire_file :: (queue: *Queue($T), file_path: string, data: [] u8, user_data: T) -> result := Error.{} {
     file: File(T) = ---;
-    file.internal = New(type_of(<<file.internal));
+    file.internal = New(type_of(file.internal.*));
     file.unfinished_operations = 3;
 
     operation := New(File_Operation(queue.User_Data));
@@ -555,7 +555,7 @@ submit_operation :: (queue: *Queue($T), operation: *File_Operation(T)) -> result
 
                 opcode      = IORING_OP_STATX;
                 fd          = operation.file.descriptor;
-                other_flags = AT_EMPTY_PATH | AT_STATX_SYNC_AS_STAT;
+                other_flags = AT_EMPTY_PATH | AT_STATX_SYNC_AS_STAT;
                 addr        = xx "".data;
                 len         = STATX_SIZE;
                 off         = xx operation.statx;
@@ -577,7 +577,7 @@ get_cq_entry :: (queue: *Queue) -> io_uring_cqe, success: bool {
         if head == atomic_read(queue.completion_tail) return .{}, false;
 
         // Copy the entry so it can be reused if the cas succeeds
-        entry = queue.completion_entries[head & <<queue.completion_mask];
+        entry = queue.completion_entries[head & queue.completion_mask.*];
 
         success, head = compare_and_swap(queue.completion_head, head, head + 1);
 
@@ -623,7 +623,7 @@ submit_sq_entry :: (queue: *Queue, entry_code: Code) -> Error #expand {
         // I get issues with READ_ENTIRE_FILE if the entry is not cleared. I don't fully know why. @ToDo Ideally
         // this would happen after the serialized portion but that adds complexity. The other option is to find
         // out what exactly needs to be cleared if not everything and just do that as a part of the entry code.
-        queue.submission_entries[allocated_entry & <<queue.submission_mask] = .{};
+        queue.submission_entries[allocated_entry & queue.submission_mask.*] = .{};
         atomic_increment(*queue.submission_entry_head); // This doesn't really need to be atomic but I'd rather be safe for now.
     }
 
@@ -632,7 +632,7 @@ submit_sq_entry :: (queue: *Queue, entry_code: Code) -> Error #expand {
     }
 
     {
-        `entry := *queue.submission_entries[allocated_entry & <<queue.submission_mask];
+        `entry := *queue.submission_entries[allocated_entry & queue.submission_mask.*];
         #insert entry_code;
     }
 
@@ -649,24 +649,24 @@ submit_sq_entry :: (queue: *Queue, entry_code: Code) -> Error #expand {
         }
     }
 
-    queue.submission_array[<<queue.submission_tail & <<queue.submission_mask] = allocated_entry & <<queue.submission_mask;
+    queue.submission_array[queue.submission_tail.* & queue.submission_mask.*] = allocated_entry & queue.submission_mask.*;
 
-    <<queue.submission_tail += 1; // We are still syncronized here
-    ent := queue.submission_entries[queue.submission_array[(<<queue.submission_tail-1) & <<queue.submission_mask]];
+    queue.submission_tail.* += 1; // We are still syncronized here
+    ent := queue.submission_entries[queue.submission_array[(queue.submission_tail.*-1) & queue.submission_mask.*]];
     //if ent.opcode == IORING_OP_READ then print("ENT % % % % %\n", ent.fd, ent.addr, ent.len, ent.off, ent);
     result := io_uring_enter(queue.ring_fd, 1, 0, 0);
     if result == -1 then result = -errno();
     if result == {
         case -EAGAIN; #through; // Kernel out of resources (memory etc.) but CQ not full
         case -EBUSY;
-            <<queue.submission_tail -= 1; // Still serialized.
+            queue.submission_tail.* -= 1; // Still serialized.
             return error(.FullQueue, -result); // CQ is full so we need to wait or bail.
         case;
             if result > 0 {
                 atomic_add(*queue.submitted, 1);
                 return .{};
             } else {
-                <<queue.submission_tail -= 1; // Still serialized.
+                queue.submission_tail.* -= 1; // Still serialized.
                 return error(.Catastrophic, -result);
             }
     }

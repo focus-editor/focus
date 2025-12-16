@@ -332,7 +332,7 @@ add_to_queue :: (using nfa: *Nfa, q: *Thread_Queue, id0: int, c: int, ctx: strin
 
 		id := a.id;
 		if id == 0	continue;
-		if contains(<<q, id)		continue;
+		if contains(q.*, id)		continue;
 
 		// Create entry in q no matter what.  We might fill it in below,
 		// or we might not.  Even if not, it is necessary to have it,

@@ -43,7 +43,7 @@ Walk :: struct (C: Type, T: Type) {
 
 walk :: (ctx: C, re: *Regexp_Node, initial_value: T, w: Walk($C, $T)) -> T, stopped_early: bool {
 	do_visit :: (ctx: C, stack: *[..] Walk_State(T), w: *Walk(C, T)) -> T, stopped_early: bool, done: bool {
-		s := *(<<stack)[stack.count - 1];
+		s := *(stack.*)[stack.count - 1];
 		if s.n == -1 {
 			w.max_visits -= 1;
 			if (w.max_visits < 0) {

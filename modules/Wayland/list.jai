@@ -61,7 +61,7 @@ has_member :: (T: Type, name: string, MT: Type) -> bool #expand {
 container_of :: (ptr: $P, sample: $S, offset: s64) -> S #expand {
     #assert (cast(*Type_Info) type_of(ptr)).type == .POINTER "`ptr` must be a pointer";
     #assert (cast(*Type_Info) type_of(sample)).type == .POINTER "`sample` must be a pointer";
-    found :: #run has_member(type_of(<<sample), offset, type_of(<<ptr));
+    found :: #run has_member(type_of(sample.*), offset, type_of(ptr.*));
     #assert found "structure does not contain a member of the specified type at the specified offset";
     return cast(S) (cast(*u8)ptr - offset);
 }

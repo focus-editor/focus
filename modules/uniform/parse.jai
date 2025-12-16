@@ -438,11 +438,11 @@ make_status :: (code := StatusCode.Success, error_arg := "") -> Status {
 }
 
 rep :: (ps: *ParseState, op: RegexpOp, t: *string, lastunary: string) -> isunary: string, success: bool  {
-	opstr := <<t;
+	opstr := t.*;
 	nongreedy := false;
 	advance(t);  // '*' or '+' or '?'
 	if (ps.flags & .PerlX) {
-		if (t.count && (<<t)[0] == #char "?") {
+		if (t.count && (t.*)[0] == #char "?") {
 			nongreedy = true;
 			advance(t);  // '?'
 		}
@@ -2119,14 +2119,14 @@ add_rune_to_string :: (re: *Regexp_Node, r: Rune) {
 // Parses a decimal integer, storing it in *np.
 // Sets *s to span the remainder of the string.
 parse_integer :: (s: *string) -> int, success: bool {
-	if !s.count || !isdigit((<<s)[0])		return 0, false;
+	if !s.count || !isdigit((s.*)[0])		return 0, false;
 
 	// Disallow leading zeros.
-	if s.count >= 2 && (<<s)[0] == #char "0" && isdigit((<<s)[1])	return 0, false;
+	if s.count >= 2 && (s.*)[0] == #char "0" && isdigit((s.*)[1])	return 0, false;
 
 	n := 0;
-	while s.count && isdigit((<<s)[0]) {
-		c := (<<s)[0];
+	while s.count && isdigit((s.*)[0]) {
+		c := (s.*)[0];
 		// Avoid overflow.
 		if n >= 100000000	return 0, false;
 		n = n*10 + c - #char "0";
@@ -2145,7 +2145,7 @@ parse_integer :: (s: *string) -> int, success: bool {
 // doesn't fail even if ParseRepetition does, so the StringPiece
 // s must NOT be edited unless MaybeParseRepetition returns true.
 maybe_parse_repetition :: (sp: *string) -> lo: int, hi: int, success: bool {
-	s := <<sp;
+	s := sp.*;
 	if !s.count || s[0] != #char "{"	 return 0, 0, false;
 
 	advance(*s);
@@ -2175,14 +2175,14 @@ maybe_parse_repetition :: (sp: *string) -> lo: int, hi: int, success: bool {
 	}
 	if !s.count || s[0] != #char "}"	return 0, 0, false;
 	advance(*s);
-	<<sp = s;
+	sp.* = s;
 
 	return lo, hi, true;
 }
 
 // @ToDo: Move to unicode module?
 consume_rune :: (str: *string) -> Rune, len: int, status: Status {
-	result, len := rune_from_string(<<str);
+	result, len := rune_from_string(str.*);
 	if !len		return 0, 0, make_status(.BadUTF8);
 
 	advance(str, len);
@@ -2219,13 +2219,13 @@ parse_escape :: (s: *string, rune_max: s32) -> r: Rune, status: Status, success:
 		return status;
 	}
 
-	assert(s.count && (<<s)[0] == #char "\\");
+	assert(s.count && (s.*)[0] == #char "\\");
 
 	if s.count == 1 {
 		return 0, make_status(.TrailingBackslash), false;
 	}
 
-	begin := <<s;
+	begin := s.*;
 
 	advance(s); // backslash
 
@@ -2252,18 +2252,18 @@ parse_escape :: (s: *string, rune_max: s32) -> r: Rune, status: Status, success:
 		case #char "6"; #through;
 		case #char "7";
 			// Single non-zero octal digit is a backreference; not supported.
-			if !s.count || (<<s)[0] < #char "0" || (<<s)[0] > #char "7"	 return 0, bad_escape(begin, s), false;
+			if !s.count || (s.*)[0] < #char "0" || (s.*)[0] > #char "7"	 return 0, bad_escape(begin, s), false;
 			#through;
 		case #char "0";
 			// consume up to three octal digits; already have one.
 			code := c - #char "0";
 			if !s.count		return 0, bad_escape(begin, s), false;
-			c = (<<s)[0];
+			c = (s.*)[0];
 			if #char "0" <= c && c <= #char "7" {
 				code = code * 8 + c - #char "0";
 				advance(s); // digit
 				if s {
-					c = (<<s)[0];
+					c = (s.*)[0];
 					if #char "0" <= c && c <= #char "7" {
 						code = code * 8 + c - #char "0";
 						advance(s); // digit
@@ -2459,11 +2459,11 @@ add_unicode_group :: (cc: *CharClass, g: *UGroup, sign: int, parse_flags: ParseF
 // The StringPiece must *NOT* be edited unless the call succeeds.
 maybe_parse_perl_cc_escape :: (s: *string, parse_flags: ParseFlags) -> *UGroup {
 	if !(parse_flags & .PerlClasses)	return null;
-	if s.count < 2 || (<<s)[0] != #char "\\"		return null;
+	if s.count < 2 || (s.*)[0] != #char "\\"		return null;
 
 	// Could use StringPieceToRune, but there aren't
 	// any non-ASCII Perl group names.
-	name := slice(<<s, 0, 2);
+	name := slice(s.*, 0, 2);
 	g := lookup_perl_group(name);
 	if g == null		return null;
 	advance(s, name.count);
@@ -2483,9 +2483,9 @@ maybe_parse_unicode_group :: (s: *string, parse_flags: ParseFlags, cc: *CharClas
 	status: Status;
 	// Decide whether to parse.
 	if !(parse_flags & .UnicodeGroups)	return status, .kParseNothing;
-	if s.count < 2 || (<<s)[0] != #char "\\"  return status, .kParseNothing;
+	if s.count < 2 || (s.*)[0] != #char "\\"  return status, .kParseNothing;
 
-	c: Rune = (<<s)[1];
+	c: Rune = (s.*)[1];
 	if c != #char "p" && c != #char "P"		return status, .kParseNothing;
 
 	// Committed to parse.  Results:
@@ -2493,12 +2493,12 @@ maybe_parse_unicode_group :: (s: *string, parse_flags: ParseFlags, cc: *CharClas
 	if (c == #char "P")	{
 		sign = -sign;
 	}
-	seq := <<s; // \p{Han} or \pL
+	seq := s.*; // \p{Han} or \pL
 	name: string;  // Han or L
 	advance(s, 2);  // '\\', 'p'
 
 
-	if (<<s)[0] != #char "{" {
+	if (s.*)[0] != #char "{" {
 		status: Status;
 		len: int;
 		c, len, status = consume_rune(s);
@@ -2508,7 +2508,7 @@ maybe_parse_unicode_group :: (s: *string, parse_flags: ParseFlags, cc: *CharClas
 		name = slice(seq, 2, len);
 	} else {
 		// Name is in braces. Look for closing }
-		end := find_index_from_left(<<s, #char "}");
+		end := find_index_from_left(s.*, #char "}");
 		if end != -1 {
 			valid: bool;
 			valid, status = is_valid_utf8(seq);
@@ -2516,7 +2516,7 @@ maybe_parse_unicode_group :: (s: *string, parse_flags: ParseFlags, cc: *CharClas
 
 			return make_status(.BadCharRange, seq), .kParseError;
 		}
-		name = slice(<<s, 1, end - 1); // without '}'
+		name = slice(s.*, 1, end - 1); // without '}'
 		advance(s, end + 1);
 		valid: bool;
 		valid, status = is_valid_utf8(name);
@@ -2573,16 +2573,16 @@ maybe_parse_unicode_group :: (s: *string, parse_flags: ParseFlags, cc: *CharClas
 // Adds the ranges corresponding to the class to ranges.
 parse_cc_name :: (s: *string, parse_flags: ParseFlags, cc: *CharClass) -> status: Status, result: ParseResult {
 	// Check begins with [:
-	if s.count < 2	|| (<<s)[0] != #char "[" || (<<s)[1] != #char ":"		return Status.{}, .kParseNothing;
+	if s.count < 2	|| (s.*)[0] != #char "[" || (s.*)[1] != #char ":"		return Status.{}, .kParseNothing;
 
 	// Look for closing :].
-	end := find_index_from_left(<<s, ":]");
+	end := find_index_from_left(s.*, ":]");
 
 	// If no closing :], then ignore.
 	if !end		return Status.{}, .kParseNothing;
 
 	// Got it.  Check that it's valid.
-	name := slice(<<s, 2, end - 2);
+	name := slice(s.*, 2, end - 2);
 	g := lookup_posix_group(name);
 	if (g == null) {
 		return make_status(.BadCharRange, name), .kParseError;
@@ -2601,7 +2601,7 @@ parse_cc_character :: (using ps: *ParseState, s: *string, whole_class: string) -
 
 	// Allow regular escape sequences even though
 	// many need not be escaped in this context.
-	if (<<s)[0] == #char "\\" {
+	if (s.*)[0] == #char "\\" {
 		rune, status, success := parse_escape(s, rune_max);
 		return rune, status, success;
 	} else {
@@ -2616,14 +2616,14 @@ parse_cc_character :: (using ps: *ParseState, s: *string, whole_class: string) -
 // For single characters, rr.lo == rr.hi.
 // Sets *s to span the remainder of the string.
 parse_cc_range :: (using ps: *ParseState, s: *string, whole_class: string) -> RuneRange, status: Status, success: bool {
-	os := <<s;
+	os := s.*;
 	rr: RuneRange;
 	success: bool;
 	rr.lo, status, success = parse_cc_character(ps, s, whole_class);
 	if !success		return rr, status, false;
 
 	// [a-] means (a|-), so check for final ].
-	if s.count >= 2 && (<<s)[0] == #char "-" && (<<s)[1] != #char "]" {
+	if s.count >= 2 && (s.*)[0] == #char "-" && (s.*)[1] != #char "]" {
 		advance(s);  // #char "-"
 
 		rr.hi, status, success = parse_cc_character(ps, s, whole_class);
@@ -2642,16 +2642,16 @@ parse_cc_range :: (using ps: *ParseState, s: *string, whole_class: string) -> Ru
 // Sets *s to span the remainder of the string.
 // Sets *out_re to the regexp for the class.
 parse_char_class :: (using ps: *ParseState, s: *string) -> *Regexp_Node, status: Status, success: bool {
-	whole_class := <<s;
+	whole_class := s.*;
 	// Caller checked this.
-	assert(s.count && (<<s)[0] == #char "[");
+	assert(s.count && (s.*)[0] == #char "[");
 
 	negated: bool;
 	re := new_regexp(*ps.pool, .CharClass, flags & ~.FoldCase);
 	re.char_class = New(CharClass);
 	re.char_class_finished = false;
 	advance(s);  // '['
-	if s.count && (<<s)[0] == #char "^" {
+	if s.count && (s.*)[0] == #char "^" {
 		advance(s); // '^'
 		negated = true;
 		if !(flags & .ClassNL) || flags & .NeverNL {
@@ -2661,25 +2661,25 @@ parse_char_class :: (using ps: *ParseState, s: *string) -> *Regexp_Node, status:
 		}
 	}
 	first := true;  // ] is okay as first char in class
-	while s.count && (first || (<<s)[0] != #char "]") {
+	while s.count && (first || (s.*)[0] != #char "]") {
 		// - is only okay unescaped as first or last in class.
 		// Except that Perl allows - anywhere.
-		if !first && (<<s)[0] == #char "-" && !(flags & .PerlX) && (s.count == 1 || (<<s)[1] != #char "]") {
+		if !first && (s.*)[0] == #char "-" && !(flags & .PerlX) && (s.count == 1 || (s.*)[1] != #char "]") {
 			remove_regexp(*ps.pool, re);
 
-			t := <<s;
+			t := s.*;
 			advance(*t);  // '-'
 			r, n, status := consume_rune(*t);
 			if !n {
 				return null, status, false;
 			}
 
-			return null, make_status(.BadCharRange, slice(<<s, 0, 1 + n)), false;
+			return null, make_status(.BadCharRange, slice(s.*, 0, 1 + n)), false;
 		}
 		first = false;
 
 		// Look for [:alnum:] etc.
-		if s.count > 2 && (<<s)[0] == #char "[" && (<<s)[1] == #char ":" {
+		if s.count > 2 && (s.*)[0] == #char "[" && (s.*)[1] == #char ":" {
 			status, result := parse_cc_name(s, flags, re.char_class);
 			if #complete result == {
 				case .kParseOk;
@@ -2692,7 +2692,7 @@ parse_char_class :: (using ps: *ParseState, s: *string) -> *Regexp_Node, status:
 		}
 
 		// Look for Unicode character group like \p{Han}
-		if s.count > 2 && (<<s)[0] == #char "\\" && ((<<s)[1] == #char "p" || (<<s)[1] == #char "P") {
+		if s.count > 2 && (s.*)[0] == #char "\\" && ((s.*)[1] == #char "p" || (s.*)[1] == #char "P") {
 			status, result := maybe_parse_unicode_group(s, flags, re.char_class);
 			if #complete result == {
 				case .kParseOk;
@@ -2763,9 +2763,9 @@ is_valid_capture_name :: (name: string) -> bool {
 // well-formed or not supported, sets status and returns false.
 parse_perl_flags :: (using ps: *ParseState, s: *string) -> Status, success: bool {
 	// Caller is supposed to check this.
-	assert(flags & .PerlX && s.count >= 2 && (<<s)[0] == #char "(" && (<<s)[1] == #char "?");
+	assert(flags & .PerlX && s.count >= 2 && (s.*)[0] == #char "(" && (s.*)[1] == #char "?");
 
-	t := <<s;
+	t := s.*;
 	advance(*t, 2); // "(?"
 
 	// Check for named captures, first introduced in Python's regexp library.
@@ -2788,13 +2788,13 @@ parse_perl_flags :: (using ps: *ParseState, s: *string) -> Status, success: bool
 		// Pull out name.
 		end := find_index_from_left(t, #char ">");
 		if end == -1 {
-			valid, status := is_valid_utf8(<<s);
+			valid, status := is_valid_utf8(s.*);
 			if !valid		return status, false;
-			return make_status(.BadNamedCapture, <<s), false;
+			return make_status(.BadNamedCapture, s.*), false;
 		}
 
 		// t is "name>...", t[end] == '>'
-		capture := slice(<<s, 2, end + 3);
+		capture := slice(s.*, 2, end + 3);
 		name := slice(t, 0, end);
 		valid, status := is_valid_utf8(name);
 		if !valid		return status, false;
@@ -2812,12 +2812,12 @@ parse_perl_flags :: (using ps: *ParseState, s: *string) -> Status, success: bool
 	nflags := flags;
 	done: bool;
 	while !done {
-		if !t.count		return make_status(.BadPerlOp, <<s), false;
+		if !t.count		return make_status(.BadPerlOp, s.*), false;
 		c, len, status :=  consume_rune(*t);
 		if !len		return status, false;
 		if c == {
 			case;
-				return make_status(.BadPerlOp, slice(<<s, 0, s.count - t.count)), false;
+				return make_status(.BadPerlOp, slice(s.*, 0, s.count - t.count)), false;
 			// Parse flags.
 			case #char "i";
 				sawflags = true;
@@ -2853,7 +2853,7 @@ parse_perl_flags :: (using ps: *ParseState, s: *string) -> Status, success: bool
 
 			// Negation
 			case #char "-";
-				if negated		return make_status(.BadPerlOp, slice(<<s, 0, s.count - t.count)), false;
+				if negated		return make_status(.BadPerlOp, slice(s.*, 0, s.count - t.count)), false;
 
 				negated = true;
 				sawflags = false;
@@ -2869,10 +2869,10 @@ parse_perl_flags :: (using ps: *ParseState, s: *string) -> Status, success: bool
 		}
 	}
 
-	if negated && !sawflags		return make_status(.BadPerlOp, slice(<<s, 0, s.count - t.count)), false;
+	if negated && !sawflags		return make_status(.BadPerlOp, slice(s.*, 0, s.count - t.count)), false;
 
 	flags = nflags;
-	<<s = t;
+	s.* = t;
 	return .{}, true;
 }
 

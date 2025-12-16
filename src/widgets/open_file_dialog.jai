@@ -467,7 +467,7 @@ refresh_entries :: (clear_input := true) {
                     if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
 
                     entry := array_add(*entries.filtered);
-                    <<entry = it;
+                    entry.* = it;
 
                     entry.entry_name = entry.name;
                     entry.name_highlights = name_highlights;
