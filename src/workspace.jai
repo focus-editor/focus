@@ -163,7 +163,7 @@ workspace_update :: () {
                     start := it * files_per_thread;
                     count := min(files_per_thread, files_to_scan.count - start);
                     if count <= 0 break;
-                    << file_range = array_view(files_to_scan, start, count);
+                    file_range.* = array_view(files_to_scan, start, count);
 
                     logging_name := sprint("Scan [%:%]", start, start + count);
                     this_allocation_is_not_a_leak(logging_name.data);  // this is actually a leak, but Thread_Group won't free it and we can't seem to be able to either
@@ -392,7 +392,7 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     file_range := cast(*[] string) work;
 
-    for path : << file_range {
+    for path : file_range.* {
         auto_release_temp();
         if !should_ignore_file(path) {
             buffer_id, created := find_or_create_buffer(path);

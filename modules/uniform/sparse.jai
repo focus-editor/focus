@@ -12,13 +12,13 @@ init :: (set: *Sparse_Set, size: int) {
 }
 
 add :: (set: *Sparse_Set, i: int) {
-	if !contains(<<set, i) {
+	if !contains(set.*, i) {
         add_unchecked(set, i);
 	}
 }
 
 add_unchecked :: (using set: *Sparse_Set, i: int) {
-  assert(!contains(<<set, i));
+  assert(!contains(set.*, i));
   assert(count < dense.count);
   sparse[i] = count;
   dense[count] = cast(u32)i;
@@ -68,7 +68,7 @@ add_or_set :: (array: *Sparse_Array($T), i: int, value: T) {
 }
 
 add_unchecked :: (using array: *Sparse_Array($T), i: int, value: T) {
-  assert(!contains(<<array, i));
+  assert(!contains(array.*, i));
   assert(count < dense.count);
   sparse[i] = count;
   dense[count].index = cast(u32)i;
@@ -77,7 +77,7 @@ add_unchecked :: (using array: *Sparse_Array($T), i: int, value: T) {
 }
 
 set :: (using array: *Sparse_Array($T), i: int, value: T) {
-	assert(contains(<<array, i));
+	assert(contains(array.*, i));
 	dense[sparse[i]].value = value;
 }
 

@@ -75,7 +75,7 @@ backend_init :: (info: *Window_Info) {
         DumpGLErrors("context");
     }
 
-    state.current_window_info = << info;
+    state.current_window_info = info.*;
 }
 
 #scope_module

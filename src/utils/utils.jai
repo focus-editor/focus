@@ -219,7 +219,7 @@ construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> F
 
 bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
     skip_table: [256] s32 = ---;
-    for * skip_table { << it = cast,no_check(s32) needle.count; }
+    for * skip_table { it.* = cast,no_check(s32) needle.count; }
     if case_sensitive {
         for i : 0 .. needle.count - 2 { skip_table[needle[i]]           = cast,no_check(s32) (needle.count - 1 - i); }
     } else {
@@ -647,7 +647,7 @@ split :: (s: string, separator: $T, max_splits: int) -> [] string {
 
 table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Type {
     pointer := inline table_find_pointer(table, key);
-    if pointer  return << pointer;
+    if pointer  return pointer.*;
 
     default: table.Value_Type;
     return default;

@@ -33,7 +33,7 @@ compile :: (pattern: string, parse_flags := ParseFlags.LikePerl) -> Regexp, succ
 		uninit(*regexp);
 		return .{}, false;
 	}
-	#if REGEXP_DEBUG	print("Compiled suffix:\n%\n", to_string(<<regexp.prog));
+	#if REGEXP_DEBUG	print("Compiled suffix:\n%\n", to_string(regexp.prog.*));
 
 	regexp.num_capture_groups = compute_num_captures(regexp.suffix_regexp);
 // 	// @ToDo: For one-pass NFA
@@ -72,12 +72,12 @@ make_patch_list :: (p: int) -> PatchList {
 patch  :: (inst: *[..] Inst, l: PatchList, p: int) {
 	head := l.head;
 	while head != 0 {
-		ip := *(<<inst)[head>>1];
+		ip := *(inst.*)[head>>1];
 		if head & 1 {
 			head = ip.out1;
 			ip.out1 = cast(u32)p;
 		} else {
-			head = get_out(<<ip);
+			head = get_out(ip.*);
 			set_out(ip, p);
 		}
 	}
@@ -88,7 +88,7 @@ append :: (inst: *[..] Inst, l1: PatchList, l2: PatchList) -> PatchList {
 	if l1.head == 0		return l2;
 	if l2.head == 0		return l1;
 
-	ip := *(<<inst)[l1.tail>>1];
+	ip := *(inst.*)[l1.tail>>1];
 	if l1.tail & 1 {
 		ip.out1 = l2.head;
 	} else {
@@ -260,13 +260,13 @@ finish :: (using comp: *Compiler, re: *Regexp_Node) -> *Prog {
 	prog.inst = inst;
 
 	optimize(prog);
-	#if REGEXP_DEBUG	print("Optimized:\n%\n", to_string(<<prog));
+	#if REGEXP_DEBUG	print("Optimized:\n%\n", to_string(prog.*));
 	flatten(prog);
-	#if REGEXP_DEBUG	print("Flattened:\n%\n", to_string(<<prog));
+	#if REGEXP_DEBUG	print("Flattened:\n%\n", to_string(prog.*));
 	compute_byte_map(prog);
 
 	if (!prog.reversed) {
-		prefix, prefix_foldcase := required_prefix_for_accel(<<re);
+		prefix, prefix_foldcase := required_prefix_for_accel(re.*);
 		if prefix.count && !prefix_foldcase {
 			prog.prefix_size = prefix.count;
 			prog.prefix_front = prefix[0];
@@ -330,7 +330,7 @@ cat :: (using comp: *Compiler, a: Frag, b: Frag) -> Frag {
 
 	// Elide no-op.
 	begin := *inst[a.begin];
-	if get_opcode(<<begin) == .kInstNop && a.end.head == (a.begin << 1) && get_out(<<begin) == 0 {
+	if get_opcode(begin.*) == .kInstNop && a.end.head == (a.begin << 1) && get_out(begin.*) == 0 {
 		// in case refs to a somewhere
 		patch(*inst, a.end, b.begin);
 		return b;
@@ -497,7 +497,7 @@ make_rune_cache_key :: (lo: u8, hi: u8, foldcase: bool, next: int) -> u64 {
 cached_rune_byte_suffix :: (using comp: *Compiler, lo: u8, hi: u8, foldcase: bool, next: int) -> int {
 	key := make_rune_cache_key(lo, hi, foldcase, next);
 	ptr := table_find_pointer(*rune_cache, key);
-	if ptr	return <<ptr;
+	if ptr	return ptr.*;
 	id := uncached_rune_byte_suffix(comp, lo, hi, foldcase, next);
 	table_add(*rune_cache, key, id);
 	return id;

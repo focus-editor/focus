@@ -1200,7 +1200,11 @@ DEBUG_MEMORY_LEAKS :: false;
      * EXTREME JANK - nuke once the Jai standard library no longer depends on libc
      */
     focus_memcpy :: (dst: *void, src: *void, size: s64) -> *void #foreign libc "memmove";
-    libc :: #system_library "libc";
+
+    // For now this is commented out, just in case this is needed in the future I will leave it here :)
+    // Does not compile otherwise since jai beta 0.2.022 added "libc" in module "System"
+    //
+    // libc :: #system_library "libc";
 } else {
     focus_memcpy :: memcpy;
 }

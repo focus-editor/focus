@@ -64,7 +64,7 @@ set_render_target :: (window: Window_Type) {
 
     backend_set_render_target(info);
 
-    state.current_window_info = << info;
+    state.current_window_info = info.*;
 }
 
 set_render_target :: (texture: *Texture) {
@@ -101,7 +101,7 @@ update_window :: (window: Window_Type) {
     c := *state.current_window_info;
     if c.window == window {
         if (window_width != c.window_width) || (window_height != c.window_height) {
-            backend_resize_render_target(<<info);
+            backend_resize_render_target(info.*);
 
             // If the user changes the window after setting a shader,
             // the projection will be out-of-date, so, update it here.
@@ -112,7 +112,7 @@ update_window :: (window: Window_Type) {
             }
         }
 
-        state.current_window_info = << info;
+        state.current_window_info = info.*;
     }
 }
 

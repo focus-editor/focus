@@ -757,7 +757,7 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     for j : 0..rows-1 {
         for i : 0..width-1 {
             dest_pixel := bitmap.data.data + ((dest_y + j) * bitmap.width + (dest_x + i));
-            << dest_pixel = b.buffer[(rows - 1 - j) * b.pitch + i];
+            dest_pixel.* = b.buffer[(rows - 1 - j) * b.pitch + i];
         }
     }
 

@@ -41,7 +41,7 @@ bucket_array_add :: (using array: *Simple_Bucket_Array) -> ptr: *array.type, ind
 
 bucket_array_add :: (using array: *Simple_Bucket_Array, item: array.type) {
     item_ptr := bucket_array_add(array);
-    << item_ptr = item;
+    item_ptr.* = item;
 }
 
 bucket_array_reset :: (using array: *Simple_Bucket_Array) {

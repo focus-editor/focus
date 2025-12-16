@@ -145,7 +145,7 @@ ascii_strcasecmp :: (a: string, b: string) -> int {
 compute_num_captures :: (re: *Regexp_Node) -> int {
 	count_pre_visit :: (num: *int, re: *Regexp_Node, v: *void) -> *void, bool {
 		if re.op == .Capture {
-			<<num += 1;
+			num.* += 1;
 		}
 		return null, false;
 	}

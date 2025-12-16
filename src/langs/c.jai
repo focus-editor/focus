@@ -249,7 +249,7 @@ parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
-    if t < max_t && !ascii_is_alpha(<<t) return;
+    if t < max_t && !ascii_is_alpha(t.*) return;
 
     directive_str := read_identifier_string(tokenizer);
 
@@ -271,8 +271,8 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
 
     t += 1;
     while t < max_t && t.* != #char "\n" {
-        if <<t == #char "\"" && !escape_seen break;
-        escape_seen = !escape_seen && <<t == #char "\\";
+        if t.* == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && t.* == #char "\\";
         t += 1;
     }
     if t >= max_t return;
@@ -326,7 +326,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type = .multiline_comment;
             t += 1;
             while t < max_t {
-                if t.* == #char "*" && (t + 1) < max_t && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                   t += 2;
                   break;
                 }

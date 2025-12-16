@@ -252,10 +252,10 @@ input_per_frame_event_and_flag_update :: () {
     end_mask := ~(Key_Current_State.END | .DOWN | .START);
     // @Speed: Could just keep a list of who is not currently set.
     for * input_button_states {
-        if (<<it & .END || !input_application_has_focus) {
-            <<it &= end_mask;
+        if (it.* & .END || !input_application_has_focus) {
+            it.* &= end_mask;
         } else {
-            <<it &= mask;
+            it.* &= mask;
         }
     }
 

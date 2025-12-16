@@ -411,7 +411,7 @@ parse_slash_or_comment :: (using tokenizer: *Dart_Tokenizer, token: *Token) {
             token.type = .multiline_comment;
             t += 1;
             while t < max_t {
-                if t.* == #char "*" && (t + 1) < max_t && << (t + 1) == #char "/" {
+                if t.* == #char "*" && (t + 1) < max_t && (t + 1).* == #char "/" {
                   t += 2;
                   break;
                 }

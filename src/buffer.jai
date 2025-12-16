@@ -368,7 +368,7 @@ remove_crlf_in_place :: (bytes: *[] u8) -> bytes_removed: s64 {
     // @Speed TODO: should probably use SIMD
     // Remove all CR's in one pass
     while cursor < end {
-        byte := <<cursor;
+        byte := cursor.*;
         if byte == #char "\r" {
             count := cursor - src;
             focus_memcpy(dst, src, count);

@@ -861,7 +861,7 @@ states_to_string :: (arr: *wl_array) -> string {
     append(*sb, "[");
     for wl_array_each(u32, arr) {
         if it_index append(*sb, ", ");
-        if <<it == {
+        if it.* == {
             case xdg_toplevel.state_maximized; append(*sb, "maximized");
             case xdg_toplevel.state_fullscreen; append(*sb, "fullscreen");
             case xdg_toplevel.state_resizing; append(*sb, "resizing");
@@ -870,7 +870,7 @@ states_to_string :: (arr: *wl_array) -> string {
             case xdg_toplevel.state_tiled_right; append(*sb, "tiled_right");
             case xdg_toplevel.state_tiled_top; append(*sb, "tiled_top");
             case xdg_toplevel.state_tiled_bottom; append(*sb, "tiled_bottom");
-            case; print_to_builder(*sb, "unknown(%)", <<it);
+            case; print_to_builder(*sb, "unknown(%)", it.*);
         }
     }
     append(*sb, "]");

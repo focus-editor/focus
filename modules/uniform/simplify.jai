@@ -189,12 +189,12 @@ can_coalesce :: (r1: *Regexp_Node, r2: *Regexp_Node) -> bool {
 do_coalesce :: (pool: *Regexp_Pool, r1ptr: **Regexp_Node, r2ptr: **Regexp_Node) {
 	leave_empty :: (r1ptr: **Regexp_Node, r2ptr: **Regexp_Node, pool: *Regexp_Pool, nre: *Regexp_Node) {
 		// @ToDo, @Speed: Why don’t we set this to null instead of allocing a temporary new regexp?
-		<<r1ptr = new_regexp(pool, .EmptyMatch, .NoParseFlags);
-		<<r2ptr = nre;
+		r1ptr.* = new_regexp(pool, .EmptyMatch, .NoParseFlags);
+		r2ptr.* = nre;
 	}
 
-	r1 := <<r1ptr;
-	r2 := <<r2ptr;
+	r1 := r1ptr.*;
+	r2 := r2ptr.*;
 
 	nre := new_repeat(pool, r1.subs[0], r1.parse_flags, 0, 0);
 
@@ -266,8 +266,8 @@ do_coalesce :: (pool: *Regexp_Pool, r1ptr: **Regexp_Node, r2ptr: **Regexp_Node) 
 			if n == r2.runes.count {
 				leave_empty(r1ptr, r2ptr, pool, nre);
 			} else {
-				<<r1ptr = nre;
-				<<r2ptr = new_literal_string(pool, slice(r2.runes, n, r2.runes.count - n), r2.parse_flags);
+				r1ptr.* = nre;
+				r2ptr.* = new_literal_string(pool, slice(r2.runes, n, r2.runes.count - n), r2.parse_flags);
 			}
 
 		case;

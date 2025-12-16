@@ -288,24 +288,24 @@ optimize :: (using prog: *Prog) {
 	add_if_nonzero(*q, start);
 	for id: q {
 		ip := *inst[id];
-		j := get_out(<<ip);
+		j := get_out(ip.*);
 		// ToDo: Why is this a pointer????
 		jp: *Inst;
 		while true {
 			if j == 0	break;
 			jp = *inst[j];
-			if get_opcode(<<jp) != .kInstNop	break;
-			j = get_out(<<jp);
+			if get_opcode(jp.*) != .kInstNop	break;
+			j = get_out(jp.*);
 		}
 		set_out(ip, j);
 		add_if_nonzero(*q, j);
-		if get_opcode(<<ip) == .kInstAlt {
+		if get_opcode(ip.*) == .kInstAlt {
 			j = ip.out1;
 			while true {
 				if j == 0	break;
 				jp = *inst[j];
-				if get_opcode(<<jp) != .kInstNop	break;
-				j = get_out(<<jp);
+				if get_opcode(jp.*) != .kInstNop	break;
+				j = get_out(jp.*);
 			}
 			ip.out1 = j;
 			add_if_nonzero(*q, j);
@@ -323,12 +323,12 @@ optimize :: (using prog: *Prog) {
 	add_if_nonzero(*q, start);
 	for id: q {
 		ip := *inst[id];
-		add_if_nonzero(*q, get_out(<<ip));
-		if get_opcode(<<ip) == .kInstAlt {
+		add_if_nonzero(*q, get_out(ip.*));
+		if get_opcode(ip.*) == .kInstAlt {
 			add_if_nonzero(*q, ip.out1);
 
 			// ToDo: Why are these pointers????
-			j := inst[get_out(<<ip)];
+			j := inst[get_out(ip.*)];
 			k := inst[ip.out1];
 			if get_opcode(j) == .kInstByteRange && get_out(j) == id && j.lo == 0x00 && j.hi == 0xFF && is_match(prog, k) {
 				set_opcode(ip, .kInstAltMatch);
@@ -426,11 +426,11 @@ compute_byte_map :: (using prog: *Prog) {
 
 	for id: 0..inst.count - 1 {
 		ip := *inst[id];
-		if get_opcode(<<ip) == .kInstByteRange {
+		if get_opcode(ip.*) == .kInstByteRange {
             lo: s32 = ip.lo;
             hi: s32 = ip.hi;
 			mark(*builder, lo, hi);
-			if get_foldcase(<<ip) && lo <= #char "z" && hi >= #char "a" {
+			if get_foldcase(ip.*) && lo <= #char "z" && hi >= #char "a" {
 				foldlo := lo;
 				foldhi := hi;
 				if foldlo < #char "a" {
@@ -447,11 +447,11 @@ compute_byte_map :: (using prog: *Prog) {
 			}
 			// If this Inst is not the last Inst in its list AND the next Inst is
 			// also a ByteRange AND the Insts have the same out, defer the merge.
-			if !get_last(<<ip) && get_opcode(inst[id + 1]) == .kInstByteRange && get_out(<<ip) == get_out(inst[id+1]) {
+			if !get_last(ip.*) && get_opcode(inst[id + 1]) == .kInstByteRange && get_out(ip.*) == get_out(inst[id+1]) {
 				continue;
 			}
 			merge(*builder);
-		} else if get_opcode(<<ip) == .kInstEmptyWidth {
+		} else if get_opcode(ip.*) == .kInstEmptyWidth {
 			if ip.empty & (EmptyOp.kEmptyBeginLine|.kEmptyEndLine) && !marked_line_boundaries {
 				mark(*builder, #char "\n", #char "\n");
 				merge(*builder);
@@ -714,10 +714,10 @@ flatten :: (using prog: *Prog) {
 	// Fourth pass: Remaps outs to flat-ids.
 	// Counts instructions by opcode.
 	for * flat {
-		if (get_opcode(<<it) != .kInstAltMatch) { // handled in EmitList()
-			set_out(it, flatmap[get_out(<<it)]);
+		if (get_opcode(it.*) != .kInstAltMatch) { // handled in EmitList()
+			set_out(it, flatmap[get_out(it.*)]);
 		}
-		inst_count[get_opcode(<<it)] += 1;
+		inst_count[get_opcode(it.*)] += 1;
 	}
 
 	total := 0;
@@ -755,16 +755,16 @@ flatten :: (using prog: *Prog) {
 mark_successors :: (using prog: *Prog, reachable: *Sparse_Set, stk: *[..] int) -> rootmap: Sparse_Array(int), predmap: Sparse_Array(int), preds_list: [..] [..] int {
 	get_or_add_preds :: (preds_list: *[..] [..] int, predmap: *Sparse_Array(int), id: int) -> *[..] int {
 		preds: * [..] int;
-		if !contains(<<predmap, id) {
+		if !contains(predmap.*, id) {
 			add_unchecked(predmap, id, preds_list.count);
 			array_reserve(preds_list, preds_list.count + 1);
 			memset(preds_list.data + preds_list.count, 0, size_of(type_of(preds_list[0])));
 			preds_list.count += 1;
-			preds = *(<<preds_list)[preds_list.count - 1];
+			preds = *(preds_list.*)[preds_list.count - 1];
 			preds.data = null;
 			preds.count = 0;
 		} else {
-			preds = *(<<preds_list)[get(<<predmap, id)];
+			preds = *(preds_list.*)[get(predmap.*, id)];
 		}
 		return preds;
 	}
@@ -791,7 +791,7 @@ mark_successors :: (using prog: *Prog, reachable: *Sparse_Set, stk: *[..] int) -
 	array_add(stk, start_unanchored);
 	while stk.count {
 		id := pop(stk);
-		if contains(<<reachable, id)	 continue;
+		if contains(reachable.*, id)	 continue;
 		add_unchecked(reachable, id);
 
 		i := inst[id];
@@ -836,10 +836,10 @@ mark_dominator :: (using prog: *Prog, root: int, rootmap: *Sparse_Array(int), pr
 
 	while stk.count {
 		id := pop(stk);
-		if contains(<<reachable, id) continue;
+		if contains(reachable.*, id) continue;
 		add_unchecked(reachable, id);
 
-		if id != root && contains(<<rootmap, id) {
+		if id != root && contains(rootmap.*, id) {
 			// We reached another "tree" via epsilon transition.
 			continue;
 		}
@@ -866,10 +866,10 @@ mark_dominator :: (using prog: *Prog, root: int, rootmap: *Sparse_Array(int), pr
 	for id: reachable {
 		if contains(predmap, id) {
 			for pred: preds_list[get(predmap, id)] {
-				if !contains(<<reachable, pred) {
+				if !contains(reachable.*, pred) {
 					// id has a predecessor that cannot be reached from root!
 					// Therefore, id must be a "root" too - mark it as such.
-					if !contains(<<rootmap, id) {
+					if !contains(rootmap.*, id) {
 						add_unchecked(rootmap, id, rootmap.count);
 					}
 				}
@@ -884,15 +884,15 @@ emit_list :: (using prog: *Prog, root: int, rootmap: *Sparse_Array(int), flat: *
 	array_add(stk, root);
 	while stk.count {
 		id := pop(stk);
-		if contains(<<reachable, id) continue;
+		if contains(reachable.*, id) continue;
 		add_unchecked(reachable, id);
 
-		if id != root && contains(<<rootmap, id) {
+		if id != root && contains(rootmap.*, id) {
 			// We reached another "tree" via epsilon transition. Emit a kInstNop
 			// instruction so that the Prog does not become quadratically larger.
 			i: Inst;
 			set_opcode(*i, .kInstNop);
-			set_out(*i, get(<<rootmap, id));
+			set_out(*i, get(rootmap.*, id));
 			array_add(flat, i);
 			continue;
 		}
@@ -916,7 +916,7 @@ emit_list :: (using prog: *Prog, root: int, rootmap: *Sparse_Array(int), flat: *
 			case .kInstCapture; #through;
 			case .kInstEmptyWidth;
 				newi := i;
-				set_out(*newi, get(<<rootmap, get_out(i)));
+				set_out(*newi, get(rootmap.*, get_out(i)));
 				array_add(flat, newi);
 
 			case .kInstNop;
@@ -945,24 +945,24 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 		// Like ByteMapBuilder, we split at lo-1 and at hi.
 		lo := lo_in - 1;
 
-		if lo >= 0 && !(<<splits)[lo] {
+		if lo >= 0 && !(splits.*)[lo] {
 			set_bit(splits, lo);
-			next := find_next_set_bit(<<splits, lo + 1);
-			(<<colors)[lo] = (<<colors)[next];
+			next := find_next_set_bit(splits.*, lo + 1);
+			(colors.*)[lo] = (colors.*)[next];
 		}
-		if !(<<splits)[hi] {
+		if !(splits.*)[hi] {
 			set_bit(splits, hi);
-			next := find_next_set_bit(<<splits, hi + 1);
-			(<<colors)[hi] = (<<colors)[next];
+			next := find_next_set_bit(splits.*, hi + 1);
+			(colors.*)[hi] = (colors.*)[next];
 		}
 
 		c := lo + 1;
 		while c < 256 {
-			next := find_next_set_bit(<<splits, c);
+			next := find_next_set_bit(splits.*, c);
 			// Ratchet backwards...
-			(<<first) = min(<<first, (<<colors)[next]);
+			(first.*) = min(first.*, (colors.*)[next]);
 			// Recolor with id - because it's the new nearest conflict!
-			(<<colors)[next] = id;
+			(colors.*)[next] = id;
 			if next == hi	break;
 			c = next+1;
 		}
@@ -974,7 +974,7 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 
 	dirty := false;
 	for < id: begin..end {
-		if (id == end || get_opcode((<<flat)[id]) != .kInstByteRange) {
+		if (id == end || get_opcode((flat.*)[id]) != .kInstByteRange) {
 			if (dirty) {
 				dirty = false;
 				clear_all_bits(*splits);
@@ -992,11 +992,11 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 		// from end to the nearest conflict (if any) during recoloring.
 		first := end;
 
-		ip := *(<<flat)[id];
+		ip := *(flat.*)[id];
 		lo: s32 = ip.lo;
 		hi: s32 = ip.hi;
 		recolor(*splits, *colors, lo, hi, *first, id);
-		if get_foldcase(<<ip) && lo <= #char "z" && hi >= #char "a" {
+		if get_foldcase(ip.*) && lo <= #char "z" && hi >= #char "a" {
 			foldlo := lo;
 			foldhi := hi;
 			if (foldlo < #char "a") {
