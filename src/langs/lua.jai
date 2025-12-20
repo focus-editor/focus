@@ -160,14 +160,17 @@ parse_identifier :: (using tokenizer: *Lua_Tokenizer, token: *Token) {
     token.type = .identifier;
     ident := read_identifier_string(tokenizer);
 
-    if ident.count <= MAX_KEYWORD_LENGTH {
-        ok, kw_token := table_find(*KEYWORD_MAP, ident);
-        if ok {
-            token.type    = kw_token.type;
-            token.keyword = kw_token.keyword;
-            return;
-        }
+    if ident.count > MAX_KEYWORD_LENGTH then return;
+    ok, kw_token := table_find(*KEYWORD_MAP, ident);
+    if !ok then return;
+
+    if kw_token.type == .builtin_function {
+        // builtin functions are always standalone
+        if last_token.type == .punctuation && last_token.punctuation == .period then return;
     }
+
+    token.type    = kw_token.type;
+    token.keyword = kw_token.keyword;
 }
 
 parse_number :: (using tokenizer: *Lua_Tokenizer, token: *Token) {
