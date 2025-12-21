@@ -52,7 +52,7 @@ open_file :: (queue: *Queue($T), file_path: string, keep_existing_content := tru
         return file, error(.Catastrophic, code);
     }
     file.unfinished_operations = Basic.New(u64);
-    <<file.unfinished_operations = 1;
+    file.unfinished_operations.* = 1;
     return file;
 }
 
@@ -74,7 +74,7 @@ read_entire_file :: (queue: *Queue($T), file_path: string, user_data: T) -> resu
         null
     );
     if file.handle == INVALID_HANDLE_VALUE return error(.FileAccessFailed, GetLastError());
-    
+
     if !CreateIoCompletionPort(file.handle, queue.completion_port, 0, 0) {
         code := GetLastError();
         CloseHandle(file.handle);
@@ -93,8 +93,8 @@ read_entire_file :: (queue: *Queue($T), file_path: string, user_data: T) -> resu
     file_data := Basic.NewArray(file_info.EndOfFile.QuadPart, u8, initialized = false);
 
     file.unfinished_operations = Basic.New(u64);
-    <<file.unfinished_operations = 0;
-    
+    file.unfinished_operations.* = 0;
+
     return read_file(queue, file, 0, file_data, user_data);
 }
 
