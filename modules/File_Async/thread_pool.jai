@@ -140,7 +140,7 @@ open_file  :: (queue: *Queue($T), file_path: string, keep_existing_content := tr
     descriptor = open(temp_c_string(file_path), O_RDWR | O_CREAT | O_CLOEXEC | (ifx keep_existing_content cast(s32)0 else O_TRUNC), 0x1B4); // 0o664
     if descriptor == -1 return file, error(.FileAccessFailed, errno());
     unfinished_operations = New(s64, false);
-    <<unfinished_operations = 1;
+    unfinished_operations.* = 1;
     return file;
 }
 close_file :: inline (queue: *Queue, file: File) {
@@ -454,7 +454,7 @@ worker_thread_start :: (queue: *Queue, thread_id: u8) {
             handle_request(queue, thread, *request.operation);
 
             #if false {
-                <<request = .{}; // We should only need to set valid to false but clearing helps with debugging
+                request.* = .{}; // We should only need to set valid to false but clearing helps with debugging
             }
             request.valid = false;
 

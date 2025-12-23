@@ -66,7 +66,7 @@ init_objective_c_selector_struct :: (selectors: *$T) {
                     selector_name[it] = #char ":";
                 }
             }
-            print_to_builder(*builder, "    <<(cast(*Selector) (data + %)) = sel_registerName(\"%\");\n", it.offset_in_bytes, selector_name);
+            print_to_builder(*builder, "    ((cast(*Selector) (data + %))).* = sel_registerName(\"%\");\n", it.offset_in_bytes, selector_name);
         }
         return builder_to_string(*builder);
     };
@@ -384,7 +384,7 @@ objc_add_instance_method :: (my_class: Class, proc: Any, selector_name: string) 
     defer free(c_type_encoding);
 
     sel := sel_registerName(selector_name);
-    success := class_addMethod(my_class, sel, xx << cast(**void) proc.value_pointer, c_type_encoding);
+    success := class_addMethod(my_class, sel, xx (cast(**void) proc.value_pointer).*, c_type_encoding);
     assert(success != 0);
 }
 
