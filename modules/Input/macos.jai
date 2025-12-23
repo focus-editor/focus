@@ -129,7 +129,7 @@ init_input_system :: () {
     using Key_Code;
 
     for * input_vk_translation_table {
-        <<it = UNKNOWN;
+        it.* = UNKNOWN;
     }
 
     input_vk_translation_table[OSX_VK_ESCAPE]        = ESCAPE;
