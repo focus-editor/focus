@@ -889,25 +889,43 @@ _find_pane_with_buffer_id :: (buffer_id: s64, current_pane: *Editor_Pane) -> *Ed
 #scope_export
 
 editors_show_existing_buffer :: (buffer_id: s64) -> found: bool {
-    _find_by_buffer_id :: (pane: *Editor_Pane, buffer_id: s64) -> *Editor_Pane, editor_index: s64 = -1 {
+    if buffer_id < 0 return false;
+
+    // Prefer the active editor if it already has the buffer open
+    if get_visible_buffer_id(editors.active_pane) == buffer_id return true;
+
+    _find_by_buffer_id :: (pane: *Editor_Pane, buffer_id: s64, prefer_visible := false) -> *Editor_Pane, editor_index: s64 = -1 {
         if !pane return null;
 
-        for pane.editor_ids {
-            editor := *open_editors[it];
-            if editor.buffer_id == buffer_id return pane, it_index;
+        if prefer_visible {
+            if get_visible_buffer_id(pane) == buffer_id return pane, pane.editor_index;
+        } else {
+            for pane.editor_ids {
+                editor := *open_editors[it];
+                if editor.buffer_id == buffer_id return pane, it_index;
+            }
         }
 
-        child1, editor_index := _find_by_buffer_id(pane.child1, buffer_id);
+        child1, editor_index := _find_by_buffer_id(pane.child1, buffer_id, prefer_visible);
         if child1 return child1, editor_index;
 
-        child2:, editor_index= _find_by_buffer_id(pane.child2, buffer_id);
+        child2:, editor_index= _find_by_buffer_id(pane.child2, buffer_id, prefer_visible);
         if child2 return child2, editor_index;
 
         return null;
     }
 
-    pane, editor_index := _find_by_buffer_id(editors.root, buffer_id);
-    if !pane return false;
+    // Prefer editors which are already visible
+    pane, editor_index := _find_by_buffer_id(editors.root, buffer_id, prefer_visible = true);
+
+    // If failed to find one, check if the current pane has the editor we need
+    pane, editor_index = _find_by_buffer_id(editors.active_pane, buffer_id);
+
+    // Finally, search among the hidden open editors in the whole tree
+    if !pane {
+        pane, editor_index = _find_by_buffer_id(editors.root, buffer_id);
+        if !pane return false;
+    }
 
     pane.editor_index = editor_index;
     activate_pane(pane);
@@ -918,6 +936,15 @@ editors_show_existing_buffer :: (buffer_id: s64) -> found: bool {
 get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {
     if !pane || !pane.editor_ids return -1;
     return pane.editor_ids[pane.editor_index];
+}
+
+get_visible_buffer_id :: (pane: *Editor_Pane) -> s64 {
+    editor_id := get_visible_editor_id(pane);
+    if editor_id >= 0 {
+        editor := *open_editors[editor_id];
+        return editor.buffer_id;
+    }
+    return -1;
 }
 
 action_center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
