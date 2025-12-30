@@ -220,6 +220,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "indentation_convert_to_spaces_for_buffer",
     "reload_from_disk",
 
+    "copy_current_file_path",
+
     "convert_buffer_to_crlf",
     "convert_buffer_to_lf",
 

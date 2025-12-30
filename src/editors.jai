@@ -203,6 +203,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .delete_current_file;              defer_action_delete(editor.buffer_id);
         case .reload_from_disk;                 action_reload_from_disk(editor.buffer_id);
 
+        case .copy_current_file_path;           action_copy_current_file_path(editor.buffer_id);
+
         case .duplicate_editor;                 action_duplicate_editor(.on_the_side);
         case .duplicate_editor_left;            action_duplicate_editor(.left);
         case .duplicate_editor_right;           action_duplicate_editor(.right);
@@ -3004,6 +3006,19 @@ action_reload_from_disk :: (buffer_id: s64) {
     add_success_message("File contents has been reloaded from\n%", buffer.file.full_path);
 
     if !(buffer.internal || buffer.binary) then finder.need_to_refresh_results = true;
+}
+
+action_copy_current_file_path :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+
+    if !buffer.has_file || !buffer.file.full_path {
+        add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
+        return;
+    }
+
+    os_clipboard_set_text(buffer.file.full_path);
+
+    add_success_message("Copied file path to clipboard:\n%", buffer.file.full_path);
 }
 
 toggle_expand :: () {
