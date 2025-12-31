@@ -216,8 +216,6 @@ parse_value_keyword :: (using tokenizer: *Toml_Tokenizer, token: *Token) {
 
     token.type = .identifier;
 
-    // if t >= max_t return;
-
     view := string.{ data = start_t, count = t - string_start };
 
     if view == {
