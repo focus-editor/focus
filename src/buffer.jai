@@ -1667,6 +1667,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Java;                 return tokenize_java;
         case .Js;                   return tokenize_js;
         case .Json;                 return tokenize_json;
+        case .Toml;                 return tokenize_toml;
         case .Lua;                  return tokenize_lua;
         case .Odin;                 return tokenize_odin;
         case .Powershell;           return tokenize_powershell;
@@ -1922,6 +1923,7 @@ Buffer :: struct {
         Java;
         Js;
         Json;
+        Toml;
         Lua;
         Odin;
         Powershell;

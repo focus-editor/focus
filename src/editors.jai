@@ -2298,6 +2298,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "rpy";             lang = .RenPy;
         case "rs";              lang = .Rust;
         case "json";            lang = .Json;
+        case "toml";            lang = .Toml;
         case "yang";            lang = .Yang;
         case "zig";             lang = .Zig;
         case "tal";             lang = .Uxntal;
@@ -4487,6 +4488,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .RenPy;        #through;
         case .Shell;        #through;
         case .Focus_Config; #through;
+        case .Toml        ; #through;
         case .Focus_Theme;
             comment = "#";
 
@@ -4738,6 +4740,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Zig;          #through;
         case .Ini;          #through;
         case .Focus_Config; #through;
+        case .Toml;         #through;
         case .Focus_Theme;
             assert(!is_fallback, "Infinite recursion");
             toggle_comment(editor, buffer, true);
