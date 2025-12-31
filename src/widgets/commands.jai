@@ -265,11 +265,10 @@ base_commands := #run -> [] Command {
 
         cmd( "Open Another Editor Instance",      .open_another_editor_instance,     .None   ),
         cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
+        cmd( "Copy Current File Path",            .copy_current_file_path,           .Single ),
 
         cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
         cmd( "Reload File From Disk",             .reload_from_disk,                 .Single ),
-
-        cmd( "Copy Current File Path",            .copy_current_file_path,           .Single ),
 
         cmd( "Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
         cmd( "Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
