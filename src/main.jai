@@ -1075,6 +1075,7 @@ focus_allocator: Allocator;
 #load "langs/java.jai";
 #load "langs/js.jai";
 #load "langs/json.jai";
+#load "langs/toml.jai";
 #load "langs/lua.jai";
 #load "langs/odin.jai";
 #load "langs/powershell.jai";
