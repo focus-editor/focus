@@ -281,52 +281,40 @@ highlight_token :: (using buffer: *Buffer, token: Base_Token) {
 }
 
 get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
-    lowercase_name := to_lower_copy(lang_name,, temp);
-    if lowercase_name == {
-        case "jai";          return .Jai,        true;
-        case "c";            return .C,          true;
-        case "cpp";          return .Cpp,        true;
-        case "csharp";       return .CSharp,     true;
-        case "css";          return .Css,        true;
-        case "d";            return .D,          true;
-        case "dart";         return .Dart,       true;
-        case "glsl";         return .Glsl,       true;
-        case "hlsl";         return .Hlsl,       true;
-        case "go";           return .Golang,     true;
-        case "golang";       return .Golang,     true;
-        case "java";         return .Java,       true;
-        case "js";           return .Js,         true;
-        case "jsx";          return .Js,         true;
-        case "json";         return .Json,       true;
-        case "toml";         return .Toml,       true;
-        case "ts";           return .Js,         true;
-        case "tsx";          return .Js,         true;
-        case "lua";          return .Lua,        true;
-        case "odin";         return .Odin,       true;
-        case "powershell";   return .Powershell, true;
-        case "python";       return .Python,     true;
-        case "renpy";        return .RenPy,      true;
-        case "rust";         return .Rust,       true;
-        case "html";         return .Html,       true;
-        case "xml";          return .Xml,        true;
-        case "todo";         return .Todo,       true;
-        case "yang";         return .Yang,       true;
-        case "zig";          return .Zig,        true;
-        case "uxntal";       return .Uxntal,     true;
-        case "plain_text";   return .Plain_Text, true;
-        case "md";           return .Markdown,   true;
-        case "markdown";     return .Markdown,   true;
-        case "batch";        return .Batch,      true;
-        case "swift";        return .Swift,      true;
-        case "shell";        return .Shell,      true;
-        case "sh";           return .Shell,      true;
-        case "bash";         return .Shell,      true;
-        case "zsh";          return .Shell,      true;
-        case "ini";          return .Ini,        true;
-        case "vue";          return .Vue,        true;
 
-        // case "focus_config"; return .Focus_Config, true;  // disabled for now
-        // case "focus_theme";  return .Focus_Theme,  true;
+    lowercase_name := to_lower_copy(lang_name,, temp);
+
+    #insert -> string {
+        builder: String_Builder;
+
+        print_to_builder(*builder, "if lowercase_name == {\n");
+
+        for language : enum_values_as_enum(Buffer.Lang) {
+            // focus_theme and focus_config disabled for now
+            if language == .Focus_Theme || language == .Focus_Config
+                continue;
+
+            lowercase_enum_name := to_lower_copy(enum_value_to_name(language));
+
+            print_to_builder(*builder, "    case \"%\"; return .%, true;\n", lowercase_enum_name, language);
+
+        }
+
+        print_to_builder(*builder, "}\n");
+        return builder_to_string(*builder);
+    }
+
+    // Languages which can be referred to by more than one name.
+    // For example: md and markdown.
+    if lowercase_name == {
+        case "go";    return .Golang,     true;
+        case "jsx";   return .Js,         true;
+        case "ts";    return .Js,         true;
+        case "tsx";   return .Js,         true;
+        case "sh";    return .Shell,      true;
+        case "bash";  return .Shell,      true;
+        case "zsh";   return .Shell,      true;
+        case "md";    return .Markdown,   true;
     }
 
     return .Plain_Text, false;
