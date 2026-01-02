@@ -298,6 +298,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "js";           return .Js,         true;
         case "jsx";          return .Js,         true;
         case "json";         return .Json,       true;
+        case "toml";         return .Toml,       true;
         case "ts";           return .Js,         true;
         case "tsx";          return .Js,         true;
         case "lua";          return .Lua,        true;
