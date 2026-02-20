@@ -420,24 +420,24 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    "break", "case", "continue", "default", "do", "else", "enum", "for", "goto", "if", "return", "sizeof", "struct", "switch",
-    "typedef", "union", "while","_Atomic", "_Generic", "_Noreturn", "_Static_assert", "__asm", "__asm__", "__except",
-    "__finally", "__leave", "__try",
+    "auto", "_Alignas", "alignas", "_Alignof", "alignof", "break", "case", "continue", "default", "defer", "do", "else", "enum",
+    "for", "goto", "if", "inline", "restrict", "return", "sizeof", "struct", "switch", "typedef", "union", "while","_Atomic",
+    "_Generic", "_Noreturn", "static_assert", "_Static_assert", "asm", "__asm", "__asm__", "__except", "__finally", "__leave", "__try",
 ];
 
 TYPE_KEYWORDS :: string.[
     // built-in types
-    "char", "double", "float", "int", "long", "short", "void", "_Bool", "_Complex", "_Imaginary",
+    "char", "_Decimal32", "_Decimal64", "_Decimal128", "double", "float", "int", "long", "short", "void", "_BitInt", "bool", "_Bool", "_Complex", "_Imaginary",
 
     // stdint types
-    "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t", "int_least16_t",
+    "char8_t", "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t", "int_least16_t",
     "int_least32_t", "int_least64_t", "uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t", "int_fast8_t",
     "int_fast16_t", "int_fast32_t", "int_fast64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t", "intptr_t",
-    "uintptr_t", "intmax_t", "uintmax_t", "wint_t", "size_t", "ssize_t", "ptrdiff_t", "sig_atomic_t", "time_t", "clock_t",
+    "uintptr_t", "intmax_t", "uintmax_t", "wint_t", "size_t", "ssize_t", "ptrdiff_t", "sig_atomic_t", "time_t", "clock_t", "nullptr_t",
 ];
 
 VALUE_KEYWORDS :: string.[
-    "false", "true",
+    "false", "true", "NULL", "nullptr"
 ];
 
 MODIFIER_KEYWORDS :: string.[
@@ -445,7 +445,7 @@ MODIFIER_KEYWORDS :: string.[
 ];
 
 DIRECTIVES :: string.[
-    "define", "elif", "elifdef", "elifndef", "else", "end", "endif", "error", "if", "ifdef", "ifndef",
+    "define", "elif", "elifdef", "elifndef", "else", "embed", "end", "endif", "error", "if", "ifdef", "ifndef",
     "include", "line", "pragma", "undef", "warning",
 ];
 
