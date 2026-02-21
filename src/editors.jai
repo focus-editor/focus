@@ -46,7 +46,20 @@ activate_editors :: () {
     cursors_start_blinking();
 }
 
-editors_handle_file_drop :: (files: [] string) {
+editors_handle_file_drop :: (paths: [] string) {
+    files: [..] string;
+    files.allocator = temp;
+
+    directories: [..] string;
+    directories.allocator = temp;
+
+    for path : paths {
+        if is_directory(path) array_add(*directories, path);
+        else                  array_add(*files, path);
+    }
+
+    if directories.count > 0 defer_action_add_directories_to_workspace(directories);
+
     if editors_get_layout() == .Multi {
         // Defer handling to the drawing code because we only know the layout then
         just_dropped_files = files;

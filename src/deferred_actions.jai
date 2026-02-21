@@ -28,6 +28,22 @@ defer_action_reload_workspace :: (automatic: bool) {
     defer_action_save_all_buffers();
 }
 
+defer_action_rescan_workspace :: () {
+    clear_action_queue();
+    push_action(.rescan_workspace);
+    defer_action_save_all_buffers();
+}
+
+defer_action_add_directories_to_workspace :: (paths: [] string) {
+    copy: [..] string;
+    for paths array_add(*copy, copy_string(it));
+
+    clear_action_queue();
+    push_action(.rescan_workspace);
+    push_action(.add_directories_to_workspace, .{ add_directories_to_workspace = .{ paths = copy } });
+    defer_action_save_all_buffers();
+}
+
 defer_action_close_project :: () {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
@@ -141,6 +157,8 @@ execute_top_action :: () -> Action_Result {
         case .close_project;                            return execute_close_project(action);
         case .refresh_config_or_theme;                  return execute_refresh_config_or_theme(action);
         case .reload_workspace;                         return execute_reload_workspace(action);
+        case .rescan_workspace;                         return execute_rescan_workspace(action);
+        case .add_directories_to_workspace;             return execute_add_directories_to_workspace(action);
         case .build_command;                            return execute_build_command(action);
         case .abort_workspace_scanning;                 return execute_abort_workspace_scanning(action);
         case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
@@ -173,12 +191,18 @@ remove_top_action :: () {
             using action.details.save_buffers;
             array_free(buffer_ids);
 
+        case .add_directories_to_workspace;
+            using action.details.add_directories_to_workspace;
+            for paths free(it);
+            array_free(paths);
+
         // Nothing to free
         case .quit;
         case .save_as;
         case .delete;
         case .kill_running_command;
         case .reload_workspace;
+        case .rescan_workspace;
         case .close_project;
         case .build_command;
         case .abort_workspace_scanning;
@@ -205,17 +229,18 @@ Deferred_Action :: struct {
     using details: Details;
 
     Details :: union {
-        save_as:                    struct { buffer_id: s64; is_move: bool; }
-        save_buffers:               struct { buffer_ids: [] s64; }
-        confirm_overwrite:          struct { buffer_id: s64; is_move: bool; file_path: string; }
-        delete:                     struct { buffer_id: s64; }
-        load_project_config:        struct { path: string; }
-        reload_workspace:           struct { automatic: bool; }
-        refresh_config_or_theme:    struct { path: string; }
-        build_command:              struct { command_id: s64; }
-        close_editor:               struct { editor_id: s64; }
-        close_editors_for_pane:     struct { pane: *Editor_Pane; except: s64; notify: bool; }
-        close_pane:                 struct { pane: *Editor_Pane; }
+        save_as:                      struct { buffer_id: s64; is_move: bool; }
+        save_buffers:                 struct { buffer_ids: [] s64; }
+        confirm_overwrite:            struct { buffer_id: s64; is_move: bool; file_path: string; }
+        delete:                       struct { buffer_id: s64; }
+        load_project_config:          struct { path: string; }
+        reload_workspace:             struct { automatic: bool; }
+        refresh_config_or_theme:      struct { path: string; }
+        add_directories_to_workspace: struct { paths: [] string; }
+        build_command:                struct { command_id: s64; }
+        close_editor:                 struct { editor_id: s64; }
+        close_editors_for_pane:       struct { pane: *Editor_Pane; except: s64; notify: bool; }
+        close_pane:                   struct { pane: *Editor_Pane; }
     }
 
     Kind :: enum {
@@ -229,6 +254,8 @@ Deferred_Action :: struct {
         load_project_config;
         close_project;
         reload_workspace;
+        rescan_workspace;
+        add_directories_to_workspace;
         refresh_config_or_theme;
         abort_workspace_scanning;
         wait_for_workspace_scanning_to_finish;
@@ -470,6 +497,22 @@ execute_refresh_config_or_theme :: (action: Deferred_Action) -> Action_Result {
 execute_reload_workspace :: (action: Deferred_Action) -> Action_Result {
     reload_workspace(action.details.reload_workspace.automatic);
     return .CANCEL;  // final command
+}
+
+execute_rescan_workspace :: (action: Deferred_Action) -> Action_Result {
+    rescan_workspace();
+    return .DONE;
+}
+
+execute_add_directories_to_workspace :: (action: Deferred_Action) -> Action_Result {
+    using action.details.add_directories_to_workspace;
+
+    for paths {
+        add_directory_to_workspace(it, index = 0);
+        add_success_message("Opened %", it);
+    }
+
+    return .DONE;
 }
 
 execute_build_command :: (action: Deferred_Action) -> Action_Result {

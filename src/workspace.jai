@@ -111,6 +111,32 @@ add_directory_to_workspace :: (path: string, index := -1) {
     }
 }
 
+rescan_workspace :: () {
+    array_reset_keeping_memory(*unique_project_dirs);
+
+    project_dirs_with_slashes: [..] string;
+    project_dirs_with_slashes.allocator = temp;
+
+    for project_dirs {
+        dir := it.path;
+        if !ends_with(dir, "/") dir = tprint("%/", dir);
+        array_add(*project_dirs_with_slashes, dir);
+    }
+
+    for dir : project_dirs {
+        is_unique := true;
+        for prefix : project_dirs_with_slashes {
+            if dir.path.count > prefix.count && platform_path_begins_with(dir.path, prefix) {
+                is_unique = false;
+                break;
+            }
+        }
+        if is_unique then array_add(*unique_project_dirs, dir.path);
+    }
+
+    start_workspace_scan();
+}
+
 start_workspace_scan :: () {
     file_list_ready = false;
     workspace_scan_complete = false;
