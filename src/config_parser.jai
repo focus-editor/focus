@@ -313,6 +313,7 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "Space",             #char " " },
     .{ "Plus",              #char "+" },
     .{ "Minus",             #char "-" },
+    .{ "Hash",              #char "#" },
 
     .{ "F1",                F1  },
     .{ "F2",                F2  },
