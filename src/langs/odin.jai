@@ -851,6 +851,7 @@ DIRECTIVES :: string.[
     "file", "line", "procedure", "directory", "hash",
     "load", "load_or", "load_directory", "load_hash",
     "soa", "relative", "simd",
+    "all_or_none"
 ];
 
 #insert -> string {
