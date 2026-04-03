@@ -335,6 +335,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .join_lines;                          join_lines                       (editor, buffer);                  keep_selection = true;
             case .join_lines_no_spaces_in_between;     join_lines                       (editor, buffer, in_between = ""); keep_selection = true;
 
+            case .sort_lines;                          sort_lines                       (editor, buffer);                  keep_selection = true;
+
             case .delete_line;                         delete_line                      (editor, buffer);
             case .delete_line_and_go_up;               delete_line                      (editor, buffer, go_up = true);
 
@@ -4192,6 +4194,22 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
     }
 
     editor.cursor_moved = true;
+}
+
+sort_lines :: (editor: *Editor, buffer: *Buffer) {
+    line_ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
+
+    for * line_range : line_ranges {
+        range_str := get_range_as_string(buffer, line_range.range);
+        individual_lines := split(trim_right(range_str, "\n"), #char "\n",, allocator = temp);
+        if individual_lines.count <= 1 continue;
+
+        quick_sort(individual_lines, compare_strings);
+
+        new_str := join(..individual_lines, "\n", after_last = ends_with(range_str, #char "\n"),, allocator = temp);
+
+        replace_range(buffer, line_range.range, new_str);
+    }
 }
 
 delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
