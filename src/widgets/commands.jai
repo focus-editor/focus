@@ -176,6 +176,8 @@ base_commands := #run -> [] Command {
         cmd( "Join Lines",                        .join_lines,                       .Single ),
         cmd( "Join Lines (no spaces in between)", .join_lines_no_spaces_in_between,  .Single ),
 
+        cmd( "Sort Lines",                        .sort_lines,                       .Single ),
+
         cmd( "Duplicate Lines",                   .duplicate_lines,                  .Single ),
         cmd( "Delete Line",                       .delete_line,                      .Single ),
         cmd( "Delete Line And Go Up",             .delete_line_and_go_up,            .Single ),
