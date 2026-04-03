@@ -4201,12 +4201,16 @@ sort_lines :: (editor: *Editor, buffer: *Buffer) {
 
     for * line_range : line_ranges {
         range_str := get_range_as_string(buffer, line_range.range);
-        individual_lines := split(trim_right(range_str, "\n"), #char "\n",, allocator = temp);
+        trimmed_str := trim_right(range_str, "\n");
+        individual_lines := split(trimmed_str, #char "\n",, allocator = temp);
         if individual_lines.count <= 1 continue;
+
+        // Adjust line range to account for trailing newlines
+        line_range.end -= cast(s32) (range_str.count - trimmed_str.count);
 
         quick_sort(individual_lines, compare_strings);
 
-        new_str := join(..individual_lines, "\n", after_last = ends_with(range_str, #char "\n"),, allocator = temp);
+        new_str := join(..individual_lines, "\n",, allocator = temp);
 
         replace_range(buffer, line_range.range, new_str);
     }
