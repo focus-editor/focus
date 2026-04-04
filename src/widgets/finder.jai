@@ -204,6 +204,9 @@ finder_open_selected_result :: (placement: Editor_Placement, selected_num := -1)
 }
 
 finder_open_selected_result_in_pane :: (number: s64) {
+    if finder.request.in_progress return;
+    if finder.selected >= finder.results.count return;
+
     target_pane := editors_find_pane_by_number(number);
     if !target_pane {
         add_user_error("Pane number % doesn't exist", number, dismiss_in_seconds = 3);
