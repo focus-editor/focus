@@ -4199,6 +4199,8 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
 sort_lines :: (editor: *Editor, buffer: *Buffer) {
     line_ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
 
+    cursor_positions := remember_cursor_positions(editor.buffer_id, .active_editor);
+
     for * line_range : line_ranges {
         range_str := get_range_as_string(buffer, line_range.range);
         trimmed_str := trim_right(range_str, "\n");
@@ -4214,6 +4216,8 @@ sort_lines :: (editor: *Editor, buffer: *Buffer) {
 
         replace_range(buffer, line_range.range, new_str);
     }
+
+    restore_cursor_positions(editor.buffer_id, cursor_positions);
 }
 
 delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
