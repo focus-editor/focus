@@ -255,10 +255,14 @@ maybe_close_file_under_cursor :: () {
 
     if !entries.filtered return;
 
-    buffer_id  := entries.filtered[entries.selected].buffer_id;
+    buffer_id := entries.filtered[entries.selected].buffer_id;
 
     for editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
+
+        buffer := *open_buffers[buffer_id];
+        buffer.pending_close = true;
+
         defer_action_close_editor(editor_id);
     }
 
@@ -496,7 +500,7 @@ refresh_entries :: (clear_input := true) {
         case .open_editors;
             for buffer_id : most_recent_buffers {
                 buffer := *open_buffers[buffer_id];
-                maybe_add_a_buffer_entry(buffer, buffer_id);
+                if !buffer.pending_close then maybe_add_a_buffer_entry(buffer, buffer_id);
             }
     }
 

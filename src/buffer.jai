@@ -1840,6 +1840,7 @@ Buffer :: struct {
     binary                 := false;
     error_when_saving      := false;
     crlf                   := false;
+    pending_close          := false;
 
     lang: Lang = .Plain_Text;
 
