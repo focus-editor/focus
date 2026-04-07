@@ -1225,6 +1225,8 @@ editor_do_post_close_cleanup :: (editor_id: s64) {
 
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
     array_add(*recently_closed_editors, editor_id);
+
+    open_file_dialog.should_refresh_entries = true;
 }
 
 close_buffer :: (buffer_id: s64) {
