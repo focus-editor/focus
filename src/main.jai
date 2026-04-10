@@ -1111,7 +1111,7 @@ focus_allocator: Allocator;
     #import "Machine_X64";
 }
 
-using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_FREED_MEMORY = false);
+using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_OVERWRITE_MEMORY = false);
 #import "Atomics";
 #import "Compiler";
 #import "File";
