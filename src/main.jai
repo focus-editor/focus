@@ -1205,7 +1205,7 @@ DEBUG_MEMORY_LEAKS :: false;
     // For now this is commented out, just in case this is needed in the future I will leave it here :)
     // Does not compile otherwise since jai beta 0.2.022 added "libc" in module "System"
     //
-    // libc :: #system_library "libc";
+    libc :: #system_library "libc";
 } else {
     focus_memcpy :: memcpy;
 }
