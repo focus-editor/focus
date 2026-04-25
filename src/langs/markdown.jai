@@ -1,11 +1,6 @@
 // This has been contributed by a user,
 // however it's still incomplete and should be simplified when we get to it
 
-/*
-    To-do:
-        - Fix [Link] (example.com) highligting.
-*/
-
 tokenize_markdown ::  (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_markdown_tokenizer(buffer, start_offset, count);
 
