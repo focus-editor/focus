@@ -392,10 +392,13 @@ parse_html_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token
         return;
     }
 
+    attribute_start_t := t;
+
     if vue_mode {
-        attribute_value_is_js   = t.* == #char ":";
-        attribute_value_is_js ||= t.* == #char "@";
-        attribute_value_is_js ||= t + 1 < max_t && t.* == #char "v" && (t + 1).* == #char "-";
+        is_js   := t.* == #char ":";
+        is_js ||= t.* == #char "@";
+        is_js ||= t + 1 < max_t && t.* == #char "v" && (t + 1).* == #char "-";
+        if is_js  attribute_lang = .Js;
     }
 
     t += 1;
@@ -406,6 +409,11 @@ parse_html_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token
         }
 
         t += 1;
+    }
+
+    if html_mode {
+        attribute_name := string.{ data = attribute_start_t, count = t - attribute_start_t };
+        if attribute_name == "style"  attribute_lang = .Css;
     }
 }
 
@@ -420,26 +428,26 @@ parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         t += 1;
         eat_until(tokenizer, char);
 
-        if attribute_value_is_js {
+        if attribute_lang != .None {
             start := last_token.start + 2; // Skip the leading "
             end   := cast(s32) (t - buf.data);
 
             t_start := buf.data + start;
             count   := ifx t >= max_t then t - t_start - 1 else t - t_start;
-            script  := string.{ data = t_start, count = count };
+            content := string.{ data = t_start, count = count };
 
-            found, first_line := split_from_left(script, "\n");
+            found, first_line := split_from_left(content, "\n");
             if found && is_all_whitespace(first_line)  start += xx (first_line.count + 1); // + 1 for the newline itself
 
             if t < max_t {
-                found, _, last_line := split_from_right(script, "\n");
+                found, _, last_line := split_from_right(content, "\n");
                 if found && is_all_whitespace(last_line)  end -= xx last_line.count;
             }
 
-            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
+            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = xx attribute_lang });
 
             // If we don't reset it here we highlight both abc in :is="abc" "abc". Which we don't want.
-            attribute_value_is_js = false;
+            attribute_lang = .None;
         }
 
         t += 1;
@@ -479,7 +487,7 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             t += 1;
         }
 
-        if html_mode && active_tag_name == "script" {
+        if html_mode && (active_tag_name == "script" || active_tag_name == "style") {
             start := last_token.start + 1;
             end   := cast(s32) (t - buf.data);
 
@@ -487,17 +495,18 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 
             t_start := buf.data + start;
             count   := ifx t >= max_t then t - t_start - 1 else t - t_start;
-            script  := string.{ data = t_start, count = count };
+            content := string.{ data = t_start, count = count };
 
-            found, first_line := split_from_left(script, "\n");
+            found, first_line := split_from_left(content, "\n");
             if found && is_all_whitespace(first_line)  start += xx (first_line.count + 1); // + 1 for the newline itself
 
             if t < max_t {
-                found, _, last_line := split_from_right(script, "\n");
+                found, _, last_line := split_from_right(content, "\n");
                 if found && is_all_whitespace(last_line)  end -= xx last_line.count;
             }
 
-            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
+            lang := ifx active_tag_name == "script" then Buffer.Lang.Js else Buffer.Lang.Css;
+            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = lang });
         }
 
         return;
@@ -600,7 +609,13 @@ Xml_Tokenizer :: struct {
 
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
     vue_mode: bool;
-    attribute_value_is_js: bool;
+    attribute_lang: Embedded_Lang;
+}
+
+Embedded_Lang :: enum u8 {
+    None;
+    Js  :: Buffer.Lang.Js;
+    Css :: Buffer.Lang.Css;
 }
 
 Xml_Tokenizer_State :: enum u8 {
