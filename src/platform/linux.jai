@@ -94,6 +94,8 @@ DONE;
         flags=flags,
         app_id=app_id);
 
+    signal(SIGPIPE, SIG_IGN);
+
     active_backend := LD.active_backend();
     assert(active_backend != .UNINITIALIZED);
 

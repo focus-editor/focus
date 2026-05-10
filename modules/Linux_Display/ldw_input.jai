@@ -238,8 +238,14 @@ wl_display_poll :: (display: *Wayland_Display, timeout: s32) -> wayland_events :
     pfd[2].fd = display.base.loop_wakeup_event;
     pfd[2].events = POLLIN;
 
-    ret := poll(pfd.data, xx pfd.count, timeout);
-    if ret <= 0 return;
+    result: s32;
+    while true {
+        result = poll(pfd.data, xx pfd.count, timeout);
+        if result >= 0 break;
+        if errno() != EINTR return;
+    }
+
+    if result == 0 return;
 
     has_wayland_events    := (pfd[0].revents & POLLIN) == POLLIN;
     has_timer_events      := (pfd[1].revents & POLLIN) == POLLIN;
@@ -255,21 +261,35 @@ wl_event_loop_step :: (display: *Wayland_Display, timeout: s32) -> bool {
     dpy := display.handle;
     dispatch_count : s32 = 0;
 
-    while wl_display_prepare_read(dpy) != 0
-        dispatch_count += wl_display_dispatch_pending(dpy);
+    if wl_display_get_error(dpy) return true;
 
-    if wl_display_flush(dpy) < 0 && errno() != EAGAIN {
-        wl_display_cancel_read(dpy);
-        return true;
+    while wl_display_prepare_read(dpy) != 0 {
+        result := wl_display_dispatch_pending(dpy);
+        if result < 0 return true;
+        dispatch_count += result;
+    }
+
+    if wl_display_flush(dpy) < 0 {
+        err := errno();
+        if err != EAGAIN {
+            wl_display_cancel_read(dpy);
+            return true;
+        }
     }
 
     wlev, tev := wl_display_poll(display, timeout);
     if wlev {
-        wl_display_read_events(dpy);
-        dispatch_count += wl_display_dispatch_pending(dpy);
+        if wl_display_read_events(dpy) < 0 {
+            return true;
+        }
+        result := wl_display_dispatch_pending(dpy);
+        if result < 0 return true;
+        dispatch_count += result;
     } else {
         wl_display_cancel_read(dpy);
     }
+
+    if wl_display_get_error(dpy) return true;
 
     return (wlev && ((dispatch_count > 0) || (display.base.events_this_frame.count > 0))) || tev;
 }

@@ -443,10 +443,15 @@ data_device_listener :: wl_data_device_listener.{
         push_context ctx {
             d : *Wayland_Display = wl_proxy_get_user_data(self);
 
-            if !d.data_offer return;
-
+            d.data_offer = id;
             reset(*d.current_text_selection);
-            data_offer_read_data(d, MIME_TYPE_TEXT, *d.current_text_selection);
+
+            if !id return;
+
+            if data_offer_has_mime_type(d, MIME_TYPE_TEXT) {
+                data_offer_read_data(d, MIME_TYPE_TEXT, *d.current_text_selection);
+            }
+
             data_offer_reset(d);
         }
     }
