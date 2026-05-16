@@ -1,4 +1,4 @@
-MIN_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 16 };
+MIN_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 29 };
 MAX_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 99 };
 
 VERSION      :: #run -> string {
