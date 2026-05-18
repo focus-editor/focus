@@ -676,13 +676,13 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         {
             starts := s64.[xx file.data, xx msg.data, xx line.data, xx col.data];
             ends   := s64.[xx (file.data + file.count), xx (msg.data + msg.count), xx (line.data + line.count), xx (col.data + col.count)];
-            
+
             start_offset: s64 = xx buffer.bytes.data;
             for starts { if it >= start_offset then start_offset = it; }
-            
+
             end_offset: s64 = (cast(s64) buffer.bytes.data) + buffer.bytes.count;
             for ends { if it > start_offset && it < end_offset then end_offset = it; }
-            
+
             build_error.error_info_start_offset = xx (start_offset - cast(s64) buffer.bytes.data);
             build_error.error_info_end_offset   = xx (end_offset   - cast(s64) buffer.bytes.data);
         }
@@ -791,6 +791,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     }
     if !success return;
 
+    active_global_widget = .editors;
     editor, buffer := get_active_editor_and_buffer();
     go_to_line(editor, buffer, build_error.line, build_error.col);
 
