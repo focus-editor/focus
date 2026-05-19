@@ -54,6 +54,7 @@ get_next_token :: (using tokenizer: *Markdown_Tokenizer) -> Token {
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
     } else {
+        did_not_found_char := false; 
         if char == {
             case #char "`"; parse_backtick(tokenizer, *token);
             case #char "~"; parse_tilde(tokenizer, *token);
@@ -61,27 +62,39 @@ get_next_token :: (using tokenizer: *Markdown_Tokenizer) -> Token {
 
             case #char "["; parse_square_bracket(tokenizer, *token);
             case #char "!"; parse_exclamation_mark(tokenizer, *token);
-
+            case #char "<"; parse_less_than(tokenizer, *token);
+            case #char "\\"; token.type = .default; t += 2;
             case;
+                did_not_found_char = true;
+                if !found_whitespace {
+                    token.type = .default; 
+                    t += 1;
+                }
+        }
+        
+        // Only after any whitespace.
+        if did_not_found_char && found_whitespace {
+            if char == {
+                case #char "h"; parse_link(tokenizer, *token);
+                case #char "@"; parse_at(tokenizer, *token);
+                case #char "_"; parse_char_for_style(tokenizer, *token, char);
+                case; 
+                    if !found_new_line {
+                        token.type = .default; 
+                        t += 1;
+                    }
+                
+                // Only after a new line.
                 if found_new_line {
                     if char == {
                         case #char "#"; parse_hash(tokenizer, *token);
                         case #char ">"; parse_greater_than(tokenizer, *token);
                         case #char "-"; parse_bullet_point(tokenizer, *token);
                         case #char "+"; parse_bullet_point(tokenizer, *token);
-                        case;           token.type = .default; t += 1;
+                        case; token.type = .default; t += 1;
                     }
-                } else if found_whitespace {
-                    if char == {
-                        case #char "@"; parse_at(tokenizer, *token);
-                        case #char "h"; parse_link(tokenizer, *token);
-                        case #char "<"; parse_less_than(tokenizer, *token);
-                        case #char "_"; parse_char_for_style(tokenizer, *token, char);
-                        case;           token.type = .default; t += 1;
-                    }
-                } else {
-                    token.type = .default; t += 1;
                 }
+            }
         }
     }
 
@@ -132,8 +145,36 @@ parse_hash :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
 }
 
 parse_greater_than :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
-    token.type = .operation;
-    t += 1;
+    identifier_str := read_identifier_string_tmp(tokenizer, stop_at_char = #char "\n", stop_at_white_space = false);
+
+    found_allert := false;
+    end_of_next_line := false;
+    for alerts {
+        if begins_with(identifier_str, it.opening_tag) {
+            token.type = it.type;
+            found_allert = true;
+
+            while t < max_t && is_white_space(t.*) {
+                if t.* == #char "\n" end_of_next_line = true;
+                t += 1;
+            }
+
+            if t.* == #char ">" && !end_of_next_line {
+                while t < max_t {
+                    if t.* == #char "\n" {
+                        break;
+                    }
+
+                    t += 1;
+                }
+            }
+        }
+    }
+
+    if !found_allert {
+        token.type = .operation;
+        t = start_t + 1;
+    }
 }
 
 parse_bullet_point :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
@@ -206,7 +247,7 @@ parse_task_list :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
     previous_t := t;
     identifier_str := read_identifier_string_tmp(tokenizer, stop_at_char = #char "\n", stop_at_white_space = false);
 
-    if      begins_with(identifier_str, "[X]") token.type = .type;
+    if      begins_with(identifier_str, "[X]") || begins_with(identifier_str, "[x]") token.type = .type;
     else if begins_with(identifier_str, "[ ]") token.type = .keyword;
     else { t = start_t; return; }
 
@@ -215,27 +256,40 @@ parse_task_list :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
 
 parse_square_bracket :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
     token.type = .number;
-    add_link := false;
 
-    number_of_open_brackets := 1;
     t += 1;
+    number_of_opening_brackets_to_stop := 1;
     while t < max_t {
-        if number_of_open_brackets == 0 && t.* == #char "(" {
-            while t < max_t {
-                if t.* == #char "\n" return;
-                if t.* == #char ")" { t += 1; return; }
-                t +=1;
-            }
+        if t.* == #char "\n" {
+            t += 1;
+            break;
+        } else if t.* == #char "]" {
+            number_of_opening_brackets_to_stop -= 1;
+        } else if t.* == #char "[" {
+            number_of_opening_brackets_to_stop += 1;
         }
 
-        if t.* == #char "\n" return;
-
-        else if t.* == #char "]" number_of_open_brackets -= 1;
-        else if t.* == #char "[" number_of_open_brackets += 1;
+        if number_of_opening_brackets_to_stop == 0 {
+            t += 1;
+            break;
+        }
 
         t += 1;
     }
 
+    eat_white_space(tokenizer, only_until_newline = true);
+
+    if t.* == #char "(" {
+        t += 1;
+        while t < max_t {
+            if t.* == #char ")" || t.* == "\n" {
+                t += 1;
+                break;
+            }
+
+            t += 1;
+        }
+    }
 }
 
 parse_exclamation_mark :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
@@ -258,12 +312,9 @@ parse_link :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
 
     if begins_with(identifier_str, "https://") || begins_with(identifier_str, "http://") {
         token.type = .number;
-        while t < max_t {
-            if is_white_space(t.*) return;
-            t += 1;
-        }
-    } else token.type = .default;
-
+    } else {
+        token.type = .default;
+    }
 }
 
 parse_less_than :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
@@ -307,16 +358,26 @@ highlight_for_repeated_chars :: (char: u8, repeats: s64, using tokenizer: *Markd
     t += repeats;
     if t >= max_t return true;
 
-    while true {
+    while t < max_t {
+        if t.* == #char "\\" {
+            t += 2;
+            continue;
+        }
+
         if check_repeated_chars(char, repeats, tokenizer) {
             t += repeats;
             break;
         }
 
-        if stop_at_new_paragraph && skip_white_space_and_look_for_next_paragraph(tokenizer) break;
+        if stop_at_new_paragraph {
+            is_new_paragraph := skip_white_space_and_look_for_next_paragraph(tokenizer);
+
+            if is_new_paragraph {
+                break;
+            }
+        }
 
         t += 1;
-        if t >= max_t break;
     }
 
     return true;
@@ -340,6 +401,7 @@ read_identifier_string_tmp :: (using tokenizer: *Markdown_Tokenizer, stop_at_cha
 }
 
 skip_white_space_and_look_for_next_paragraph :: (using tokenizer: *Markdown_Tokenizer) -> found_new_para: bool {
+    original_t := t;
     number_of_new_lines := 0;
     while t < max_t {
         if !is_white_space(t.*) break;
@@ -347,6 +409,8 @@ skip_white_space_and_look_for_next_paragraph :: (using tokenizer: *Markdown_Toke
         if number_of_new_lines >= 2 return true;
         t += 1;
     }
+    
+    t = original_t;
     return false;
 }
 
@@ -367,10 +431,18 @@ Tag :: struct {
     type: Token_Type;
 }
 
-tags :: #run,stallable -> [] Tag {
+tags, alerts :: #run,stallable -> [] Tag, [] Tag {
     tags: [..] Tag;
-    array_add(*tags, .{"<sub>", "</sub>", .number} );
-    array_add(*tags, .{"<sup>", "</sup>", .number} );
-    array_add(*tags, .{"<!--",  "-->",    .comment} );
-    return tags;
-}
+    array_add(*tags, .{"<sub>", "</sub>", .number});
+    array_add(*tags, .{"<sup>", "</sup>", .number});
+    array_add(*tags, .{"<ins>", "</ins>", .number});
+    array_add(*tags, .{"<!--",  "-->",    .comment});
+
+    alerts: [..] Tag;
+    array_add(*alerts, .{"> [!NOTE]", "\n", .highlight});
+    array_add(*alerts, .{"> [!TIP]", "\n", .type});
+    array_add(*alerts, .{"> [!IMPORTANT]", "\n", .number});
+    array_add(*alerts, .{"> [!WARNING]", "\n", .operation});
+    array_add(*alerts, .{"> [!CAUTION]", "\n", .modifier});
+    return tags, alerts;
+};
