@@ -810,3 +810,4 @@ Option :: struct($T: Type) {
 some :: (value: $T) -> Option(T) {
     return .{ value = value, is_set = true };
 }
+

@@ -502,10 +502,18 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 for member : result.config.members {
                     is_dir, success := is_directory(member);
                     if !is_dir || !success  continue;
-                    array_add(*result.config.ignore, sprint("%/%", member, item));
+
+                    pattern := sprint("%/%", member, item);
+                    #if OS == .WINDOWS {
+                        to_lower_in_place(pattern);
+                    }
+                    array_add(*result.config.ignore, construct_file_pattern(pattern));
                 }
             } else {
-                array_add(*result.config.ignore, item);
+                #if OS == .WINDOWS {
+                    to_lower_in_place(item);
+                }
+                array_add(*result.config.ignore, construct_file_pattern(item));
             }
 
         case .workspace_allow;
@@ -518,10 +526,18 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 for member : result.config.members {
                     is_dir, success := is_directory(member);
                     if !is_dir || !success  continue;
-                    array_add(*result.config.allow, sprint("%/%", member, item));
+
+                    pattern := sprint("%/%", member, item);
+                    #if OS == .WINDOWS {
+                        to_lower_in_place(pattern);
+                    }
+                    array_add(*result.config.allow, construct_file_pattern(pattern));
                 }
             } else {
-                array_add(*result.config.allow, item);
+                #if OS == .WINDOWS {
+                    to_lower_in_place(item);
+                }
+                array_add(*result.config.allow, construct_file_pattern(item));
             }
 
         case .workspace_file_associations;
@@ -1400,8 +1416,8 @@ Parsed_Config :: struct {
 
     // Workspace
     members:            [..] string;
-    ignore:             [..] string;
-    allow:              [..] string;
+    ignore:             [..] File_Pattern;
+    allow:              [..] File_Pattern;
     file_associations:  [..] File_Association;
 
     // Keymap

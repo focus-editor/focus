@@ -85,13 +85,21 @@ refresh_config :: (path: string) {
     old_workspace_members.allocator = temp;
     for config.workspace.members array_add(*old_workspace_members, copy_temporary_string(it));
 
-    old_allow_list: [..] string;
+    old_allow_list: [..] File_Pattern;
     old_allow_list.allocator = temp;
-    for config.workspace.allow array_add(*old_allow_list, copy_temporary_string(it));
+    for config.workspace.allow {
+        pat_copy := it;
+        pat_copy.pattern = copy_temporary_string(it.pattern);
+        array_add(*old_allow_list, pat_copy);
+    }
 
-    old_ignore_list: [..] string;
+    old_ignore_list: [..] File_Pattern;
     old_ignore_list.allocator = temp;
-    for config.workspace.ignore array_add(*old_ignore_list, copy_temporary_string(it));
+    for config.workspace.ignore {
+        pat_copy := it;
+        pat_copy.pattern = copy_temporary_string(it.pattern);
+        array_add(*old_ignore_list, pat_copy);
+    }
 
     old_file_associations: [..] File_Association;
     old_file_associations.allocator = temp;
@@ -674,9 +682,81 @@ Linux_Config :: struct {
 
 Workspace :: struct {
     members:            [] string;
-    ignore:             [] string;
-    allow:              [] string;
+    ignore:             [] File_Pattern;
+    allow:              [] File_Pattern;
     file_associations:  [] File_Association;
+}
+
+File_Pattern :: struct {
+    pattern: string;  // pre-lowercased on Windows
+    should_match_whole_path: bool;
+    pattern_type: Pattern_Type;
+
+    Pattern_Type :: enum { LITERAL; EXTENSION; WILDCARD; }
+}
+
+construct_file_pattern :: (pattern: string) -> File_Pattern {
+    should_match_whole_path := contains(pattern, #char "/");
+
+    pattern_type: File_Pattern.Pattern_Type;
+
+    #if OS == .WINDOWS {
+        final_pattern := to_lower_copy(pattern);
+    } else {
+        final_pattern := pattern;
+    }
+
+    // Try to classify as an extension pattern first (e.g. "*.exe" -> store just "exe").
+    // Only valid as a partial-match pattern — "src/*.exe" stays a WILDCARD.
+    ext, is_ext_pattern := is_extension_pattern(pattern);
+    if is_ext_pattern && !should_match_whole_path {
+        pattern_type = .EXTENSION;
+        final_pattern = ext;
+    } else if contains_wildcards(pattern) {
+        pattern_type = .WILDCARD;
+    } else {
+        pattern_type = .LITERAL;
+    }
+
+    return File_Pattern.{
+        pattern = final_pattern,
+        should_match_whole_path = should_match_whole_path,
+        pattern_type = pattern_type,
+    };
+}
+
+contains_wildcards :: inline (s: string) -> bool {
+    for 0..s.count-1 {
+        c := s[it];
+        if c == #char "*" || c == #char "?" return true;
+    }
+    return false;
+}
+
+is_extension_pattern :: (pattern: string) -> extension: string, is_extension: bool {
+    if pattern.count < 3       return "", false;  // need at least "*.x"
+    if pattern[0] != #char "*" return "", false;
+    if pattern[1] != #char "." return "", false;
+
+    ext := slice(pattern, 2, pattern.count - 2);
+
+    // Reject if the extension part itself contains wildcards (e.g. "*.*", "*.?", "*.e*e")
+    for 0..ext.count-1 {
+        c := ext[it];
+        if c == #char "*" || c == #char "?" return "", false;
+    }
+
+    return ext, true;
+}
+
+operator== :: (a: File_Pattern, b: File_Pattern) -> bool {
+    return a.pattern == b.pattern && a.should_match_whole_path == b.should_match_whole_path && a.pattern_type == b.pattern_type;
+}
+
+// The array_find function in Basic doesn't seem to work well with the compare function
+array_find :: (array: [] File_Pattern, item: File_Pattern) -> bool, s64 {
+    for array if it == item return true, it_index;
+    return false, -1;  // Not found.
 }
 
 Settings :: struct {

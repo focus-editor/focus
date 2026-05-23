@@ -37,6 +37,7 @@ main :: () {
 
     fill_in_missing_default_themes();
 
+    init_file_tables();
     init_file_watcher();
     defer deinit_file_watcher();
 

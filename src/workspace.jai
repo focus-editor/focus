@@ -225,6 +225,7 @@ reload_workspace :: (automatic := false) {
     deinit_cursor_history();
     deinit_buffers();
     deinit_editors();
+    forget_ignore_table();
 
     // Reinit things
     init_file_watcher();

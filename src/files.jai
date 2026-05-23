@@ -88,7 +88,7 @@ get_file_icon :: (name: string, extension: string) -> Icon {
     return icon;
 }
 
-get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, found_extension: bool {
+get_extension :: (path: string, greedy := true) -> string /* temp */, found_extension: bool {
     // NOTE: not using path_extension because it won't handle filenames with multiple dots as expected (e.g. lib.so.1.1)
     just_path := path_strip_filename(path);
     basename_with_extension := advance(path, just_path.count);
@@ -104,7 +104,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
 
-    return to_lower_copy(extension,, allocator = temp), true;
+    return extension, true;
 }
 
 is_file_binary :: (file_data: string) -> bool {
@@ -115,13 +115,30 @@ is_file_binary :: (file_data: string) -> bool {
     return has_zeroes;
 }
 
-should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool {
+should_ignore_file :: (file_path: string, check_for_zeroes_if_needed := true) -> bool {
+    #if OS == .WINDOWS {
+        // Ignore case on Windows.
+        // NOTE: assuming all the patterns in the config are pre-lowercased at config load time!
+        path := to_lower_copy(file_path,, temp);
+    } else {
+        path := file_path;
+    }
+
+    // Check if we've already ignored this file
+    found, should_ignore_value := table_find_threadsafe(*ignore_table, path);
+    if found return should_ignore_value;
+
     should_ignore, explicitly_allowed := should_ignore_path(path);
+
+    if should_ignore || explicitly_allowed {
+        table_set_threadsafe(*ignore_table, path, should_ignore);
+    }
+
     if should_ignore return true;
     if explicitly_allowed return false;
 
     // If we haven't decided yet whether to ignore or allow, do some extra checks
-    extension, found_extension := get_lowercase_extension(path);
+    extension, found_extension := get_extension(path);
     if found_extension {
         known, file_type := is_known_file_extension(extension);
         if known {
@@ -157,10 +174,17 @@ should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool
 
     if !check_for_zeroes_if_needed return false;
 
+    // Check if we already checked this file for zeroes
+    already_checked, is_binary := table_find_threadsafe(*binary_files_table, path);
+    if already_checked return is_binary;
+
     // Ignore binary files - it's not a 100% guarantee but a good heuristic.
     // We're not using read_entire_file here because this function is used when scanning workspace
     // and obtaining file lists in the Navigate to File dialog, so large binary files could really trip us up here
     found_zeroes := read_a_chunk_of_file_and_scan_for_zeroes(path);
+
+    // Remember this file so that we don't have to check again
+    table_set_threadsafe(*binary_files_table, path, found_zeroes);
 
     return found_zeroes;
 }
@@ -199,33 +223,42 @@ known_extensions_table :: #run -> Table(string, Known_Extension_File_Type) {
 #scope_export
 
 should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool = false {
-    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
+    // NOTE: assuming path is pre-lowercased on Windows!
 
     // Allow list has priority - check if path is explicitly allowed
-    for config.workspace.allow {
-        if contains(it, cast(u8) #char "/") {
-            // Match whole path
-            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return false, true;
+    for fp : config.workspace.allow {
+        if fp.should_match_whole_path {
+            if path_pattern_match(path, fp) return false, true;
         } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if path_wildcard_match(chunk, it) return false, true;
+            // Match path chunks
+            chunk_start := 0;
+            for i : 0 .. path.count {
+                if i == path.count || path[i] == #char "/" {
+                    chunk := slice(path, chunk_start, i - chunk_start);
+                    if path_pattern_match(chunk, fp) return false, true;
+                    chunk_start = i + 1;
+                }
             }
         }
     }
 
     // Then check the user-specified ignore list
-    for config.workspace.ignore {
-        if contains(it, cast(u8) #char "/") {
-            // Match whole path
-            if path_wildcard_match(path, it) return true;
+    for fp : config.workspace.ignore {
+        if fp.should_match_whole_path {
+            if path_pattern_match(path, fp) return true;
         } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if path_wildcard_match(chunk, it) return true;
+            // Match path chunks
+            chunk_start := 0;
+            for i : 0 .. path.count {
+                if i == path.count || path[i] == #char "/" {
+                    chunk := slice(path, chunk_start, i - chunk_start);
+                    if path_pattern_match(chunk, fp) return true;
+                    chunk_start = i + 1;
+                }
             }
         }
     }
+
     if begins_with_nocase(path, temp_dir) return true;  // ignore our own temp dir
 
     return false;
@@ -237,22 +270,59 @@ should_descend_into_dir :: (path: string) -> bool {
     // explicitly allowed, so we have to check everything.
     if config.workspace.allow return true;
 
-    return !should_ignore_path(path);
+    #if OS == .WINDOWS {
+        return !should_ignore_path(to_lower_copy(path),, temp);
+    } else {
+        return !should_ignore_path(path);
+    }
+}
+
+path_pattern_match :: (path: string, fp: File_Pattern) -> bool {
+    if #complete fp.pattern_type == {
+        case .LITERAL;
+            // Pattern is a plain string with no wildcards.
+            if fp.should_match_whole_path {
+                return path == fp.pattern;
+            }
+            // Partial match: caller is responsible for iterating chunks and
+            // calling us once per chunk, OR we treat this as "any chunk equals
+            // pattern". Pick one convention — see note below. Here, equality
+            // against a single chunk passed in as `path`.
+            return path == fp.pattern;
+
+        case .EXTENSION;
+            // Pattern stored as just the extension, no leading dot.
+            // e.g. pattern == "exe" matches "foo.exe", "a/b/c.exe", etc.
+            // should_match_whole_path is irrelevant for extensions.
+            return path_has_extension(path, fp.pattern);
+
+        case .WILDCARD;
+            return _wildcard_match(path, fp.pattern);
+    }
+}
+
+path_has_extension :: inline (path: string, ext: string) -> bool {
+    needed := ext.count + 1;  // +1 for the dot
+    if path.count < needed return false;
+    if path[path.count - needed] != #char "." return false;
+    return slice(path, path.count - ext.count, ext.count) == ext;
 }
 
 // Match simple wildcard patterns. Supports `*`, `**` and `?` only.
-path_wildcard_match :: (path: string, pattern: string) -> bool {
+path_wildcard_match :: (path: string, wildcard: string) -> bool {
     // Path wildcards are slightly different from usual wildcards, because:
     // 1. On Windows they are case-insensitive, while everywhere else they are case-sensitive
     // 2. For paths, * will match until the next path separator, while ** will match everything
 
+
     // NOTE: assuming all paths passed to this function will have their path separators normalised to '/'
 
     #if OS == .WINDOWS {
+        // @Speed: this could be very slow if called in a loop on Windows!
         // TODO: support case-insensitive Unicode paths
-        return _wildcard_match(to_lower_copy(path,, temp), to_lower_copy(pattern,, temp));
+        return _wildcard_match(to_lower_copy(path,, temp), to_lower_copy(wildcard,, temp));
     }
-    return _wildcard_match(path, pattern);
+    return _wildcard_match(path, wildcard);
 }
 
 #scope_file
@@ -389,8 +459,8 @@ get_parent_dir_path :: (file_path: string) -> string {
 }
 
 read_a_chunk_of_file_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool {
-    push_allocator(temp);
     auto_release_temp();
+    push_allocator(temp);
 
     file, success := file_open(path);
     if !success return true;  // assuming a file we can't open here is something we should not worry about
@@ -414,3 +484,52 @@ File_Info :: struct {
     icon: Icon;
     project_dir_id: s8 = 0;  // to be used for sorting
 }
+
+init_file_tables :: () {
+    init(*ignore_table,       3000,, focus_allocator);
+    init(*binary_files_table, 3000,, focus_allocator);
+}
+
+forget_ignore_table :: () {
+    table_reset_threadsafe(*ignore_table);
+}
+
+#scope_file
+
+// Some tables to speed up scanning
+
+Threadsafe_Table :: struct {
+    table: Table(string, bool);
+    lock: Mutex;
+}
+
+init :: (table: *Threadsafe_Table, size: int) {
+    init(*table.lock);
+    table_resize(*table.table, size);
+}
+
+table_find_threadsafe :: (table: *Threadsafe_Table, key: string) -> bool, bool {
+    lock(*table.lock);
+    defer unlock(*table.lock);
+
+    found, value := table_find(*table.table, key);
+    return found, value;
+}
+
+table_set_threadsafe :: (table: *Threadsafe_Table, key: string, value: bool) -> *bool {
+    lock(*table.lock);
+    defer unlock(*table.lock);
+
+    return table_set(*table.table, copy_string(key,, focus_allocator), value);
+}
+
+table_reset_threadsafe :: (table: *Threadsafe_Table) {
+    lock(*table.lock);
+    defer unlock(*table.lock);
+
+    table_reset_keeping_memory(*table.table);
+}
+
+ignore_table:       Threadsafe_Table;
+binary_files_table: Threadsafe_Table;
+

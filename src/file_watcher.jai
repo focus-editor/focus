@@ -120,6 +120,8 @@ file_watcher_process_changes :: () {
         }
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
+            auto_release_temp();
+
             if file.is_directory {
                 if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
                 return;
