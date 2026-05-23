@@ -494,12 +494,9 @@ substitute_variables :: (using work: *Build_Thread_Work) {
     file := "";
     cursor_coords: Coords;
 
-    active_pane_editor_id := get_active_editor_id();
-    if active_pane_editor_id > 0 {
-        buffer := open_buffers[open_editors[active_pane_editor_id].buffer_id];
+    editor, buffer := get_visible_editor_and_buffer();
+    if editor && buffer {
         if buffer.has_file then file = copy_string(buffer.file.full_path);
-
-        editor := *open_editors[active_pane_editor_id];
         main_cursor := editor.cursors[editor.main_cursor];
         cursor_coords = offset_to_real_coords(buffer, main_cursor.pos);
     }
