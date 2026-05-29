@@ -120,14 +120,14 @@ parse_number :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
         if t >= max_t return;
     }
 
-    if t.* == #char "." {
+    next_t := t + 1;
+    if t.* == #char "." && next_t < max_t && is_white_space(next_t.*) {
         token.type = .keyword;
         t += 1;
         maybe_do_task_list = true;
     } else {
         token.type = .default;
     }
-
 }
 
 parse_hash :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
