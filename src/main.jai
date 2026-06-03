@@ -1190,9 +1190,7 @@ load_font :: (name: string) -> Loaded_Font {
 #scope_export
 
 MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why.
-                      // Probably we don't give it enough memory for a glyph bitmap when rendering it?
-
+MAX_FONT_SIZE :: 90;
 
 DEBUG_MEMORY_LEAKS :: false;
 

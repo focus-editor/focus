@@ -662,7 +662,7 @@ page_size_x := 2048;
 page_size_y := 1024;
 
 dynamic_fonts: [..] *Dynamic_Font;
-font_pages:    [..] Font_Page;
+font_pages:    [..] *Font_Page;
 
 glyph_and_line_pool: Pool;
 
@@ -707,7 +707,8 @@ find_line_within_page :: (page: *Font_Page, width: int, height: int) -> *Font_Li
 }
 
 make_font_page :: () -> *Font_Page {
-    page := array_add(*font_pages);
+    page := New(Font_Page);
+    array_add(*font_pages, page);
 
     bitmap := New(Bitmap);
     bitmap_alloc(bitmap, xx page_size_x, xx page_size_y, .R8);
@@ -717,7 +718,7 @@ make_font_page :: () -> *Font_Page {
 }
 
 get_font_line :: (width: int, height: int) -> *Font_Line {
-    for *page : font_pages {
+    for page : font_pages {
         line := find_line_within_page(page, width, height);
         if line return line;
     }
