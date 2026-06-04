@@ -808,6 +808,98 @@ end
 
 LUA
 
+SAMPLE_Luau :: #string LUAU
+-- Comment
+--[[
+	Multiline comment
+	Shows block text, indentation, and punctuation.
+--]]
+
+local PI: number = 3.14159
+local EPSILON = 1e-6
+local title = "Luau Syntax Highlighting"
+local template = `Title: {title}, Pi: {PI}`
+local isDebug = true
+local missingValue = nil
+
+type Point = { x: number, y: number }
+type Shape = "circle" | "square" | "triangle"
+type Result<T> = { ok: boolean, value: T?, err: string? }
+
+local numbers: { number } = { 1, 2, 3, 4, 5 }
+local lookup: { [string]: number } = { apples = 3, oranges = 7 }
+
+local person = {
+	firstName = "John",
+	lastName = "Doe",
+	age = 30,
+	getFullName = function(self)
+		return self.firstName .. " " .. self.lastName
+	end,
+}
+
+local function calculateArea(radius: number): number
+	if radius <= 0 then
+		error("Radius must be greater than zero")
+	elseif radius < EPSILON then
+		warn("Radius is very small")
+	end
+
+	return PI * radius ^ 2
+end
+
+local function movePoint(point: Point, dx: number, dy: number): Point
+	return { x = point.x + dx, y = point.y + dy }
+end
+
+for i = 1, #numbers do
+	print("Number:", i, numbers[i])
+end
+
+for key, value in pairs(lookup) do
+	print(`{key} = {value}`)
+end
+
+while isDebug and #numbers < 8 do
+	table.insert(numbers, math.random(10, 99))
+end
+
+repeat
+	local last = table.remove(numbers)
+	print("Removed:", last)
+until #numbers <= 5
+
+local message = isDebug and "Hello, Luau!" or "Goodbye!"
+print(template, message, person:getFullName())
+
+local status, result = pcall(calculateArea, 10)
+if status then
+	print("Area:", result)
+else
+	print("Error:", result)
+end
+
+local function fetchData(url: string): Result<{ id: number, name: string }>
+	-- Simulate fetching data from a URL
+	if not string.find(url, "^https://") then
+		return { ok = false, err = "URL must use HTTPS" }
+	end
+
+	return {
+		ok = true,
+		value = {
+			id = 1,
+			name = "Sample Data",
+		},
+	}
+end
+
+local data = fetchData("https://api.example.com/data")
+if data.ok and data.value ~= nil then
+	print("Data fetched:", data.value.name)
+end
+LUAU
+
 
 SAMPLE_RenPy :: #string RENPY
 # Comment
