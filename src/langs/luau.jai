@@ -263,7 +263,6 @@ parse_string_literal :: (using tokenizer: *Luau_Tokenizer, token: *Token) {
                                     start_offset = interpolation_start - buf.data,
                                     count        = t - interpolation_start
                                 });
-                                // t += 1;
                                 break;
                             } else {
                                 open_count -= 1;
