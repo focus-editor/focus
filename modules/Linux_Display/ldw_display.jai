@@ -554,6 +554,7 @@ wl_window_handle_resize :: (w: *Wayland_Window, width: s32, height: s32) {
         wl_egl_window_resize(w.base.gl.egl.native, w.buffer_width, w.buffer_height, 0, 0);
 
     Input.add_resize_record(xx w, xx w.buffer_width, xx w.buffer_height);
+    array_add(*w.display.base.events_this_frame, .{type=.WINDOW});
 }
 
 wl_get_dpi_scaling_factor :: (window: *Window) -> float {

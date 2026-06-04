@@ -19,14 +19,20 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     enter = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface, keys: *wl_array) -> void #c_call {
-        Input.input_application_has_focus = true;
+        ctx: #Context;
+        push_context ctx {
+            Input.input_application_has_focus = true;
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
+            array_add(*d.base.events_this_frame, .{type=.WINDOW});
+        }
     },
 
     leave = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface) -> void #c_call {
-        d: *Wayland_Display = wl_proxy_get_user_data(self);
-        Input.input_application_has_focus = false;
         ctx: #Context;
         push_context ctx {
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
+            Input.input_application_has_focus = false;
+            array_add(*d.base.events_this_frame, .{type=.WINDOW});
             timer_stop(d.key_repeat_timer);
         }
     },
@@ -55,8 +61,12 @@ keyboard_listenter :: wl_keyboard_listener.{
     modifiers = (data: *void, self: *wl_keyboard, serial: u32,
         mods_depressed: u32, mods_latched: u32, mods_locked: u32, group: u32) -> void #c_call
     {
-        d: *Wayland_Display = wl_proxy_get_user_data(self);
-        ld_xkb_state_set_mods(d, mods_depressed, mods_latched, mods_locked, group);
+        ctx: #Context;
+        push_context ctx {
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
+            ld_xkb_state_set_mods(d, mods_depressed, mods_latched, mods_locked, group);
+            array_add(*d.base.events_this_frame, .{type=.WINDOW});
+        }
     },
 
     repeat_info = (data: *void, self: *wl_keyboard, rate: s32, delay: s32) -> void #c_call {
@@ -113,13 +123,18 @@ pointer_listener :: wl_pointer_listener.{
             d: *Wayland_Display = wl_proxy_get_user_data(self);
             d.current_hovered_window = wl_surface.get_user_data(surface);
             d.current_hovered_window.enter_serial = serial;
+            array_add(*d.base.events_this_frame, .{type=.WINDOW});
             refresh_cursor(d.current_hovered_window);
         }
     },
 
     leave = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface) -> void #c_call {
-        d: *Wayland_Display = wl_proxy_get_user_data(self);
-        d.current_hovered_window = null;
+        ctx: #Context;
+        push_context ctx {
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
+            d.current_hovered_window = null;
+            array_add(*d.base.events_this_frame, .{type=.WINDOW});
+        }
     },
 
     motion = (data: *void, self: *wl_pointer, time: u32, fx: wl_fixed_t, fy: wl_fixed_t) -> void #c_call {
@@ -130,6 +145,7 @@ pointer_listener :: wl_pointer_listener.{
                 m_x := wl_fixed_to_int(fx);
                 m_y := wl_fixed_to_int(fy);
                 d.current_hovered_window.mouse_x, d.current_hovered_window.mouse_y = window_scale_coords(d.current_hovered_window, m_x, m_y);
+                array_add(*d.base.events_this_frame, .{type=.WINDOW});
             }
         }
     },
@@ -291,7 +307,7 @@ wl_event_loop_step :: (display: *Wayland_Display, timeout: s32) -> bool {
 
     if wl_display_get_error(dpy) return true;
 
-    return (wlev && ((dispatch_count > 0) || (display.base.events_this_frame.count > 0))) || tev;
+    return (wlev && (display.base.events_this_frame.count > 0)) || tev;
 }
 
 wl_wait_for_events :: (display: *Display) {
