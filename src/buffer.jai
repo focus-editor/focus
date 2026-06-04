@@ -575,6 +575,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Vue;          return tokenize_xml_for_indentation(buffer);
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
+        case .Luau;         return tokenize_luau_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
         case .Rust;         return tokenize_rust_for_indentation(buffer);
         case .Batch;        return tokenize_batch_for_indentation(buffer);
@@ -1669,6 +1670,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Json;                 return tokenize_json;
         case .Toml;                 return tokenize_toml;
         case .Lua;                  return tokenize_lua;
+        case .Luau;                 return tokenize_luau;
         case .Odin;                 return tokenize_odin;
         case .Powershell;           return tokenize_powershell;
         case .Python;               return tokenize_python;
@@ -1925,6 +1927,7 @@ Buffer :: struct {
         Json;
         Toml;
         Lua;
+        Luau;
         Odin;
         Powershell;
         Python;

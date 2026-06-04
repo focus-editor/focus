@@ -293,6 +293,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
         case .Json;              return SAMPLE_Json;
         case .Toml;              return SAMPLE_Toml;
         case .Lua;               return SAMPLE_Lua;
+        case .Luau;              return SAMPLE_Luau;
         case .Odin;              return SAMPLE_Odin;
         case .Powershell;        return SAMPLE_Powershell;
         case .Python;            return SAMPLE_Python;

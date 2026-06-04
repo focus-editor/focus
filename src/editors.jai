@@ -2295,6 +2295,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "focus-theme";     lang = .Focus_Theme;
         case "go";              lang = .Golang;
         case "lua";             lang = .Lua;
+        case "luau";            lang = .Luau;
         case "java";            lang = .Java;
         case "odin";            lang = .Odin;
         case "ps1";             lang = .Powershell;
@@ -4508,7 +4509,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Swift;
             comment = "//";
 
-        case .Lua;
+        case .Lua; #through;
+        case .Luau;
             comment = "--";
 
         case .Powershell;   #through;
@@ -4737,7 +4739,8 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
             comment_start = "/*";
             comment_end   = "*/";
 
-        case .Lua;
+        case .Lua; #through;
+        case .Luau;
             comment_start = "--[[";
             comment_end   = "]]";
 
