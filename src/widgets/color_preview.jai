@@ -305,6 +305,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
         case .Yang;              return SAMPLE_Yang;
         case .Zig;               return SAMPLE_Zig;
         case .Uxntal;            return SAMPLE_Uxntal;
+        case .Vhdl;              return SAMPLE_Vhdl;
         case .Markdown;          return SAMPLE_Markdown;
         case .Batch;             return SAMPLE_Batch;
         case .Swift;             return SAMPLE_Swift;

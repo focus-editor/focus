@@ -1089,6 +1089,7 @@ focus_allocator: Allocator;
 #load "langs/yang.jai";
 #load "langs/zig.jai";
 #load "langs/uxntal.jai";
+#load "langs/vhdl.jai";
 #load "langs/rust.jai";
 #load "langs/markdown.jai";
 #load "langs/batch.jai";

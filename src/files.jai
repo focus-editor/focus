@@ -205,7 +205,7 @@ known_extensions_table :: #run -> Table(string, Known_Extension_File_Type) {
     text_file_extensions :: string.[
         "jai", "c", "cpp", "h", "hpp", "cc", "cs", "d", "txt", "md", "ini", "csv", "go", "log",
         "sql", "py", "m", "html", "xml", "plist", "js", "jsx", "ts", "tsx", "json", "yml",
-        "yaml", "toml", "zig", "odin", "focus-config", "focus-theme",
+        "yaml", "toml", "zig", "odin", "focus-config", "focus-theme", "vhd", "vhdl", "vdhl",
     ];
     for text_file_extensions  table_add(*table, it, .text);
 

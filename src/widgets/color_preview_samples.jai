@@ -1457,6 +1457,47 @@ import Menu from './Menu.vue';
 </template>
 LANG_VUE
 
+
+SAMPLE_Vhdl :: #string LANG_VHDL
+-- Comment
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity counter is
+    generic (
+        WIDTH : positive := 8
+    );
+    port (
+        clk   : in  std_logic;
+        rst   : in  std_logic;
+        count : out std_logic_vector(WIDTH-1 downto 0)
+    );
+end entity;
+
+architecture rtl of counter is
+    signal cnt : unsigned(WIDTH-1 downto 0);
+begin
+    process (clk) is
+    begin
+        if rising_edge(clk) then
+            if rst = '1' then
+                cnt <= (others => '0');
+            else
+                cnt <= cnt + 1;
+            end if;
+        end if;
+    end process;
+
+    count <= std_logic_vector(cnt);
+
+    -- Based literal and string example
+    constant MAGIC : std_logic_vector(7 downto 0) := x"2A";  -- 16#2A#
+    constant MSG   : string := "Hello";
+end architecture;
+LANG_VHDL
+
 SAMPLE_Diff :: #string LANG_Diff
 diff --git a/src/draw.jai b/src/draw.jai
 index 6711110..e7b4234 100644

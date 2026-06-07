@@ -1684,6 +1684,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Yang;                 return tokenize_yang;
         case .Zig;                  return tokenize_zig;
         case .Uxntal;               return tokenize_uxntal;
+        case .Vhdl;                 return tokenize_vhdl;
         case .Markdown;             return tokenize_markdown;
         case .Batch;                return tokenize_batch;
         case .Swift;                return tokenize_swift;
@@ -1940,6 +1941,7 @@ Buffer :: struct {
         Yang;
         Zig;
         Uxntal;
+        Vhdl;
         Markdown;
         Batch;
         Swift;
