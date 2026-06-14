@@ -1147,6 +1147,9 @@ SAMPLE_Markdown :: #string MARKDOWN
 
 ## Heading Level 2
 
+Alternate Heading
+=================
+
 This is a paragraph with **bold text**, *italic text*, and `inline code`.
 
 > This is a blockquote.
@@ -1214,7 +1217,7 @@ This is a footnote reference[^1].
 
 ### Escape character
 
-\# Escape heading 
+\# Escape heading
 
 \*This is also escaped\*
 
