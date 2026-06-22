@@ -678,7 +678,7 @@ KEYWORDS :: string.[
 ];
 
 TYPE_KEYWORDS :: string.[
-    // alt: could just leave this blank and treat them as classes..
+    // TODO: DECIDE: could just skip types and just treat them as classes..
     "Array", "Hash", "String", "Integer", "Float", "Numeric",
     "Symbol", "Range", "Regexp", "TrueClass", "FalseClass", "NilClass",
     "Object", "Module", "Class", "Struct", "Enumerable"
