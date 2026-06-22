@@ -60,7 +60,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "|";  parse_pipe              (tokenizer, *token);
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "^";  parse_caret             (tokenizer, *token);
-        case #char "\\"; parse_back_slash        (tokenizer, *token);        
+        case #char "\\"; parse_back_slash        (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;  t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;      t += 1;
@@ -125,29 +125,29 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
         if t < max_t {
             // 1. Numeric Globals (Regex captures: $1, $2, etc)
             if ascii_is_digit(t.*) {
-                t += 1; 
-            } 
+                t += 1;
+            }
             // 2. Standard Globals ($LOAD_PATH, $global_var)
             else if ascii_is_alpha(t.*) || t.* == #char "_" {
-                read_identifier_string(tokenizer); 
-            } 
+                read_identifier_string(tokenizer);
+            }
             // 3. Special Globals ($!, $?, $/, $~, $*)
             else {
-                t += 1; 
+                t += 1;
             }
         }
         token.type = .string; // Globals are often colored like Symbols
         return;
     }
 
-    // 1. Check for Labels (key:) 
+    // 1. Check for Labels (key:)
     // Do this early so that "if:" is a symbol, not a keyword.
     if t < max_t && t.* == #char ":" {
         // Peek to ensure it's not the first part of a '::'
         if (t + 1) < max_t && (t + 1).* != #char ":" {
             t += 1; // Consume the ':'
             token.type = .string; // Highlight as a Ruby symbol
-            return; 
+            return;
         }
     }
 
@@ -166,7 +166,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
         ok, kw_token := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
-        
+
 }
 
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -215,7 +215,7 @@ parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     if char == #char ":" {
         t += 1; // Consume the second ':'
         token.type = .operation;
-        token.operation = .double_colon; 
+        token.operation = .double_colon;
         return;
     }
 
@@ -223,8 +223,8 @@ parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     // CASE 2: Standard Symbol (:symbol)
     if ascii_is_alpha(char) || char == #char "_" {
         // Use the original reader to grab the alphanumeric part
-        read_identifier_string(tokenizer); 
-        
+        read_identifier_string(tokenizer);
+
         // Ruby symbols can end in ! or ? (e.g. :valid?)
         if t < max_t && (t.* == #char "!" || t.* == #char "?") {
             t += 1;
@@ -238,7 +238,7 @@ parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     if char == #char "\"" || char == #char "'" {
         // This re-uses the existing string literal logic
         parse_string_literal(tokenizer, token, char);
-        token.type = .string; 
+        token.type = .string;
         return;
     }
 
@@ -266,9 +266,10 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     // and if the next characters are "begin"
     if is_at_start_of_line(tokenizer) && peek_string(tokenizer, "begin") {
         token.type = .comment;
+
         // Skip "=begin"
-        t += 6; 
-        
+        t += 6;
+
         // Loop until we find "=end" at the start of a line
         while t < max_t {
             if is_at_start_of_line(tokenizer) && peek_string(tokenizer, "=end") {
@@ -287,7 +288,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
         case #char "=";
             token.operation = .equal_equal;
             t += 1;
-            
+
             // Ruby specific: Check for ===
             if t < max_t && t.* == #char "=" {
                 token.operation = .triple_equal;
@@ -301,7 +302,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
         case #char "~";
             token.operation = .equal_tilde; // The =~ operator
             t += 1;
-            
+
     }
 }
 
@@ -385,11 +386,11 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     if t < max_t && ascii_is_alpha(t.*) {
         // It's a literal like %w, %q, %i, %r
         t += 1; // Consume the letter
-        
+
         if t < max_t {
             open_delim := t.*;
             close_delim: uint8;
-            
+
             // Set the matching pair
             if      open_delim == #char "("  close_delim = #char ")";
             else if open_delim == #char "["  close_delim = #char "]";
@@ -474,7 +475,7 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
 
 parse_slash :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
-    token.operation = .slash; 
+    token.operation = .slash;
 
     t += 1; // Consume the first '/'
     if t >= max_t return;
@@ -491,24 +492,24 @@ parse_slash :: (using tokenizer: *Tokenizer, token: *Token) {
     // In Ruby, division / usually has spaces around it: x / y.
     if t.* != #char " " && t.* != #char "\t" && t.* != #char "\n" {
         token.type = .string; // Color regex as a string literal
-        
+
         while t < max_t {
             if t.* == #char "\\" {
                 t += 2; // Skip escaped characters like \/
                 continue;
             }
-            
+
             if t.* == #char "/" {
                 t += 1; // Consume closing '/'
-                
+
                 // Consume optional regex modifiers: /abc/ix
-                while t < max_t && (t.* == #char "i" || t.* == #char "m" || 
+                while t < max_t && (t.* == #char "i" || t.* == #char "m" ||
                                    t.* == #char "x" || t.* == #char "o") {
                     t += 1;
                 }
                 break;
             }
-            
+
             if t.* == #char "\n" break; // Safety: stop at end of line
             t += 1;
         }
@@ -586,7 +587,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote_type:
 
         // If we hit the matching closing quote, we are done
         if t.* == quote_type {
-            t += 1; 
+            t += 1;
             break;
         }
 
@@ -594,7 +595,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote_type:
         // We stay in the string for now to avoid breaking the lexer
         if quote_type == #char "\"" && t.* == #char "#" {
             if (t + 1) < max_t && (t + 1).* == #char "{" {
-                // For a basic lexer, we just continue. 
+                // For a basic lexer, we just continue.
                 // Advanced lexers would break here to color the code inside.
             }
         }
@@ -608,13 +609,13 @@ parse_back_slash :: (using tokenizer: *Tokenizer, token: *Token) {
     token.punctuation = .back_slash;
     t += 1; // Consume the '\'
 
-    // Ruby logic: If a backslash is followed immediately by a newline, 
-    // it's a line continuation. We consume the newline so the lexer 
+    // Ruby logic: If a backslash is followed immediately by a newline,
+    // it's a line continuation. We consume the newline so the lexer
     // treats the next line as part of the current expression.
     if t < max_t && t.* == #char "\n" {
         t += 1;
         // Optional: If you want to skip highlighting line continuations entirely:
-        // token.type = .none; 
+        // token.type = .none;
     }
 }
 
@@ -656,26 +657,26 @@ KEYWORDS :: string.[
 
 TYPE_KEYWORDS :: string.[
     // alt: could just leave this blank and treat them as classes..
-    "Array", "Hash", "String", "Integer", "Float", "Numeric", 
+    "Array", "Hash", "String", "Integer", "Float", "Numeric",
     "Symbol", "Range", "Regexp", "TrueClass", "FalseClass", "NilClass",
     "Object", "Module", "Class", "Struct", "Enumerable"
 ];
 
 BUILTIN_FUNCTIONS :: string.[
     // Kernal methods as global functions
-    "puts", "print", "p", "gets", "chomp", "require", "require_relative", 
+    "puts", "print", "p", "gets", "chomp", "require", "require_relative",
     "include", "extend", "attr_accessor", "attr_reader", "attr_writer",
     "raise", "fail", "catch", "throw", "loop", "proc", "lambda"
 ];
 
 BUILTIN_EXCEPTIONS :: string.[
-    "Exception", "StandardError", "RuntimeError", "ArgumentError", 
-    "NoMethodError", "NameError", "TypeError", "ZeroDivisionError", 
+    "Exception", "StandardError", "RuntimeError", "ArgumentError",
+    "NoMethodError", "NameError", "TypeError", "ZeroDivisionError",
     "SystemExit", "StopIteration", "IOError", "LoadError", "SecurityError"
 ];
 
 VALUE_KEYWORDS :: string.[
-    "true", "false", "nil", "self"    
+    "true", "false", "nil", "self"
 ];
 
 #insert -> string {
