@@ -117,6 +117,8 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     identifier_str := read_ruby_identifier_string(tokenizer); // read_identifier_string
 
+    // if identifier_str.count > 0 && identifier_str[0] == #char "$" {
+
     // globals
     if t.* == #char "$" {
         t += 1;
@@ -151,11 +153,12 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // 2. Check for Ruby Constants (Starts with A-Z)
     // In Ruby, capitalization is a semantic rule for Types/Classes.
-    first_char := identifier_str[0];
-    if ascii_is_upper(first_char) {
-        token.type = .type;
-        // Note: Don't return yet! Some constants might be in the keyword map 
-        // (though rare in Ruby, like BEGIN/END).
+    if identifier_str.count > 0 {
+        if ascii_is_upper(identifier_str[0]) {
+            token.type = .type;
+            // Note: Don't return yet! Some constants might be in the keyword map
+            // (though rare in Ruby, like BEGIN/END).
+        }
     }
 
     // Maybe it's a keyword
@@ -244,13 +247,25 @@ parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     token.operation = .colon;
 }
 
-parse_equals :: (using tokenizer: *Tokenizer, token: *Token) {
+is_at_start_of_line :: (using tokenizer: *Tokenizer) -> bool #inline {
+    if t == buf.data return true;
+    return (t - 1).* == #char "\n";
+}
+
+peek_string :: (using tokenizer: *Tokenizer, s: string) -> bool { // TODO: #inline?
+    if t + s.count > max_t return false;
+    for 0..s.count-1 {
+        if (t + it).* != s[it] return false;
+    }
+    return true;
+}
+
+parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     // handle =begin/=end
     // Check if we are at the start of a line (t == line_start)
     // and if the next characters are "begin"
     if is_at_start_of_line(tokenizer) && peek_string(tokenizer, "begin") {
         token.type = .comment;
-        
         // Skip "=begin"
         t += 6; 
         
@@ -389,7 +404,8 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
                 t += 1;
             }
             token.type = .string;
-            token.count = t - start_pos;
+            token.len = cast(s32) (t - start_t); // TODO: check ai's work
+            // token.count = t - start_pos;
             return;
         }
     }
@@ -563,7 +579,8 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote_type:
     while t < max_t {
         // Handle escaped characters (like \" or \\)
         if t.* == #char "\\" {
-            t += 2; 
+            t += 1;
+            if t < max_t t += 1;
             continue;
         }
 
@@ -629,10 +646,10 @@ OPERATIONS :: string.[
 
 
 KEYWORDS :: string.[
-    "alias", "and", "begin", "break", "case", "class", "def", "defined?", 
-    "do", "else", "elsif", "end", "ensure", "false", "for", "if", "in", 
-    "module", "next", "nil", "not", "or", "redo", "rescue", "retry", 
-    "return", "self", "super", "then", "true", "undef", "unless", "until", 
+    "alias", "and", "begin", "break", "case", "class", "def", "defined?",
+    "do", "else", "elsif", "end", "ensure", "for", "if", "in",
+    "module", "next", "not", "or", "redo", "rescue", "retry",
+    "return", "self", "super", "then", "undef", "unless", "until",
     "when", "while", "yield", "it",
     "__FILE__", "__LINE__", "__ENCODING__", "BEGIN", "END"
 ];
@@ -688,7 +705,7 @@ Keyword_Token :: struct {
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
     size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
-    init(*table, size);
+    table_resize(*table, size);
 
     #insert -> string {
         b: String_Builder;
