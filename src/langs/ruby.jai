@@ -61,10 +61,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "^";  parse_caret             (tokenizer, *token);
         case #char "\\"; parse_back_slash        (tokenizer, *token);
+        case #char ".";  parse_dot               (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;  t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;      t += 1;
-        case #char ".";  token.type = .punctuation; token.punctuation = .period;     t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;    t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;    t += 1;
         case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;    t += 1;
@@ -194,6 +194,23 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         // Binary
         t += 1;
         while t < max_t && (t.* == #char "1" || t.* == #char "0" || t.* == #char "_") t += 1;
+    }
+}
+
+parse_dot :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .operation;
+    token.operation = .period;
+    t += 1;
+
+    if t >= max_t {
+        return; // skip single dot
+    else if t < max_t && t.* == #char "." {
+        t += 1;
+        token.operation = .double_dot;
+        if t < max_t && t.* == #char "." {
+            t += 1;
+            token.operation = .triple_dot;
+        }
     }
 }
 
@@ -355,6 +372,9 @@ parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     if t.* == {
+        case #char "*";
+            token.operation = .double_asterisk;
+            t += 1;
         case #char "=";
             token.operation = .asterisk_equal;
             t += 1;
@@ -640,9 +660,11 @@ OPERATIONS :: string.[
     "minus", "minus_equal", "asterisk", "asterisk_equal", "colon", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde",
     "caret", "caret_equal",
-    // NOTE: added: hash_rocket (=>), spaceship (<=>), equal_tilde (=~), bang_tilde (!~), and triple_equal (===)
-    "hash_rocket", "spaceship", "equal_tilde", "bang_tilde", "triple_equal"
-    // TODO: unimpl: "double_asterisk" (exponent), "asterisk_equal" (exponent equal?), "double_dot", "triple_dot"
+
+    "hash_rocket", "spaceship", // =>, <=>
+    "equal_tilde", "bang_tilde", "triple_equal",
+    "double_dot", "triple_dot",
+    "double_asterisk"
 ];
 
 
