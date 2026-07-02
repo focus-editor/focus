@@ -2,9 +2,9 @@
 
 [colors]
 background0:                            14171DFF
-background1:                            14171DFF
+background1:                            22262DFF
 background2:                            22262DFF
-background3:                            14171DFF
+background3:                            22262DFF
 background4:                            393B42FF
 selection_active:                       2D4F67FF
 selection_inactive:                     393B427F
