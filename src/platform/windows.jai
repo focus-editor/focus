@@ -215,11 +215,24 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
-    path_backslashes := copy_string(path,, allocator = temp);
-    path_overwrite_separators(path_backslashes, #char "\\");
+    ITEMIDLIST :: struct {}
+    ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u16, lpDirectory: *u16, nShowCmd: s32) -> HINSTANCE #foreign shell32;
+    ILCreateFromPathW :: (pszPath: *u16) -> *ITEMIDLIST #foreign shell32;
+    ILFree :: (pidl: *ITEMIDLIST) -> void #foreign shell32;
+    SHOpenFolderAndSelectItems :: (pidlFolder: *ITEMIDLIST, cidl: u32, apidl: **ITEMIDLIST, dwFlags: u32) -> HRESULT #foreign shell32;
 
-    if reveal run_command("explorer", "/select,", path_backslashes);
-    else      run_command("explorer", path_backslashes);
+    path_wide := utf8_to_wide(path,, temp);
+
+    if reveal {
+        pidl := ILCreateFromPathW(path_wide);
+        if pidl {
+            SHOpenFolderAndSelectItems(pidl, 0, null, 0);
+            ILFree(pidl);
+        }
+    } else {
+        verb_wide := utf8_to_wide("open",, temp);
+        ShellExecuteW(null, verb_wide, path_wide, null, null, 1);
+    }
 }
 
 platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
