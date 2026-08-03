@@ -7,7 +7,7 @@ background2:                            18262FFF
 background3:                            072626FF
 background4:                            1A1A1AFF
 selection_active:                       0000FFFF
-selection_inactive:                     0000FF00
+selection_inactive:                     0000FFA0
 selection_highlight:                    FCEDFC26
 search_result_active:                   CD6889FF
 search_result_inactive:                 FCEDFC26
