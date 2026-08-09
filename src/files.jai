@@ -1,5 +1,42 @@
+focus_path_is_separator :: inline (byte: u8) -> bool {
+    return byte == #char "/" || byte == #char "\\";
+}
+
+focus_path_is_unc :: (path: string) -> bool {
+    #if OS != .WINDOWS {
+        return false;
+    }
+
+    if path.count < 5 || !focus_path_is_separator(path[0]) || !focus_path_is_separator(path[1]) return false;
+
+    server_end := 2;
+    while server_end < path.count && !focus_path_is_separator(path[server_end]) server_end += 1;
+    if server_end == 2 || server_end == path.count return false;
+
+    server := slice(path, 2, server_end - 2);
+    if server == "." || server == "?" return false;  // Device and extended-length namespaces are out of scope.
+
+    share_start := server_end + 1;
+    if share_start == path.count || focus_path_is_separator(path[share_start]) return false;
+
+    return true;
+}
+
+focus_path_is_absolute :: (path: string) -> bool {
+    #if OS == .WINDOWS {
+        if path.count >= 2 && focus_path_is_separator(path[0]) && focus_path_is_separator(path[1]) {
+            if path.count >= 4 && (path[2] == #char "?" || path[2] == #char ".") && focus_path_is_separator(path[3]) {
+                return is_absolute_path(path);
+            }
+            return focus_path_is_unc(path);
+        }
+    }
+
+    return is_absolute_path(path);
+}
+
 get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info {
-    assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
+    assert(focus_path_is_absolute(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
     full_path := copy_string(abs_path);  // one allocation, the rest are views into it
     path, basename, extension, name := path_decomp(full_path);
