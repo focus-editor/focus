@@ -1,6 +1,8 @@
 Glyph_Data :: struct {
     utf32: u32;
     glyph_index_within_font: u32;
+    source_face: FT_Face;
+    was_missing: bool;
 
     x0, y0: s16;
     width, height: u32;
@@ -13,6 +15,11 @@ Glyph_Data :: struct {
     page: *Font_Page;
 }
 
+Font_Source :: struct {
+    name: string;
+    data: string;
+}
+
 Font_Quad :: struct {
     p0, p1, p2, p3: Vector2;
     u0, v0, u1, v1: float;
@@ -23,6 +30,8 @@ Font_Quad :: struct {
 Dynamic_Font :: struct {
     name: string;
     face: FT_Face;
+    fallback_names: [..] string;
+    fallback_faces: [..] FT_Face;
     glyph_lookup: Table(u64, *Glyph_Data);
 
     character_height:       int;
@@ -116,8 +125,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
 
     if !s return 0;
 
-    use_kerning := FT_HAS_KERNING(font.face);
-    prev_glyph: u32 = 0;
+    prev_glyph: *Glyph_Data;
 
     width_in_pixels := 0;
 
@@ -131,17 +139,13 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
 
             width_in_pixels += glyph.advance;
 
-            if use_kerning && prev_glyph {
-                delta: FT_Vector = ---;
-                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-                if !error then width_in_pixels += (delta.x >> 6);
-            }
+            width_in_pixels += get_kerning(prev_glyph, glyph);
 
             // FreeType returns glyph index 0 for undefined glyphs... just signal
             // the condition that this happened.
-            if glyph.glyph_index_within_font == 0 font.glyph_conversion_failed = true;
+            if glyph.was_missing font.glyph_conversion_failed = true;
 
-            prev_glyph = glyph.glyph_index_within_font;
+            prev_glyph = glyph;
         }
 
         t = unicode_next_character(t);
@@ -286,8 +290,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    use_kerning := FT_HAS_KERNING(font.face);
-    prev_glyph: u32 = 0;
+    prev_glyph: *Glyph_Data;
     width_in_pixels := 0;
 
     last_texture: GLuint = 0xFFFFFFFF;
@@ -326,14 +329,9 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
 
         // Draw glyph
         {
-            if use_kerning && prev_glyph {
-                delta: FT_Vector = ---;
-                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-                if !error {
-                    sx += cast(float) (delta.x >> 6);
-                    width_in_pixels += (delta.x >> 6);
-                }
-            }
+            kerning := get_kerning(prev_glyph, glyph);
+            sx += cast(float) kerning;
+            width_in_pixels += kerning;
 
             x1 := sx + cast(float) glyph.offset_x;
             x2 := x1 + cast(float) glyph.width / (ifx font_anti_aliasing == .lcd then 3.0 else 1.0);
@@ -366,7 +364,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
         }
 
         t = unicode_next_character(t);
-        prev_glyph = glyph.glyph_index_within_font;
+        prev_glyph = glyph;
     }
 
     immediate_flush();
@@ -442,13 +440,23 @@ load_font_part_2 :: (result: *Dynamic_Font, pixel_height: int) {
     array_add(*dynamic_fonts, result);
 }
 
-get_font_at_size :: (name: string, font_data: string, pixel_height: int) -> *Dynamic_Font {
+get_font_at_size :: (name: string, font_data: string, pixel_height: int, fallbacks: [] Font_Source = .[]) -> *Dynamic_Font {
     inline ensure_fonts_are_initted();
 
     // Try to find a previously loaded font
     for dynamic_fonts {
         if (it.character_height != pixel_height) continue;
         if (it.name != name) continue;
+        if it.fallback_names.count != fallbacks.count continue;
+
+        fallback_stack_matches := true;
+        for fallback, fallback_index : fallbacks {
+            if it.fallback_names[fallback_index] != fallback.name {
+                fallback_stack_matches = false;
+                break;
+            }
+        }
+        if !fallback_stack_matches continue;
 
         return it;
     }
@@ -471,6 +479,34 @@ get_font_at_size :: (name: string, font_data: string, pixel_height: int) -> *Dyn
     result.name = copy_string(name);
     result.face = face;
     load_font_part_2(result, pixel_height);
+
+    for fallback : fallbacks {
+        // Keep the complete configured stack in the cache key even if a face fails to load.
+        array_add(*result.fallback_names, copy_string(fallback.name));
+
+        fallback_face: FT_Face;
+        error := FT_New_Memory_Face(ft_library, fallback.data.data, cast(s32) fallback.data.count, 0, *fallback_face);
+        if error {
+            log_error("Unable to load fallback font '%': error %\n", fallback.name, error);
+            continue;
+        }
+
+        error = FT_Set_Pixel_Sizes(fallback_face, 0, xx pixel_height);
+        if error {
+            log_error("Unable to size fallback font '%': error %\n", fallback.name, error);
+            FT_Done_Face(fallback_face);
+            continue;
+        }
+
+        error = FT_Select_Charmap(fallback_face, .UNICODE);
+        if error {
+            log_error("Unable to select Unicode charmap for fallback font '%': error %\n", fallback.name, error);
+            FT_Done_Face(fallback_face);
+            continue;
+        }
+
+        array_add(*result.fallback_faces, fallback_face);
+    }
     return result;
 
     // TODO(ivan): finish this loading part, use float metrics if possible
@@ -521,8 +557,7 @@ prepare_text :: (font: *Dynamic_Font, text: string) -> width: s64 {
 get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
     if !s return 0;
 
-    use_kerning := FT_HAS_KERNING(font.face);
-    prev_glyph: u32 = 0;
+    prev_glyph: *Glyph_Data;
 
     width_in_pixels := 0;
 
@@ -534,13 +569,9 @@ get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
         if glyph {
             width_in_pixels += glyph.advance;
 
-            if use_kerning && prev_glyph {
-                delta: FT_Vector = ---;
-                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-                if !error then width_in_pixels += (delta.x >> 6);
-            }
+            width_in_pixels += get_kerning(prev_glyph, glyph);
 
-            prev_glyph = glyph.glyph_index_within_font;
+            prev_glyph = glyph;
         }
 
         t = unicode_next_character(t);
@@ -552,8 +583,7 @@ get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
 get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s64) -> pos: s32 {
     if !s return 0;
 
-    use_kerning := FT_HAS_KERNING(font.face);
-    prev_glyph: u32 = 0;
+    prev_glyph: *Glyph_Data;
 
     current_pos: s32 = 0;
     width_in_pixels := 0;
@@ -568,15 +598,11 @@ get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s6
         if glyph {
             glyph_width += glyph.advance;
 
-            if use_kerning && prev_glyph {
-                delta: FT_Vector = ---;
-                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-                if !error then glyph_width += (delta.x >> 6);
-            }
+            glyph_width += get_kerning(prev_glyph, glyph);
         }
 
         t = unicode_next_character(t);
-        prev_glyph = glyph.glyph_index_within_font;
+        prev_glyph = glyph;
 
         width_in_pixels += glyph_width;
         if width_in_pixels >= requested_width {
@@ -597,27 +623,16 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     array_reset_keeping_memory(*font.current_quads);
     array_reserve(*font.current_quads, font.temporary_glyphs.count);
 
-    // @Speed: we don't need kerning for most of the text
-    use_kerning := FT_HAS_KERNING(font.face);
-
     sx := cast(float) x;
     sy := cast(float) y;
 
-    prev_glyph: u32 = 0;
+    prev_glyph: *Glyph_Data;
 
     // @Speed!
     for info: font.temporary_glyphs {
         if !info.page continue;
 
-        if use_kerning && prev_glyph {
-            delta: FT_Vector = ---;
-            error := FT_Get_Kerning(font.face, prev_glyph, info.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-            if !error {
-                sx += cast(float) (delta.x >> 6);
-            } else {
-                log_error("Couldn't get kerning for glyphs %, %\n", prev_glyph, info.glyph_index_within_font);
-            }
-        }
+        sx += cast(float) get_kerning(prev_glyph, info);
 
         sx1 := sx  + cast(float) info.offset_x;
         sx2 := sx1 + cast(float) info.width / (ifx font_anti_aliasing == .lcd then 3.0 else 1.0);
@@ -647,7 +662,7 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
         array_add(*font.current_quads, quad);
         sx += cast(float) info.advance;
 
-        prev_glyph = info.glyph_index_within_font;
+        prev_glyph = info;
     }
 }
 
@@ -771,6 +786,20 @@ glyph_hash :: inline (utf32: u32, anti_aliasing: Font_Anti_Aliasing, hinting: bo
     return hash_key;
 }
 
+get_kerning :: inline (previous: *Glyph_Data, current: *Glyph_Data) -> s64 {
+    if !previous || !current return 0;
+    if previous.source_face != current.source_face return 0;
+
+    face := current.source_face;
+    if !FT_HAS_KERNING(face) return 0;
+
+    delta: FT_Vector = ---;
+    error := FT_Get_Kerning(face, previous.glyph_index_within_font, current.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+    if error return 0;
+
+    return delta.x >> 6;
+}
+
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     hash_key := glyph_hash(utf32, font_anti_aliasing, font_hinting);
 
@@ -780,26 +809,43 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
     if utf32 == #char "\n" then utf32 = #char "¶";  // draw newlines as paragraph symbols
 
-    glyph_index := FT_Get_Char_Index(face, utf32);
+    glyph_face := face;
+    glyph_index := FT_Get_Char_Index(glyph_face, utf32);
+    if !glyph_index {
+        for fallback_face : fallback_faces {
+            glyph_index = FT_Get_Char_Index(fallback_face, utf32);
+            if glyph_index {
+                glyph_face = fallback_face;
+                break;
+            }
+        }
+    }
+
+    was_missing := false;
     if !glyph_index {
         log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
+        glyph_face = face;
         glyph_index = glyph_index_for_unknown_character;
+        was_missing = true;
     }
 
     load_mode := cast(s32) ifx font_hinting then FT_LOAD_DEFAULT else FT_LOAD_NO_HINTING;
-    error := FT_Load_Glyph(face, glyph_index, load_mode);
+    error := FT_Load_Glyph(glyph_face, glyph_index, load_mode);
     assert(!error);
 
     if #complete font_anti_aliasing == {
-        case .lcd;      FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);  // TODO: use LCD_V when monitor is rotated
-        case .normal;   FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_NORMAL);
+        case .lcd;      FT_Render_Glyph(glyph_face.glyph, .FT_RENDER_MODE_LCD);  // TODO: use LCD_V when monitor is rotated
+        case .normal;   FT_Render_Glyph(glyph_face.glyph, .FT_RENDER_MODE_NORMAL);
     }
 
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
+    data.* = .{};
     data.utf32 = utf32;
     data.glyph_index_within_font = glyph_index;
+    data.source_face = glyph_face;
+    data.was_missing = was_missing;
 
-    copy_glyph_to_bitmap(face, data);
+    copy_glyph_to_bitmap(glyph_face, data);
 
     table_add(*glyph_lookup, hash_key, data);
 

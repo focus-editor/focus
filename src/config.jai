@@ -17,6 +17,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
 
     if loaded_config.loaded {
         // Merge into an empty config
+        reset_ui_font_fallbacks();
         config = Config.{};
         reset_color_map_to_default();
         merge_configs(*config, loaded_config.parsed_config);
@@ -26,6 +27,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
         return true, true, loaded_config.there_were_warnings;
     } else {
         if fallback_to_default_on_failure {
+            reset_ui_font_fallbacks();
             config = DEFAULT_CONFIG;
             apply_config();
         }
@@ -48,6 +50,7 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
 
     if loaded_config.loaded {
         // Merge into an empty config, starting from a loaded global config
+        reset_ui_font_fallbacks();
         if global_config.loaded {
             config = Config.{};
             reset_color_map_to_default();
@@ -255,7 +258,7 @@ close_project :: () {
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
     if name == "default" return "default", "";
 
-    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
+    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf") || ends_with_nocase(name, ".ttc");
 
     try_path :: (font_path: string) #expand {
         if file_exists(font_path) `return font_path, "";
@@ -289,6 +292,15 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
     error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ",, allocator = temp));
     return "", error_msg;
+}
+
+font_path_identity :: (path: string, allocator := temp) -> string {
+    if path == "default" return copy_string(path,, allocator = allocator);
+
+    absolute_path, success := get_absolute_path(path,, allocator);
+    if !success then absolute_path = copy_string(path,, allocator = allocator);
+    path_overwrite_separators(absolute_path, #char "/");
+    return absolute_path;
 }
 
 reset_color_map_to_default :: () {
@@ -327,6 +339,17 @@ apply_style :: (parsed: Parsed_Config) {
             loaded_fonts.ui_bold_italic = loaded_font;
         } else {
             add_user_error("Couldn't load font %", parsed.font_ui_bold_italic);
+        }
+    }
+    if parsed.font_ui_fallbacks_is_set {
+        reset_ui_font_fallbacks();
+        for fallback_name : parsed.font_ui_fallbacks {
+            loaded_font, success := load_font_by_name(fallback_name, .ui);
+            if success {
+                array_add(*loaded_fonts.ui_fallbacks, loaded_font);
+            } else {
+                add_user_error("Couldn't load UI fallback font %", fallback_name);
+            }
         }
     }
     if parsed.font_size > 0 {
@@ -600,6 +623,57 @@ process_comment_highlight_words :: () {
     config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
+#scope_export
+
+ensure_default_ui_font_fallback_is_loaded :: () {
+    if loaded_fonts.ui_fallbacks return;
+    if default_ui_font_fallback_checked return;
+    default_ui_font_fallback_checked = true;
+
+    loaded_any := false;
+    fallback_paths: [..] string;
+    fallback_paths.allocator = temp;
+
+    for candidate : platform_default_ui_font_fallback_candidates() {
+        fallback_path := find_font_by_name(candidate);
+        if !fallback_path continue;
+
+        fallback_identity := font_path_identity(fallback_path);
+        duplicate := false;
+        for existing_path : fallback_paths {
+            if platform_path_equals(existing_path, fallback_identity) {
+                duplicate = true;
+                break;
+            }
+        }
+        if duplicate continue;
+
+        if loaded_fonts.ui_fallbacks.count >= MAX_UI_FONT_FALLBACKS {
+            log_error("The platform default UI fallback list exceeds the maximum of % fonts.\n", MAX_UI_FONT_FALLBACKS);
+            break;
+        }
+
+        loaded_font, success := load_font_by_name(candidate, .ui);
+        if !success continue;
+
+        array_add(*fallback_paths, fallback_identity);
+        array_add(*loaded_fonts.ui_fallbacks, loaded_font);
+        log("Using '%' as the default UI fallback font\n", loaded_font.name);
+        loaded_any = true;
+    }
+
+    if !loaded_any {
+        log_error("No default UI font with CJK coverage was found. Configure 'font_ui_fallbacks' to display CJK file names.\n");
+    }
+}
+
+reset_ui_font_fallbacks :: () {
+    array_reset_keeping_memory(*loaded_fonts.ui_fallbacks);
+    default_ui_font_fallback_checked = false;
+}
+
+#scope_file
+
 load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
     if name == "default" {
         if #complete kind == {
@@ -629,6 +703,7 @@ load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_ital
 }
 
 font_cache: Table(string, Loaded_Font);  // path -> loaded font
+default_ui_font_fallback_checked := false;
 
 #scope_export
 
