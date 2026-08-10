@@ -493,7 +493,14 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
+    ensure_default_main_font_fallback_is_loaded();
     ensure_default_ui_font_fallback_is_loaded();
+
+    main_fallback_sources: [..] Simp.Font_Source;
+    main_fallback_sources.allocator = temp;
+    for fallback : loaded_fonts.main_fallbacks {
+        array_add(*main_fallback_sources, .{ name = fallback.name, data = fallback.data });
+    }
 
     ui_fallback_sources: [..] Simp.Font_Source;
     ui_fallback_sources.allocator = temp;
@@ -519,7 +526,7 @@ init_fonts_and_dependent_things :: () {
     font_icons_small_size      = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_very_small_size = clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale));
+    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale), main_fallback_sources);
     assert(font_main != null, "Couldn't init main text font\n");
 
     font_ui = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_size * dpi_scale), ui_fallback_sources);
@@ -920,6 +927,7 @@ DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
 loaded_fonts: struct {
     main:           Loaded_Font = FONT_MAIN;
+    main_fallbacks: [..] Loaded_Font;
     ui:             Loaded_Font = FONT_UI;
     ui_bold:        Loaded_Font = FONT_UI_BOLD;
     ui_bold_italic: Loaded_Font = FONT_UI_BOLD_ITALIC;

@@ -414,7 +414,10 @@ Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 
 [fonts]
 font:          default
+# font_fallbacks: some-font.ttf, other-font.ttc  # comma-separated fallback fonts for the editor font, used when it doesn't contain a glyph.
+#                                                # If unset, platform default fallbacks are used. Set to an empty value to disable all fallbacks, including platform defaults.
 font_ui:       default
+# font_ui_fallbacks: some-font.ttf, other-font.ttc  # comma-separated fallback fonts for the UI font. Same unset/empty rules as font_fallbacks above.
 font_ui_bold:  default
 font_size:     14
 font_ui_size:  15

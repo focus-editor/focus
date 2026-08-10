@@ -226,7 +226,7 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
     return found, path;
 }
 
-platform_default_ui_font_fallback_candidates :: () -> [] string {
+platform_default_font_fallback_candidates :: () -> [] string {
     return .[
         "Noto Sans CJK SC",
         "Noto Sans CJK KR",

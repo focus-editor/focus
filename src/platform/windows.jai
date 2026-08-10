@@ -199,7 +199,7 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
     return false, "";
 }
 
-platform_default_ui_font_fallback_candidates :: () -> [] string {
+platform_default_font_fallback_candidates :: () -> [] string {
     return .[
         "msyh.ttc",   // Microsoft YaHei, resolved through platform_get_fonts_dir()
         "malgun.ttf", // Malgun Gothic, resolved through platform_get_fonts_dir()

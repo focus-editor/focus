@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 25;
+CURRENT_CONFIG_VERSION :: 26;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -17,6 +17,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
 
     if loaded_config.loaded {
         // Merge into an empty config
+        reset_main_font_fallbacks();
         reset_ui_font_fallbacks();
         config = Config.{};
         reset_color_map_to_default();
@@ -27,6 +28,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
         return true, true, loaded_config.there_were_warnings;
     } else {
         if fallback_to_default_on_failure {
+            reset_main_font_fallbacks();
             reset_ui_font_fallbacks();
             config = DEFAULT_CONFIG;
             apply_config();
@@ -50,6 +52,7 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
 
     if loaded_config.loaded {
         // Merge into an empty config, starting from a loaded global config
+        reset_main_font_fallbacks();
         reset_ui_font_fallbacks();
         if global_config.loaded {
             config = Config.{};
@@ -341,16 +344,11 @@ apply_style :: (parsed: Parsed_Config) {
             add_user_error("Couldn't load font %", parsed.font_ui_bold_italic);
         }
     }
+    if parsed.font_fallbacks_is_set {
+        apply_parsed_font_fallbacks(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked, .main, parsed.font_fallbacks, "editor");
+    }
     if parsed.font_ui_fallbacks_is_set {
-        reset_ui_font_fallbacks();
-        for fallback_name : parsed.font_ui_fallbacks {
-            loaded_font, success := load_font_by_name(fallback_name, .ui);
-            if success {
-                array_add(*loaded_fonts.ui_fallbacks, loaded_font);
-            } else {
-                add_user_error("Couldn't load UI fallback font %", fallback_name);
-            }
-        }
+        apply_parsed_font_fallbacks(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked, .ui, parsed.font_ui_fallbacks, "UI");
     }
     if parsed.font_size > 0 {
         font_main_size = parsed.font_size;
@@ -625,16 +623,54 @@ process_comment_highlight_words :: () {
 
 #scope_export
 
+ensure_default_main_font_fallback_is_loaded :: () {
+    ensure_default_font_fallbacks_are_loaded(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked, .main, "font_fallbacks");
+}
+
 ensure_default_ui_font_fallback_is_loaded :: () {
-    if loaded_fonts.ui_fallbacks return;
-    if default_ui_font_fallback_checked return;
-    default_ui_font_fallback_checked = true;
+    ensure_default_font_fallbacks_are_loaded(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked, .ui, "font_ui_fallbacks");
+}
+
+reset_main_font_fallbacks :: () {
+    reset_font_fallbacks(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked);
+}
+
+reset_ui_font_fallbacks :: () {
+    reset_font_fallbacks(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked);
+}
+
+#scope_file
+
+Font_Kind :: enum { main; ui; ui_bold; ui_bold_italic; }
+
+reset_font_fallbacks :: (fallbacks: *[..] Loaded_Font, checked: *bool) {
+    array_reset_keeping_memory(fallbacks);
+    checked.* = false;
+}
+
+apply_parsed_font_fallbacks :: (fallbacks: *[..] Loaded_Font, checked: *bool, kind: Font_Kind, parsed_names: [] string, what: string) {
+    reset_font_fallbacks(fallbacks, checked);
+    checked.* = true;  // an explicit setting (even an empty one) disables the platform default fallback list
+    for fallback_name : parsed_names {
+        loaded_font, success := load_font_by_name(fallback_name, kind);
+        if success {
+            array_add(fallbacks, loaded_font);
+        } else {
+            add_user_error("Couldn't load % fallback font %", what, fallback_name);
+        }
+    }
+}
+
+ensure_default_font_fallbacks_are_loaded :: (fallbacks: *[..] Loaded_Font, checked: *bool, kind: Font_Kind, config_name: string) {
+    if fallbacks.* return;
+    if checked.* return;
+    checked.* = true;
 
     loaded_any := false;
     fallback_paths: [..] string;
     fallback_paths.allocator = temp;
 
-    for candidate : platform_default_ui_font_fallback_candidates() {
+    for candidate : platform_default_font_fallback_candidates() {
         fallback_path := find_font_by_name(candidate);
         if !fallback_path continue;
 
@@ -648,33 +684,26 @@ ensure_default_ui_font_fallback_is_loaded :: () {
         }
         if duplicate continue;
 
-        if loaded_fonts.ui_fallbacks.count >= MAX_UI_FONT_FALLBACKS {
-            log_error("The platform default UI fallback list exceeds the maximum of % fonts.\n", MAX_UI_FONT_FALLBACKS);
+        if fallbacks.count >= MAX_FONT_FALLBACKS {
+            log_error("The platform default fallback list for '%' exceeds the maximum of % fonts.\n", config_name, MAX_FONT_FALLBACKS);
             break;
         }
 
-        loaded_font, success := load_font_by_name(candidate, .ui);
+        loaded_font, success := load_font_by_name(candidate, kind);
         if !success continue;
 
         array_add(*fallback_paths, fallback_identity);
-        array_add(*loaded_fonts.ui_fallbacks, loaded_font);
-        log("Using '%' as the default UI fallback font\n", loaded_font.name);
+        array_add(fallbacks, loaded_font);
+        log("Using '%' as a default fallback font for '%'\n", loaded_font.name, config_name);
         loaded_any = true;
     }
 
     if !loaded_any {
-        log_error("No default UI font with CJK coverage was found. Configure 'font_ui_fallbacks' to display CJK file names.\n");
+        log_error("No default fallback font with CJK coverage was found. Configure '%' to display glyphs missing from the primary font.\n", config_name);
     }
 }
 
-reset_ui_font_fallbacks :: () {
-    array_reset_keeping_memory(*loaded_fonts.ui_fallbacks);
-    default_ui_font_fallback_checked = false;
-}
-
-#scope_file
-
-load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
+load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bool {
     if name == "default" {
         if #complete kind == {
             case .main;             return FONT_MAIN,           true;
@@ -703,7 +732,8 @@ load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_ital
 }
 
 font_cache: Table(string, Loaded_Font);  // path -> loaded font
-default_ui_font_fallback_checked := false;
+default_main_font_fallback_checked := false;
+default_ui_font_fallback_checked   := false;
 
 #scope_export
 
