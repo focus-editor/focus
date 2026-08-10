@@ -1079,6 +1079,7 @@ focus_allocator: Allocator;
 #load "langs/toml.jai";
 #load "langs/lua.jai";
 #load "langs/luau.jai";
+#load "langs/matlab.jai";
 #load "langs/odin.jai";
 #load "langs/powershell.jai";
 #load "langs/python.jai";
