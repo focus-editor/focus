@@ -426,7 +426,7 @@ load_configs_and_start_session :: (args: [] string) {
 
     // Load global config
     log("Loading global config '%'", global_config_path);
-    loaded_global_config := load_config_new(global_config_path);
+    loaded_global_config := load_config(global_config_path);
     if !loaded_global_config.loaded {
         log_error("Falling back to default config as global config '%' failed to load", global_config_path);
         loaded_global_config = load_default_config_fallback();
@@ -507,8 +507,10 @@ load_configs_and_start_session :: (args: [] string) {
     loaded_project_config_ptr: *Loaded_Config = null;
     if project_config_path {
         log("Loading project config '%' (%)", project_config_path, project_config_source);
-        loaded_project_config := load_config_new(project_config_path);
-        if !loaded_project_config.loaded then add_user_error("Couldn't load project '%'\n(%)", project_config_path, project_config_source);
+        loaded_project_config := load_config(project_config_path);
+        if !loaded_project_config.loaded {
+            add_user_error("Couldn't load project '%'\n(%)", project_config_path, project_config_source);
+        }
         // Get a pointer to indicate we attempted to load it regardless of errors,
         // because passing null to the merge_and_apply_configs function indicates there's no project config at all
         loaded_project_config_ptr = *loaded_project_config;

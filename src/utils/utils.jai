@@ -50,6 +50,29 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     return result;
 }
 
+arrays_are_equal :: (array1: [] $T, array2: [] T) -> bool {  // order matters
+    if array1.count != array2.count return false;
+    for array1 {
+        if it != array2[it_index] return false;
+    }
+    return true;
+}
+
+arrays_contain_the_same_items :: (array1: [] $T, array2: [] T) -> bool {  // order doesn't matter
+    if array1.count != array2.count return false;
+
+    for array1 {
+        exists := array_find(array2, it);
+        if !exists return false;
+    }
+    for array2 {
+        exists := array_find(array1, it);
+        if !exists return false;
+    }
+
+    return true;
+}
+
 visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64, tab_size: s32) -> offset: s64, new_col: s64 {
     s := str;
     col := 0;
@@ -805,6 +828,12 @@ move_toward :: (a_pointer: *float, target: float, dt: float, rate_up: float, rat
 Option :: struct($T: Type) {
     value:  T = ---;
     is_set: bool;
+}
+
+operator== :: (a: Option, b: Option) -> bool {
+    if a.is_set != b.is_set return false;
+    if !a.is_set return true;
+    return a.value == b.value;
 }
 
 some :: (value: $T) -> Option(T) {

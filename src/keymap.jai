@@ -196,6 +196,10 @@ Key_Mapping :: struct {
     action: u32;  // NOTE: tried to use a union with actual enums here, but the compiler crashes @compilerbug
 }
 
+operator== :: (a: Key_Mapping, b: Key_Mapping) -> bool {
+    return a.action == b.action && arrays_are_equal(a.key_sequence, b.key_sequence);
+}
+
 Typed_Key_Mapping :: struct {
     mapping: Key_Mapping;
     action_type: Type;
@@ -205,4 +209,8 @@ Key_Combo :: struct {
     key_code: u32;
     mods: Mods;
     ignore: Mods;
+}
+
+operator== :: (a: Key_Combo, b: Key_Combo) -> bool {
+    return a.key_code == b.key_code && a.mods.packed == b.mods.packed && a.ignore.packed == b.ignore.packed;
 }

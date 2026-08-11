@@ -6,74 +6,7 @@ get_global_config_path :: inline () -> string /* temp */ {
     return tprint("%/global.focus-config", config_dir);
 }
 
-load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
-    config_path := get_global_config_path();
-    print("LOADING GLOBAL CONFIG: %\n", config_path);  // @Cleanup
-
-    loaded_config, changed := load_config(config_path, *global_config, force = force);
-    if !changed && !force return true, false, false;
-
-    if loaded_config.loaded {
-        // Merge into an empty config
-        config = Config.{};
-        reset_color_map_to_default();
-        merge_configs(*config, loaded_config.parsed_config);
-        print("Applying global config\n");  // @Cleanup
-        apply_config();
-        free_loaded_config(*global_config);
-        global_config = loaded_config;
-        return true, true, loaded_config.there_were_warnings;
-    } else {
-        if fallback_to_default_on_failure {
-            config = DEFAULT_CONFIG;
-            apply_config();
-        }
-        global_config.hash = loaded_config.hash;
-        free_loaded_config(*loaded_config);
-        return false, false, false;
-    }
-}
-
-load_project_config :: (file_path: string, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
-    assert(file_path != "", "Attempting to load project config from an empty path. This is a bug.");
-
-    config_path := copy_string(file_path,, temp);
-    path_overwrite_separators(config_path, #char "/");
-
-    print("LOADING PROJECT CONFIG: %\n", config_path);  // @Cleanup
-
-    loaded_config, changed := load_config(config_path, *project_config, force);
-    if !changed && !force return true, false, false;
-
-    if loaded_config.loaded {
-        // Merge into an empty config, starting from a loaded global config
-        if global_config.loaded {
-            config = Config.{};
-            reset_color_map_to_default();
-            merge_configs(*config, global_config.parsed_config);
-        } else {
-            config = DEFAULT_CONFIG;
-        }
-        // Now mix in the project config
-        merge_configs(*config, loaded_config.parsed_config);
-        print("Applying project config\n");  // @Cleanup
-        apply_config();
-
-        changed := loaded_config.hash != project_config.hash;
-        free_loaded_config(*project_config);
-        project_config = loaded_config;
-
-        add_to_most_recent_projects(file_path);
-
-        return true, changed, loaded_config.there_were_warnings;
-    } else {
-        project_config.hash = loaded_config.hash;
-        free_loaded_config(*loaded_config);
-        return false, false, false;
-    }
-}
-
-load_config_new :: (config_path: string) -> Loaded_Config {
+load_config :: (config_path: string) -> Loaded_Config {
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
@@ -155,7 +88,8 @@ load_default_config_fallback :: () -> Loaded_Config {
     return loaded_config;
 }
 
-merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) {
+// TODO: @cleanup - after the new config process is done, maybe split this into 2 stages
+merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) -> changed: bool {
     // Merge configs into one
     new_config: Config;
 
@@ -170,8 +104,8 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     if new_project && new_project.loaded {
         log("Using project config '%'", new_project.path);
         merge_configs(*new_config, new_project.parsed_config);
-        add_to_most_recent_projects(new_project.path);
-    } else if new_project && !new_project.loaded {
+    }
+    else if new_project && !new_project.loaded {
         if project_config.loaded {
             log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
             merge_configs(*new_config, project_config.parsed_config);
@@ -180,154 +114,113 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
         }
     }
 
-    config_diff := compare_configs(config, new_config);
+    clamp_config_values(*new_config);
 
-    if !config_diff.changed {
+    // Replace the config if changed
+    diff := get_config_diff(config, new_config);
+
+    if diff.changed {
+        new_config.comment_words_automaton = build_comment_words_automaton(new_config);
+        replace_and_apply_config(new_config, diff, new_global, new_project);
+    }
+    else {
+        log("Merged config unchanged, skip applying");
         free_loaded_config(new_global);
         free_loaded_config(new_project);
-        log("Merged config unchanged, skip applying");
-        return;
     }
 
-    // Apply the resulting config if changed
+    return diff.changed;
+}
+
+#scope_file
+
+clamp_config_values :: (new_config: *Config) {
+    settings := *new_config.settings;
+
+    Clamp(*settings.tab_size, 1, 100);
+
+    Clamp(*settings.line_height_scale_percent,  50,  1000);
+    Clamp(*settings.build_panel_height_percent, 10,  100);
+    Clamp(*settings.build_panel_width_percent,  10,  100);
+
+    Clamp(*settings.scrollbar_width_scale,     0.0, 10.0);
+    Clamp(*settings.scrollbar_min_opacity,     0.0,  1.0);
+    Clamp(*settings.scrollbar_max_opacity,     settings.scrollbar_min_opacity,  1.0);
+
+    Clamp(*settings.scrollbar_fade_in_sensitivity,       0.0, 100.0);
+    Clamp(*settings.scrollbar_fade_out_delay_seconds,    0.0, 1000.0);
+
+    Clamp(*settings.cursor_position_after_jump,  0.0,  1.0);
+
+    if settings.window_width  != -1    Clamp(*settings.window_width,  100, 10000);
+    if settings.window_height != -1    Clamp(*settings.window_height, 100, 3000);
+    if settings.window_x      != -1000 Clamp(*settings.window_x,     -500, 10000);
+    if settings.window_y      != -1000 Clamp(*settings.window_y,     -500, 3000);
+}
+
+replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
+    // TODO:
+    // - swap config atomically and make sure threads don't crash
+    // - make sure the aho-corasick automaton doesn't leak (maybe allocate from the pool)
+    // - store loaded config pointers in the config and use it to free the previous config
+    config = new_config;
+
+    // TODO: don't replace them like this, they need to be preserved and cleaned up
+    // later when no threads are using them
+    global_config = new_global.*;
+    if new_project && new_project.loaded {
+        add_to_most_recent_projects(new_project.path);
+        project_config = new_project.*;
+    } else {
+        project_config.loaded = false;
+    }
+
+    // Apply new config
+
     reset_color_map_to_default();
+    if global_config.loaded  then apply_style(global_config.parsed_config);
+    if project_config.loaded then apply_style(project_config.parsed_config);
 
-    // !!!!!!!!!!!!!!!!!
-}
-
-Config_Diff :: struct {
-    changed:                         bool;
-
-    workspace_members_changed:       bool;
-    allow_ignore_changed:            bool;
-    file_associations_changed:       bool;
-    comment_highlight_words_changed: bool;
-    build_commands_changed:          bool;
-}
-
-compare_configs :: (old: Config, new: Config) -> Config_Diff {
-    // TODO!
-    return Config_Diff.{ changed = true };
-}
-
-maybe_defer_refresh_config_or_theme :: (path: string) {
-    if is_our_config_file(path) || is_current_theme(path) {
-        defer_action_refresh_config_or_theme(path);
-    }
-}
-
-refresh_config :: (path: string) {
-    // Deep copy old workspace members and allow/ignore lists (they will be freed by the load config function otherwise)
-    old_workspace_members: [..] string;
-    old_workspace_members.allocator = temp;
-    for config.workspace.members array_add(*old_workspace_members, copy_temporary_string(it));
-
-    old_allow_list: [..] File_Pattern;
-    old_allow_list.allocator = temp;
-    for config.workspace.allow {
-        pat_copy := it;
-        pat_copy.pattern = copy_temporary_string(it.pattern);
-        array_add(*old_allow_list, pat_copy);
-    }
-
-    old_ignore_list: [..] File_Pattern;
-    old_ignore_list.allocator = temp;
-    for config.workspace.ignore {
-        pat_copy := it;
-        pat_copy.pattern = copy_temporary_string(it.pattern);
-        array_add(*old_ignore_list, pat_copy);
-    }
-
-    old_file_associations: [..] File_Association;
-    old_file_associations.allocator = temp;
-    for config.workspace.file_associations array_add(*old_file_associations, .{ copy_temporary_string(it.wildcard), it.lang });
-
-    old_comment_highlight_words1 := copy_temporary_string(config.settings.comment_highlight_words1);
-    old_comment_highlight_words2 := copy_temporary_string(config.settings.comment_highlight_words2);
-    old_comment_highlight_words3 := copy_temporary_string(config.settings.comment_highlight_words3);
-    old_comment_highlight_words4 := copy_temporary_string(config.settings.comment_highlight_words4);
-
-    // Load new config
-    if platform_path_equals(path, global_config.path) {
-        success, changed, there_were_warnings := load_global_config();
-        if success && changed && !there_were_warnings {
-            clear_user_messages(.config);
-            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
-        }
-        if project_config.loaded {
-            success, changed, there_were_warnings = load_project_config(project_config.path, force = true);
-            if success && changed && !there_were_warnings {
-                add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
-            }
-        }
-    } else if platform_path_equals(path, project_config.path) {
-        success, changed, there_were_warnings := load_project_config(project_config.path);
-        if success && changed && !there_were_warnings {
-            clear_user_messages(.config);
-            add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
-        }
-    } else {
-        log_error("Attempted to refresh config from file %, but it is not a global config or a current project config", path);
-        return;
-    }
-
-    // Detect changes in workspace members or allow_ignore_lists
-    members_changed := false;
-    if config.workspace.members.count != old_workspace_members.count {
-        members_changed = true;
-    } else {
-        // Even if the workspace members are reordered we still want to refresh workspace
-        for i : 0 .. config.workspace.members.count-1 {
-            if config.workspace.members[i] != old_workspace_members[i] {
-                members_changed = true;
-                break;
-            }
+    if diff.tab_size_changed {
+        // Refresh all editors which have line wrap on
+        for * editor : open_editors {
+            buffer := *open_buffers[editor.buffer_id];
+            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
         }
     }
 
-    allow_ignore_changed := false;
-    for config.workspace.allow {
-        exists := array_find(old_allow_list, it);
-        if !exists { allow_ignore_changed = true; break; }
-    }
-    for old_allow_list {
-        exists := array_find(config.workspace.allow, it);
-        if !exists { allow_ignore_changed = true; break; }
+    if diff.settings_changed || diff.file_specific_settings_changed {
+        build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
+        build_panel_height = config.settings.build_panel_height_percent / 100.0;
+        build_panel_height_anim.target = build_panel_height;
+        build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
+
+        // Recalculate all file-specific settings
+        for * open_buffers {
+            recalculate_settings(it);
+        }
+
+        // In case indentation rules changed, refresh them for all open editors
+        for editor : open_editors {
+            buffer := *open_buffers[editor.buffer_id];
+
+            maybe_detect_and_set_indentation(buffer);
+        }
     }
 
-    for config.workspace.ignore {
-        exists := array_find(old_ignore_list, it);
-        if !exists { allow_ignore_changed = true; break; }
-    }
-    for old_ignore_list {
-        exists := array_find(config.workspace.ignore, it);
-        if !exists { allow_ignore_changed = true; break; }
-    }
-
-    if members_changed || allow_ignore_changed {
+    if diff.workspace_members_changed || diff.allow_ignore_changed {
         if unsaved_buffers_exist() {
             clear_user_messages();
-            if members_changed      then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
-            if allow_ignore_changed then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+            if diff.workspace_members_changed   then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+            if diff.allow_ignore_changed        then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
         }
+        print("DIFF =====================================\n");
+        print("%\n", diff);
+        print("==========================================\n");
         defer_action_reload_workspace(automatic = true);
     }
 
-    // !!!!!!!!
-    // TODO! try to do this at the time when configs are applied
-    // !!!!!!!!
-
-    // Detect changes in file associations
-    file_associations_changed := config.workspace.file_associations.count != old_file_associations.count;
-    if !file_associations_changed {
-        for 0 .. old_file_associations.count - 1 {
-            if config.workspace.file_associations[it] != old_file_associations[it] {
-                file_associations_changed = true;
-                break;
-            }
-        }
-    }
-    if file_associations_changed {
+    if diff.file_associations_changed {
         // Reassign languages for all buffers in the workspace
         for * buffer : open_buffers {
             if !buffer.has_file continue;
@@ -338,34 +231,181 @@ refresh_config :: (path: string) {
                 buffer.needs_tokenizing = true;
             }
         }
-        add_success_message("File associations have been refreshed", dismiss_in_seconds = 3);
     }
 
-    if old_comment_highlight_words1 != config.settings.comment_highlight_words1 ||
-       old_comment_highlight_words2 != config.settings.comment_highlight_words2 ||
-       old_comment_highlight_words3 != config.settings.comment_highlight_words3 ||
-       old_comment_highlight_words4 != config.settings.comment_highlight_words4
-    {
-        for * buffer : open_buffers {
-            buffer.needs_tokenizing = true;
-        }
+    if !config.settings.enable_temporary_editors then make_all_editors_permanent();
+
+    init_fonts_and_dependent_things();
+
+    if diff.build_config_changed {
+        commands_refresh_after_config_change();
     }
-
-    // If indentation rules changed, refresh them for all open editors
-    for editor : open_editors {
-        buffer := *open_buffers[editor.buffer_id];
-
-        maybe_detect_and_set_indentation(buffer);
-    }
-
-    commands_refresh_after_config_change();
 
     dont_ignore_next_window_resize = true;
+
+    platform_apply_config();
+
+    array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
+                                                       //       keep pointers to old keymaps when the config is reloaded
+}
+
+Config_Diff :: struct {
+    changed:                         bool;
+
+    workspace_members_changed:       bool;
+    allow_ignore_changed:            bool;
+    file_associations_changed:       bool;
+
+    settings_changed:                bool;
+    comment_highlight_words_changed: bool;
+    file_specific_settings_changed:  bool;
+    tab_size_changed:                bool;
+
+    keymap_changed:                  bool;
+    build_config_changed:            bool;
+
+    style_changed:                   bool;
+    linux_config_changed:            bool;
+}
+
+
+get_config_diff :: (old: Config, new: Config) -> Config_Diff {
+    diff: Config_Diff;
+
+    diff.workspace_members_changed       = workspace_members_changed(old, new);
+    diff.allow_ignore_changed            = allow_ignore_changed(old, new);
+    diff.file_associations_changed       = file_associations_changed(old, new);
+
+    diff.settings_changed                = settings_changed(old, new);
+    diff.comment_highlight_words_changed = comment_highlight_words_changed(old, new);
+    diff.file_specific_settings_changed  = file_specific_settings_changed(old, new);
+    diff.tab_size_changed                = old.settings.tab_size != new.settings.tab_size;
+
+    diff.keymap_changed                  = keymap_changed(old, new);
+    diff.build_config_changed            = build_config_changed(old, new);
+
+    diff.style_changed                   = style_changed(old, new);
+    diff.linux_config_changed            = linux_config_changed(old, new);
+
+    diff.changed =
+        diff.workspace_members_changed ||
+        diff.allow_ignore_changed ||
+        diff.file_associations_changed ||
+        diff.settings_changed ||
+        diff.comment_highlight_words_changed ||
+        diff.file_specific_settings_changed ||
+        diff.keymap_changed ||
+        diff.build_config_changed ||
+        diff.style_changed ||
+        diff.linux_config_changed;
+
+    return diff;
+}
+
+workspace_members_changed :: (old: Config, new: Config) -> changed: bool {
+    // Even if the workspace members are reordered we still want to refresh workspace
+    return !arrays_are_equal(old.workspace.members, new.workspace.members);
+}
+
+allow_ignore_changed :: (old: Config, new: Config) -> changed: bool {
+    print("OLD============\n");
+    print("allow: %\nignore: %\n", old.workspace.allow, old.workspace.ignore);
+    print("NEW============\n");
+    print("allow: %\nignore: %\n", new.workspace.allow, new.workspace.ignore);
+    return
+        !arrays_contain_the_same_items(old.workspace.allow,  new.workspace.allow) ||
+        !arrays_contain_the_same_items(old.workspace.ignore, new.workspace.ignore);
+}
+
+file_associations_changed :: (old: Config, new: Config) -> changed: bool {
+    return !arrays_are_equal(new.workspace.file_associations, old.workspace.file_associations);
+}
+
+settings_changed :: (old: Config, new: Config) -> changed: bool {
+    #insert -> string {
+        b: String_Builder;
+        for setting : type_info(Settings).members {
+            print_to_builder(*b, "if new.settings.%1 != old.settings.%1  return true;\n", setting.name);
+        }
+        return builder_to_string(*b);
+    }
+    return false;
+}
+
+comment_highlight_words_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.settings.comment_highlight_words1 != new.settings.comment_highlight_words1 ||
+           old.settings.comment_highlight_words2 != new.settings.comment_highlight_words2 ||
+           old.settings.comment_highlight_words3 != new.settings.comment_highlight_words3 ||
+           old.settings.comment_highlight_words4 != new.settings.comment_highlight_words4;
+}
+
+file_specific_settings_changed :: (old: Config, new: Config) -> changed: bool {
+    return !arrays_are_equal(old.file_specific_settings, new.file_specific_settings);
+}
+
+keymap_changed :: (old: Config, new: Config) -> changed: bool {
+    return !arrays_are_equal(old.keymap.common,           new.keymap.common)           ||
+           !arrays_are_equal(old.keymap.editors,          new.keymap.editors)          ||
+           !arrays_are_equal(old.keymap.open_file_dialog, new.keymap.open_file_dialog) ||
+           !arrays_are_equal(old.keymap.search_dialog,    new.keymap.search_dialog)    ||
+           !arrays_are_equal(old.keymap.build,            new.keymap.build);
+}
+
+build_config_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.build.defaults != new.build.defaults ||
+           !arrays_are_equal(old.build.commands, new.build.commands) ||
+           !arrays_are_equal(old.build.keymap,   new.build.keymap);
+}
+
+style_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.style != new.style;
+}
+
+linux_config_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.linux != new.linux;
+}
+
+
+#scope_export
+
+maybe_defer_refresh_config_or_theme :: (path: string) {
+    if is_our_config_file(path) || is_current_theme(path) {
+        defer_action_refresh_config_or_theme(path);
+    }
+}
+
+refresh_config :: (path: string) {
+    if platform_path_equals(path, global_config.path) {
+        loaded_global_config := load_config(global_config.path);
+        if !loaded_global_config.loaded {
+            log_error("Attempted to refresh global config from file '%', but it has errors", global_config.path);
+            return;
+        }
+        changed := merge_and_apply_configs(*loaded_global_config, ifx project_config.loaded then *project_config else null);
+        if changed {
+            clear_user_messages(.config);
+            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
+        }
+    }
+    else if platform_path_equals(path, project_config.path) {
+        loaded_project_config := load_config(project_config.path);
+        if !loaded_project_config.loaded {
+            log_error("Attempted to refresh project config from file '%', but it has errors", global_config.path);
+            return;
+        }
+        changed := merge_and_apply_configs(*global_config, *loaded_project_config);
+        if changed {
+            clear_user_messages(.config);
+            add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
+        }
+    } else {
+        log_error("Attempted to refresh config from file '%', but it is not a global config or a current project config", path);
+        return;
+    }
 }
 
 refresh_current_theme :: () {
-    if global_config.loaded  then load_global_config(force = true);
-    if project_config.loaded then load_project_config(project_config.path, force = true);
+    merge_and_apply_configs(*global_config, ifx project_config.loaded then *project_config else null);
 }
 
 is_our_config_file :: (path: string) -> bool {
@@ -512,77 +552,6 @@ get_current_project_dir :: () -> string {
 
 #scope_file
 
-load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
-    assert(workspace_scan_complete);  // we never want to load config while we're scanning the workspace
-
-    loaded_config: Loaded_Config;
-    loaded_config.memory_pool = New(Flat_Pool);
-
-    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
-    push_allocator(allocator);
-
-    file_path := path;
-
-    file_data, success_read := read_entire_file(file_path);
-    if !success_read {
-        error_msg := tprint("Couldn't read the config file '%'", file_path);
-        log_error(error_msg);
-        add_user_error(error_msg);
-        return loaded_config;
-    }
-
-    // Convert to absolute path if we can
-    file_path = copy_string(path);
-    abs_path, ok := get_absolute_path(path,, temp);
-    if ok then file_path = copy_string(abs_path);
-    path_overwrite_separators(file_path, #char "/");
-    loaded_config.path = file_path;
-
-    loaded_config.hash = calculate_hash(to_bytes(file_data));
-    if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
-
-    // Attempt a migration
-    migrated, new_file_data := maybe_migrate_config(file_path, file_data);
-    if migrated {
-        // Try parsing after migration to verify it's OK
-        result := parse_config(file_path, file_path, new_file_data);
-        if !result.success {
-            add_user_error("We attempted to migrate config file '%' to version [%],\nbut it doesn't parse after migration. Please migrate manually using the default config as a reference.", file_path, CURRENT_CONFIG_VERSION);
-            return loaded_config;
-        }
-
-        // All good
-        write_entire_file(tprint("%.bak", file_path), file_data);
-        file_data = new_file_data;
-
-        // Replace the old config's file
-        loaded_config.hash = calculate_hash(to_bytes(new_file_data));
-        success := write_entire_file(file_path, new_file_data);
-        if success {
-            add_success_message("Config file '%' has been migrated to version [%]", file_path, CURRENT_CONFIG_VERSION);
-        } else {
-            add_user_error("We migrated config file '%' to version [%],\nbut could't save the file. Is it writable?", file_path, CURRENT_CONFIG_VERSION);
-        }
-    }
-
-    parse_result := parse_config(file_path, file_path, file_data);
-    if !parse_result.success {
-        if !parse_result.error_msg assert(false, "No error message on a config error. This is a bug.");
-        add_user_error(parse_result.error_msg, tag = .config);
-        return loaded_config;
-    }
-    if parse_result.warnings {
-        add_success_message(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 30, tag = .config);
-        for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
-        loaded_config.there_were_warnings = true;
-    }
-
-    loaded_config.loaded = true;
-    loaded_config.parsed_config = parse_result.config;
-
-    return loaded_config;
-}
-
 free_loaded_config :: (using loaded_config: *Loaded_Config) {
     path = "";
     parsed_config = Parsed_Config.{};
@@ -638,85 +607,21 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Style
+    /// !!!!!!!!!!!! TODO: allocate using the resulting config's pool
     if parsed.theme then dst.style.theme = copy_string(parsed.theme); /* @leak */  // TODO: rework how themes and styles are applied
     if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing = parsed.font_anti_aliasing.value;
     if parsed.font_hinting.is_set       then dst.style.font_hinting       = parsed.font_hinting.value;
-    apply_style(parsed);
 
     // Platform config
     dst.linux = parsed.linux;
 }
 
-apply_config :: () {
-    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string = "") {
-        old := setting.*;
-        clamped := clamp(old, min, max);
-        if clamped != old {
-            if message then add_user_warning(message, clamped);
-            setting.* = clamped;
-        }
-    }
-
-    clamp_and_warn(*config.settings.tab_size, 1, 100, "Tab size clamped to %");
-
-    if old_tab_size != config.settings.tab_size {
-        // Refresh all editors which have line wrap on
-        for * editor : open_editors {
-            buffer := *open_buffers[editor.buffer_id];
-            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
-        }
-    }
-    old_tab_size = config.settings.tab_size;
-
-    clamp_and_warn(*config.settings.line_height_scale_percent,  50,  1000,        "Line height scale clamped to % percent");
-    clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
-    clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
-
-    Clamp(*config.settings.scrollbar_width_scale,     0.0, 10.0);
-    Clamp(*config.settings.scrollbar_min_opacity,     0.0,  1.0);
-    Clamp(*config.settings.scrollbar_max_opacity,     config.settings.scrollbar_min_opacity,  1.0);
-
-    Clamp(*config.settings.scrollbar_fade_in_sensitivity,       0.0, 100.0);
-    Clamp(*config.settings.scrollbar_fade_out_delay_seconds,    0.0, 1000.0);
-
-    Clamp(*config.settings.cursor_position_after_jump,  0.0,  1.0);
-
-    if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
-    if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
-    if config.settings.window_x      != -1000 clamp_and_warn(*config.settings.window_x,     -500, 10000, "Window X clamped to %");
-    if config.settings.window_y      != -1000 clamp_and_warn(*config.settings.window_y,     -500, 3000,  "Window Y clamped to %");
-
-    build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
-    build_panel_height = config.settings.build_panel_height_percent / 100.0;
-    build_panel_height_anim.target = build_panel_height;
-    build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
-
-    process_comment_highlight_words();
-
-    if !config.settings.enable_temporary_editors then make_all_editors_permanent();
-
-    // NOTE: this is potentially expensive, and apply_config as it's currently set up could be called 3 times
-    for * open_buffers  recalculate_settings(it);
-
-    // Must do after the validation
-    init_fonts_and_dependent_things();
-
-    platform_apply_config();
-
-    array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
-                                                       //       keep pointers to old keymaps when the config is reloaded
-}
-
-
-old_tab_size := 0;  // used to detect when tab size is changed in the config
-
-
-process_comment_highlight_words :: () {
+build_comment_words_automaton :: (new_config: Config) -> Aho_Corasick_Automaton {
     highlight_words_settings := string.[
-        config.settings.comment_highlight_words1,
-        config.settings.comment_highlight_words2,
-        config.settings.comment_highlight_words3,
-        config.settings.comment_highlight_words4,
+        new_config.settings.comment_highlight_words1,
+        new_config.settings.comment_highlight_words2,
+        new_config.settings.comment_highlight_words3,
+        new_config.settings.comment_highlight_words4,
     ];
     token_types := Token_Type.[
         .comment_highlight1,
@@ -737,8 +642,7 @@ process_comment_highlight_words :: () {
         }
     }
 
-    free(*config.comment_words_automaton);
-    config.comment_words_automaton = build_aho_corasick_automaton(words);
+    return build_aho_corasick_automaton(words);
 }
 
 load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
@@ -801,6 +705,17 @@ Style :: struct {
     font_hinting := true;
 }
 
+operator== :: (a: Style, b: Style) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for type_info(Style).members {
+            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
+}
+
 Loaded_Font :: struct {
     name: string;
     data: string;
@@ -810,7 +725,7 @@ Loaded_Config :: struct {
     loaded := false;
     there_were_warnings := false;
     path: string;
-    hash: u64;  // !!!!! TODO: remove
+    hash: u64;  // !!!!! TODO: remove @cleanup
     parsed_config: Parsed_Config;
     memory_pool: *Flat_Pool;  // must be valid for the lifetime of the config
 }
@@ -819,6 +734,17 @@ Linux_Config :: struct {
     scaling_factor: float = 0.0;
     explorer_command: string;
     explorer_reveal_command: string;
+}
+
+operator== :: (a: Linux_Config, b: Linux_Config) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for type_info(Linux_Config).members {
+            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
 }
 
 Workspace :: struct {
@@ -948,7 +874,7 @@ Settings :: struct {
     closing_last_editor_in_pane_should_close_pane           := true;    @v23
     closing_last_editor_should_exit_program                 := false;   @v23
     show_pane_numbers                                       := false;   @v23
-    show_tab_characters_in_selection                       := true;    @v24
+    show_tab_characters_in_selection                        := true;    @v24
 
     // TODO
     // load_last_session_on_start:         true
@@ -1005,6 +931,17 @@ Settings :: struct {
     return builder_to_string(*b);
 }
 
+operator== :: (a: Settings_Overrides, b: Settings_Overrides) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for override : type_info(Settings_Overrides).members {
+            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", override.name);
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
+}
+
 is_overridable_setting :: (name: string) -> bool {
     setting := get_field(type_info(Settings), name);
     return array_find(setting.notes, "overridable");
@@ -1039,6 +976,14 @@ File_Specific_Settings :: struct {
         langs: [] Buffer.Lang;
         wildcards: [] string;
     }
+}
+
+operator== :: (a: File_Specific_Settings.Match_Rules, b: File_Specific_Settings.Match_Rules) -> bool {
+    return arrays_are_equal(a.langs, b.langs) && arrays_are_equal(a.wildcards, b.wildcards);
+}
+
+operator== :: (a: File_Specific_Settings, b: File_Specific_Settings) -> bool {
+    return a.match_rules == b.match_rules && a.overrides == b.overrides;
 }
 
 buffer_matches_file_specific_rules :: (buffer: Buffer, match_rules: File_Specific_Settings.Match_Rules) -> bool {
@@ -1128,7 +1073,7 @@ Build_Config :: struct {
 }
 
 Build_Command :: struct {
-    name:                   string;  @dontparse
+    name:                               string;  @dontparse
 
     build_command:                      string;
     build_working_dir:                  string;
@@ -1145,6 +1090,17 @@ Build_Command :: struct {
     substitute_variables:               bool = true;
 
     timeout_in_seconds:                 int = -1;
+}
+
+operator== :: (a: Build_Command, b: Build_Command) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for type_info(Build_Command).members {
+            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
 }
 
 

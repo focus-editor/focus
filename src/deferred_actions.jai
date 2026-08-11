@@ -453,21 +453,29 @@ execute_kill_running_command :: (action: Deferred_Action) -> Action_Result {
 
 execute_load_project_config :: (action: Deferred_Action) -> Action_Result {
     path := action.details.load_project_config.path;
-    success := load_project_config(path, force = true);
-    if !success {
+
+    loaded_project_config := load_config(path);
+    if !loaded_project_config.loaded {
         add_user_error("Couldn't load project config from '%'", path, dismiss_in_seconds = 10, tag = .config);
         return .CANCEL;
     }
+
+    merge_and_apply_configs(*global_config, *loaded_project_config);
+
     return .DONE;
 }
 
 execute_close_project :: (action: Deferred_Action) -> Action_Result {
-    success := load_global_config(force = true);
-    if !success {
+    global_config_path := get_global_config_path();
+
+    loaded_global_config := load_config(global_config_path);
+    if !loaded_global_config.loaded {
         add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10, tag = .config);
         return .CANCEL;
     }
-    project_config.loaded = false;
+
+    merge_and_apply_configs(*loaded_global_config);
+
     return .DONE;
 }
 
