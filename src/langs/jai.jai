@@ -238,12 +238,14 @@ parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token, 
     is_keyword := maybe_mark_as_keyword(token, identifier_str);
     if !is_keyword return;
 
+    // Check if we can check for modifiers
+    if !array_find(Keyword.[.kw_using, .kw_cast, .kw_xx, .kw_push_context], token.keyword) return;
+
     // Check for modifiers
     while true {
         next_token := start_new_token(tokenizer);
         if t >= max_t return;
         if t.* != #char "," break;
-        if identifier_str != "using" && identifier_str != "cast" && identifier_str != "xx" && identifier_str != "push_context" break;
 
         t += 1;
         next_token.type = .punctuation;
