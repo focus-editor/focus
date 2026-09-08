@@ -465,7 +465,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             path := copy_temporary_string(line);
             path_overwrite_separators(path, #char "/");
             path = trim_right(path, "/");
-            relative_to_config := !is_absolute_path(path) && config_path;
+            relative_to_config := !focus_path_is_absolute(path) && config_path;
             abs_path := path;
             if relative_to_config {
                 if path == "." {
@@ -886,14 +886,14 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             dir_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(dir_path, #char "/");
                             working_dir := get_working_directory_from_workspace(result.config.members);
-                            relative_to_working_dir := !is_absolute_path(dir_path) && working_dir;
+                            relative_to_working_dir := !focus_path_is_absolute(dir_path) && working_dir;
                             abs_path := ifx relative_to_working_dir then tprint("\%/\%", working_dir, dir_path) else dir_path;
 
                             if file_exists(abs_path) {
                                 target.%1 = copy_string(abs_path);
                                 return true, "";
                             } else {
-                                if !is_absolute_path(dir_path) && !working_dir  return true, "";  // if the workspace is empty, don't check relative paths
+                                if !focus_path_is_absolute(dir_path) && !working_dir  return true, "";  // if the workspace is empty, don't check relative paths
 
                                 // Highlight the bad chunk
                                 for chunk : split(dir_path, "/",, temp) {
