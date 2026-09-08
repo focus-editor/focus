@@ -493,6 +493,21 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
+    ensure_default_main_font_fallback_is_loaded();
+    ensure_default_ui_font_fallback_is_loaded();
+
+    main_fallback_sources: [..] Simp.Font_Source;
+    main_fallback_sources.allocator = temp;
+    for fallback : loaded_fonts.main_fallbacks {
+        array_add(*main_fallback_sources, .{ name = fallback.name, data = fallback.data });
+    }
+
+    ui_fallback_sources: [..] Simp.Font_Source;
+    ui_fallback_sources.allocator = temp;
+    for fallback : loaded_fonts.ui_fallbacks {
+        array_add(*ui_fallback_sources, .{ name = fallback.name, data = fallback.data });
+    }
+
     Simp.set_anti_aliasing(config.style.font_anti_aliasing);
     Simp.set_hinting(config.style.font_hinting);
 
@@ -511,31 +526,31 @@ init_fonts_and_dependent_things :: () {
     font_icons_small_size      = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_very_small_size = clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale));
+    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale), main_fallback_sources);
     assert(font_main != null, "Couldn't init main text font\n");
 
-    font_ui = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_size * dpi_scale));
+    font_ui = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_size * dpi_scale), ui_fallback_sources);
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_ui_big = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_big_size * dpi_scale));
+    font_ui_big = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_big_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_big != null, "Couldn't init big ui font\n");
     font_ui_big_line_height = cast(float) font_ui_big.default_line_spacing;
 
-    font_ui_medium = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_medium_size * dpi_scale));
+    font_ui_medium = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_medium_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_medium != null, "Couldn't init medium ui font\n");
     font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
 
-    font_ui_bold = Simp.get_font_at_size(loaded_fonts.ui_bold.name, loaded_fonts.ui_bold.data, cast(int) (font_ui_size * dpi_scale));
+    font_ui_bold = Simp.get_font_at_size(loaded_fonts.ui_bold.name, loaded_fonts.ui_bold.data, cast(int) (font_ui_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
-    font_ui_bold_italic = Simp.get_font_at_size(loaded_fonts.ui_bold_italic.name, loaded_fonts.ui_bold_italic.data, cast(int) (font_ui_size * dpi_scale));
+    font_ui_bold_italic = Simp.get_font_at_size(loaded_fonts.ui_bold_italic.name, loaded_fonts.ui_bold_italic.data, cast(int) (font_ui_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_bold != null, "Couldn't init bold italic ui font\n");
 
-    font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale));
+    font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_small != null, "Couldn't init small ui font\n");
 
-    font_ui_very_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_very_small_size * dpi_scale));
+    font_ui_very_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_very_small_size * dpi_scale), ui_fallback_sources);
     assert(font_ui_very_small != null, "Couldn't init very small ui font\n");
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
@@ -912,9 +927,11 @@ DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
 loaded_fonts: struct {
     main:           Loaded_Font = FONT_MAIN;
+    main_fallbacks: [..] Loaded_Font;
     ui:             Loaded_Font = FONT_UI;
     ui_bold:        Loaded_Font = FONT_UI_BOLD;
     ui_bold_italic: Loaded_Font = FONT_UI_BOLD_ITALIC;
+    ui_fallbacks:   [..] Loaded_Font;
 };
 
 // can be changed in the config file

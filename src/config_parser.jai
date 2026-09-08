@@ -45,6 +45,8 @@ CONFIG_SECTIONS :: Config_Section.[
     },
 ];
 
+MAX_FONT_FALLBACKS :: 8;
+
 parse_config :: (name: string, file_path: string, file_data: string, for_highlighting := false, as_theme := false) -> Config_Parse_Result {
     // NOTE: This function allocates a lot and never frees.
     if !#compile_time  assert(context.allocator.proc == flat_pool_allocator_proc || context.allocator.proc == temp.proc, "parse_config must use a pool or a temp allocator");
@@ -560,6 +562,53 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
     return true, "";
 }
 
+parse_font_fallbacks_setting :: (parser: *Config_Parser, line: string, value: string, what: string, dst_names: *[..] string, dst_is_set: *bool) -> success: bool, error_msg: string /* temp */ {
+    // Validate the whole value before changing the parsed config. This keeps
+    // repeated settings atomic if the last occurrence contains an error.
+    pending_fallback_names: [..] string;
+    pending_fallback_names.allocator = temp;
+    pending_fallback_paths: [..] string;
+    pending_fallback_paths.allocator = temp;
+
+    for fallback_name : split(value, cast(u8) #char ",",, temp) {
+        fallback_name = trim(fallback_name);
+        if !fallback_name continue;
+
+        fallback_path, error_msg := find_font_by_name(fallback_name);
+        if !fallback_path {
+            add_highlight(parser, fallback_name.data - line.data, fallback_name.count, .error);
+            return true, error_msg;
+        }
+
+        fallback_identity := font_path_identity(fallback_path);
+        duplicate := false;
+        for existing_path : pending_fallback_paths {
+            if platform_path_equals(existing_path, fallback_identity) {
+                duplicate = true;
+                break;
+            }
+        }
+        if duplicate continue;
+
+        if pending_fallback_names.count >= MAX_FONT_FALLBACKS {
+            add_highlight(parser, fallback_name.data - line.data, fallback_name.count, .error);
+            return false, tprint("Too many % fallback fonts. The maximum is %.", what, MAX_FONT_FALLBACKS);
+        }
+
+        array_add(*pending_fallback_paths, fallback_identity);
+        array_add(*pending_fallback_names, fallback_name);
+    }
+
+    // Treat a repeated setting like the scalar font settings: the last valid
+    // occurrence wins. An explicitly empty value clears an inherited list.
+    array_reset_keeping_memory(dst_names);
+    for pending_fallback_names {
+        array_add(dst_names, copy_string(it));
+    }
+    dst_is_set.* = true;
+    return true, "";
+}
+
 parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if parse_as_theme && active_subsection != .style_colors {
         add_highlight(parser, 0, line.count, .comment);
@@ -572,7 +621,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
 
-            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_ui_bold_italic", "font_size", "font_ui_size", "anti_aliasing", "hinting" ];
+            font_settings := string.[ "font", "font_fallbacks", "font_ui", "font_ui_bold", "font_ui_bold_italic", "font_ui_fallbacks", "font_size", "font_ui_size", "anti_aliasing", "hinting" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
                 return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, temp));
@@ -615,6 +664,10 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font_ui_bold_italic = "default";
                         return true, error_msg;
                     }
+                case "font_fallbacks";
+                    return parse_font_fallbacks_setting(parser, line, value, "editor", *result.config.font_fallbacks, *result.config.font_fallbacks_is_set);
+                case "font_ui_fallbacks";
+                    return parse_font_fallbacks_setting(parser, line, value, "UI", *result.config.font_ui_fallbacks, *result.config.font_ui_fallbacks_is_set);
                 case "font_size";
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
@@ -1434,10 +1487,14 @@ Parsed_Config :: struct {
     // Style
     theme:                  string;
     font:                   string;
+    font_fallbacks:         [..] string;
+    font_fallbacks_is_set:  bool;
     font_size:              int;
     font_ui:                string;
     font_ui_bold:           string;
     font_ui_bold_italic:    string;
+    font_ui_fallbacks:      [..] string;
+    font_ui_fallbacks_is_set: bool;
     font_ui_size:           int;
     font_hinting:       Option(bool);
     font_anti_aliasing: Option(Font_Anti_Aliasing);

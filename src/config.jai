@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 25;
+CURRENT_CONFIG_VERSION :: 26;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -17,6 +17,8 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
 
     if loaded_config.loaded {
         // Merge into an empty config
+        reset_main_font_fallbacks();
+        reset_ui_font_fallbacks();
         config = Config.{};
         reset_color_map_to_default();
         merge_configs(*config, loaded_config.parsed_config);
@@ -26,6 +28,8 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
         return true, true, loaded_config.there_were_warnings;
     } else {
         if fallback_to_default_on_failure {
+            reset_main_font_fallbacks();
+            reset_ui_font_fallbacks();
             config = DEFAULT_CONFIG;
             apply_config();
         }
@@ -48,6 +52,8 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
 
     if loaded_config.loaded {
         // Merge into an empty config, starting from a loaded global config
+        reset_main_font_fallbacks();
+        reset_ui_font_fallbacks();
         if global_config.loaded {
             config = Config.{};
             reset_color_map_to_default();
@@ -255,7 +261,7 @@ close_project :: () {
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
     if name == "default" return "default", "";
 
-    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
+    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf") || ends_with_nocase(name, ".ttc");
 
     try_path :: (font_path: string) #expand {
         if file_exists(font_path) `return font_path, "";
@@ -289,6 +295,15 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
     error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ",, allocator = temp));
     return "", error_msg;
+}
+
+font_path_identity :: (path: string, allocator := temp) -> string {
+    if path == "default" return copy_string(path,, allocator = allocator);
+
+    absolute_path, success := get_absolute_path(path,, allocator);
+    if !success then absolute_path = copy_string(path,, allocator = allocator);
+    path_overwrite_separators(absolute_path, #char "/");
+    return absolute_path;
 }
 
 reset_color_map_to_default :: () {
@@ -328,6 +343,12 @@ apply_style :: (parsed: Parsed_Config) {
         } else {
             add_user_error("Couldn't load font %", parsed.font_ui_bold_italic);
         }
+    }
+    if parsed.font_fallbacks_is_set {
+        apply_parsed_font_fallbacks(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked, .main, parsed.font_fallbacks, "editor");
+    }
+    if parsed.font_ui_fallbacks_is_set {
+        apply_parsed_font_fallbacks(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked, .ui, parsed.font_ui_fallbacks, "UI");
     }
     if parsed.font_size > 0 {
         font_main_size = parsed.font_size;
@@ -600,7 +621,89 @@ process_comment_highlight_words :: () {
     config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
-load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
+#scope_export
+
+ensure_default_main_font_fallback_is_loaded :: () {
+    ensure_default_font_fallbacks_are_loaded(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked, .main, "font_fallbacks");
+}
+
+ensure_default_ui_font_fallback_is_loaded :: () {
+    ensure_default_font_fallbacks_are_loaded(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked, .ui, "font_ui_fallbacks");
+}
+
+reset_main_font_fallbacks :: () {
+    reset_font_fallbacks(*loaded_fonts.main_fallbacks, *default_main_font_fallback_checked);
+}
+
+reset_ui_font_fallbacks :: () {
+    reset_font_fallbacks(*loaded_fonts.ui_fallbacks, *default_ui_font_fallback_checked);
+}
+
+#scope_file
+
+Font_Kind :: enum { main; ui; ui_bold; ui_bold_italic; }
+
+reset_font_fallbacks :: (fallbacks: *[..] Loaded_Font, checked: *bool) {
+    array_reset_keeping_memory(fallbacks);
+    checked.* = false;
+}
+
+apply_parsed_font_fallbacks :: (fallbacks: *[..] Loaded_Font, checked: *bool, kind: Font_Kind, parsed_names: [] string, what: string) {
+    reset_font_fallbacks(fallbacks, checked);
+    checked.* = true;  // an explicit setting (even an empty one) disables the platform default fallback list
+    for fallback_name : parsed_names {
+        loaded_font, success := load_font_by_name(fallback_name, kind);
+        if success {
+            array_add(fallbacks, loaded_font);
+        } else {
+            add_user_error("Couldn't load % fallback font %", what, fallback_name);
+        }
+    }
+}
+
+ensure_default_font_fallbacks_are_loaded :: (fallbacks: *[..] Loaded_Font, checked: *bool, kind: Font_Kind, config_name: string) {
+    if fallbacks.* return;
+    if checked.* return;
+    checked.* = true;
+
+    loaded_any := false;
+    fallback_paths: [..] string;
+    fallback_paths.allocator = temp;
+
+    for candidate : platform_default_font_fallback_candidates() {
+        fallback_path := find_font_by_name(candidate);
+        if !fallback_path continue;
+
+        fallback_identity := font_path_identity(fallback_path);
+        duplicate := false;
+        for existing_path : fallback_paths {
+            if platform_path_equals(existing_path, fallback_identity) {
+                duplicate = true;
+                break;
+            }
+        }
+        if duplicate continue;
+
+        if fallbacks.count >= MAX_FONT_FALLBACKS {
+            log_error("The platform default fallback list for '%' exceeds the maximum of % fonts.\n", config_name, MAX_FONT_FALLBACKS);
+            break;
+        }
+
+        loaded_font, success := load_font_by_name(candidate, kind);
+        if !success continue;
+
+        array_add(*fallback_paths, fallback_identity);
+        array_add(fallbacks, loaded_font);
+        log("Using '%' as a default fallback font for '%'\n", loaded_font.name, config_name);
+        loaded_any = true;
+    }
+
+    if !loaded_any {
+        log_error("No default fallback font with CJK coverage was found. Configure '%' to display glyphs missing from the primary font.\n", config_name);
+    }
+}
+
+load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bool {
     if name == "default" {
         if #complete kind == {
             case .main;             return FONT_MAIN,           true;
@@ -629,6 +732,8 @@ load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_ital
 }
 
 font_cache: Table(string, Loaded_Font);  // path -> loaded font
+default_main_font_fallback_checked := false;
+default_ui_font_fallback_checked   := false;
 
 #scope_export
 

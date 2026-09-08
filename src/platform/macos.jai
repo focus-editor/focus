@@ -128,6 +128,15 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
     return false, "";
 }
 
+platform_default_font_fallback_candidates :: () -> [] string {
+    return .[
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/Supplemental/Songti.ttc",
+    ];
+}
+
 platform_get_fonts_dir :: inline () -> string {
     return "/System/Library/Fonts";
 }
