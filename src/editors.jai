@@ -2367,6 +2367,10 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
 
         case "ini";             lang = .Ini;
 
+        case "vhd";             lang = .Vhdl;
+        case "vhdl";            lang = .Vhdl;
+
+
         case "diff";            lang = .Diff;
         case "patch";           lang = .Diff;
 
@@ -4510,7 +4514,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             comment = "//";
 
         case .Lua; #through;
-        case .Luau;
+        case .Luau; #through;
+        case .Vhdl;
             comment = "--";
 
         case .Powershell;   #through;
@@ -4769,6 +4774,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
         case .Shell;        #through; // You could with herestrings but it runs into having to use specific identifiers like #string in Jai so let's not
         case .Zig;          #through;
+        case .Vhdl;         #through; // Standard VHDL has only -- comments; block comments are non-standard
         case .Ini;          #through;
         case .Focus_Config; #through;
         case .Toml;         #through;
