@@ -143,14 +143,14 @@ clamp_config_values :: (new_config: *Config) {
     Clamp(*settings.build_panel_height_percent, 10,  100);
     Clamp(*settings.build_panel_width_percent,  10,  100);
 
-    Clamp(*settings.scrollbar_width_scale,     0.0, 10.0);
-    Clamp(*settings.scrollbar_min_opacity,     0.0,  1.0);
-    Clamp(*settings.scrollbar_max_opacity,     settings.scrollbar_min_opacity,  1.0);
+    Clamp(*settings.scrollbar_width_scale, 0.0, 10.0);
+    Clamp(*settings.scrollbar_min_opacity, 0.0,  1.0);
+    Clamp(*settings.scrollbar_max_opacity, settings.scrollbar_min_opacity,  1.0);
 
-    Clamp(*settings.scrollbar_fade_in_sensitivity,       0.0, 100.0);
-    Clamp(*settings.scrollbar_fade_out_delay_seconds,    0.0, 1000.0);
+    Clamp(*settings.scrollbar_fade_in_sensitivity,    0.0, 100.0);
+    Clamp(*settings.scrollbar_fade_out_delay_seconds, 0.0, 1000.0);
 
-    Clamp(*settings.cursor_position_after_jump,  0.0,  1.0);
+    Clamp(*settings.cursor_position_after_jump, 0.0, 1.0);
 
     if settings.window_width  != -1    Clamp(*settings.window_width,  100, 10000);
     if settings.window_height != -1    Clamp(*settings.window_height, 100, 3000);
@@ -214,10 +214,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
             if diff.workspace_members_changed   then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
             if diff.allow_ignore_changed        then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
         }
-        print("DIFF =====================================\n");
-        print("%\n", diff);
-        print("==========================================\n");
-        defer_action_reload_workspace(automatic = true);
+        should_reload_workspace = true;
     }
 
     if diff.file_associations_changed {
@@ -553,6 +550,8 @@ get_current_project_dir :: () -> string {
 #scope_file
 
 free_loaded_config :: (using loaded_config: *Loaded_Config) {
+    if loaded_config == null return;
+
     path = "";
     parsed_config = Parsed_Config.{};
     if memory_pool {

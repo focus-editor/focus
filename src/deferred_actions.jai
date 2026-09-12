@@ -39,9 +39,16 @@ defer_action_close_project :: () {
 }
 
 defer_action_refresh_config_or_theme :: (path: string) {
-    clear_action_queue();
-    push_action(.refresh_config_or_theme, .{ type = .refresh_config_or_theme, refresh_config_or_theme = .{ path = copy_string(path) } });
-    push_action(.wait_for_workspace_scanning_to_finish);
+    if action_already_queued(.refresh_config_or_theme) {
+        log("Skipping deferred action refresh_config_or_theme for path '%' because it's already queued", path);
+        return;
+    }
+
+    // Insert actions at the back of the queue without destroying the existing queue
+    push_actions_back(.[
+        .{.refresh_config_or_theme, .{ type = .refresh_config_or_theme, refresh_config_or_theme = .{ path = copy_string(path) } }},
+        .{.wait_for_workspace_scanning_to_finish, .{}},
+    ]);
 }
 
 defer_action_quit :: () {
@@ -53,11 +60,17 @@ defer_action_quit :: () {
 }
 
 defer_action_build_command :: (command_id: s64) {
-    clear_action_queue();
-    push_action(.build_command, .{ type = .build_command, build_command = .{ command_id = command_id } });
-    push_action(.wait_for_killed_command_to_stop);
-    push_action(.kill_running_command);
-    push_action(.wait_for_workspace_scanning_to_finish);
+    if action_already_queued(.build_command) {
+        log("Skipping build command because one is already queued");
+        return;
+    }
+
+    push_actions_back(.[
+        .{.build_command, .{ type = .build_command, build_command = .{ command_id = command_id } }},
+        .{.wait_for_killed_command_to_stop, .{}},
+        .{.kill_running_command, .{}},
+        .{.wait_for_workspace_scanning_to_finish, .{}},
+    ]);
 }
 
 defer_action_save_as :: (buffer_id: s64) {
@@ -119,6 +132,7 @@ Deferred_Action_Id :: #type,distinct s64;
 #scope_file
 
 push_action :: (kind: Deferred_Action.Kind, details: Deferred_Action.Details = .{}) {
+    log("PUSH: %\n", kind);
     last_action_id += 1;
 
     array_add(*actions, .{ id = last_action_id, kind = kind, details = details});
@@ -126,10 +140,32 @@ push_action :: (kind: Deferred_Action.Kind, details: Deferred_Action.Details = .
     redraw_requested = true;  // if we push an action during drawing we have to redraw
 }
 
+push_actions_back :: (action_data: [] Deferred_Action_Data) {
+    index := 0;
+
+    for action_data {
+        last_action_id += 1;
+        array_insert_at(*actions, .{ id = last_action_id, kind = it.kind, details = it.details }, index);
+        index += 1;
+    }
+
+    redraw_requested = true;
+}
+
+action_already_queued :: (kind: Deferred_Action.Kind) -> bool {
+    for actions {
+        if it.kind == kind return true;
+    }
+    return false;
+}
+
 execute_top_action :: () -> Action_Result {
     if !actions return .WAIT;
 
     action := actions[actions.count-1];
+
+    log("EXECUTE: %\n", action.kind);
+
     if #complete action.kind == {
         case .quit;                                     return execute_quit(action);
         case .save_as;                                  return execute_save_as(action);
@@ -155,6 +191,8 @@ execute_top_action :: () -> Action_Result {
 
 remove_top_action :: () {
     action := pop(*actions);
+
+    log("POP: %\n", action.kind);
 
     if #complete action.kind == {
         case .load_project_config;
@@ -253,6 +291,11 @@ Deferred_Action :: struct {
         close_pane;
         close_other_panes;
     }
+}
+
+Deferred_Action_Data :: struct {
+    kind: Deferred_Action.Kind;
+    details: Deferred_Action.Details;
 }
 
 Action_Result :: enum {

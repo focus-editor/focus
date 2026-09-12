@@ -47,6 +47,7 @@ main :: () {
     focus_executable_args = get_command_line_arguments();
 
     load_configs_and_start_session(focus_executable_args);
+    should_reload_workspace = false;
 
     // Create window
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
@@ -260,6 +261,15 @@ main :: () {
         maybe_deactivate_lingering_actions();
 
         execute_deferred_actions();
+
+        if should_reload_workspace {
+            // TODO: this is a temporary solution around the limitation of the deferred action system.
+            // We can't currently properly defer actions from within deferred actions, therefore
+            // we can't execute the refresh config action and defer a workspace reload from within it.
+            // The deferred action system will need to be redesigned.
+            defer_action_reload_workspace(automatic = true);
+            should_reload_workspace = false;
+        }
 
         build_system_update();
         maybe_revert_temporary_theme();
@@ -884,6 +894,8 @@ fullscreen_state: Saved_Window_Info;
 
 redraw_requested := true;  // set to true to render the first frame
 should_quit      := false;
+
+should_reload_workspace := false;
 
 frame_time:   Apollo_Time;          // ever-increasing time since start in seconds
 frame_time64: float64;              // for when we don't need as much precision
