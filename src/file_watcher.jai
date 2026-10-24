@@ -153,13 +153,15 @@ start_watching_file_if_not_already :: (file_path: string) {
     assert(context.allocator.proc == focus_allocator.proc, "Unexpected context allocator for start_watching_file_if_not_already. This is a bug.");
     if file_is_watched(file_path) return;
 
+    log("Start watching file '%'", file_path);
+
     parent_dir := get_parent_dir_path(file_path);
     if !array_find(watch_dirs, parent_dir) {
         parent_dir = copy_string(parent_dir);
         array_add(*watch_dirs, parent_dir);
         added := add_directories(*watchers.external_watcher, parent_dir);
         if !added {
-            log_error("Couldn't start watching the directory '%' containing file %", parent_dir, file_path);
+            log_error("Couldn't start watching the directory '%' containing file '%'", parent_dir, file_path);
             return;
         }
         log("Started watching external directory '%'", parent_dir);

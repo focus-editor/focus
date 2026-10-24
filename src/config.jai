@@ -7,6 +7,17 @@ get_global_config_path :: inline () -> string /* temp */ {
 }
 
 load_config :: (config_path: string) -> Loaded_Config {
+    file_data, success_read := read_entire_file(config_path,, temp);
+    if !success_read {
+        error_msg := tprint("Couldn't read the config file '%'", config_path);
+        log_error(error_msg);
+        add_user_error(error_msg);
+        return .{};
+    }
+    return load_config(config_path, file_data);
+}
+
+load_config :: (config_path: string, file_contents: string) -> Loaded_Config {
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
@@ -14,20 +25,14 @@ load_config :: (config_path: string) -> Loaded_Config {
     push_allocator(allocator);
 
     path := copy_string(config_path);
-
-    file_data, success_read := read_entire_file(path);
-    if !success_read {
-        error_msg := tprint("Couldn't read the config file '%'", path);
-        log_error(error_msg);
-        add_user_error(error_msg);
-        return loaded_config;
-    }
+    file_data := copy_string(file_contents);
 
     // Convert to absolute path if we can
     abs_path, ok := get_absolute_path(path,, temp);
     if ok then path = copy_string(abs_path);
     path_overwrite_separators(path, #char "/");
     loaded_config.path = path;
+    loaded_config.hash = calculate_hash(to_bytes(file_data));
 
     // Attempt a migration
     migrated, new_file_data := maybe_migrate_config(path, file_data);
@@ -46,6 +51,7 @@ load_config :: (config_path: string) -> Loaded_Config {
         // Replace the old config's file
         success := write_entire_file(path, new_file_data);
         if success {
+            loaded_config.hash = calculate_hash(to_bytes(new_file_data));
             add_success_message("Config file '%' has been migrated to version [%]", path, CURRENT_CONFIG_VERSION);
         } else {
             add_user_error("We migrated config file '%' to version [%],\nbut could't save the file. Is it writable?", path, CURRENT_CONFIG_VERSION);
@@ -61,7 +67,6 @@ load_config :: (config_path: string) -> Loaded_Config {
     if parse_result.warnings {
         add_success_message(tprint("Config file % loaded with warnings", path), dismiss_in_seconds = 30, tag = .config);
         for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
-        loaded_config.there_were_warnings = true;
     }
 
     loaded_config.loaded = true;
@@ -71,14 +76,14 @@ load_config :: (config_path: string) -> Loaded_Config {
 }
 
 // Only used when global config fails to load or parse
-load_default_config_fallback :: () -> Loaded_Config {
+load_default_config_fallback :: (config_path: string) -> Loaded_Config {
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
     allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
     push_allocator(allocator);
 
-    loaded_config.path = copy_string("[default config]");
+    loaded_config.path = copy_string(config_path);
 
     parse_result := parse_config(loaded_config.path, loaded_config.path, DEFAULT_CONFIG_FILE_DATA);
 
@@ -88,13 +93,12 @@ load_default_config_fallback :: () -> Loaded_Config {
     return loaded_config;
 }
 
-// TODO: @cleanup - after the new config process is done, maybe split this into 2 stages
-merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) -> changed: bool {
-    // Merge configs into one
+merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null, refresh_style := false) -> changed: bool {
+    log("Merging configs. Global: '%', Project: '%'", new_global.path, ifx new_project then new_project.path else "-");
+
     new_config: Config;
 
     if new_global.loaded {
-        log("Using global config '%'", new_global.path);  // @cleanup
         merge_configs(*new_config, new_global.parsed_config);
     } else {
         log_error("Using previous global config because new one (%) failed to load", new_global.path);
@@ -104,11 +108,13 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     if new_project && new_project.loaded {
         log("Using project config '%'", new_project.path);
         merge_configs(*new_config, new_project.parsed_config);
+        new_config.project_path = new_project.path;
     }
     else if new_project && !new_project.loaded {
         if project_config.loaded {
             log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
             merge_configs(*new_config, project_config.parsed_config);
+            new_config.project_path = new_project.path;
         } else {
             log_error("Not using project config because it failed to load and there was no previous version");
         }
@@ -119,14 +125,36 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     // Replace the config if changed
     diff := get_config_diff(config, new_config);
 
+    if refresh_style {
+        diff.style_changed = true;
+        diff.changed = true;
+    }
+
     if diff.changed {
         new_config.comment_words_automaton = build_comment_words_automaton(new_config);
         replace_and_apply_config(new_config, diff, new_global, new_project);
     }
     else {
         log("Merged config unchanged, skip applying");
-        free_loaded_config(new_global);
-        free_loaded_config(new_project);
+        reset(new_config.keymap_memory_pool);
+        free(new_config.keymap_memory_pool);
+
+        // Keep the latest parsed sources even when their changes are currently masked by overrides.
+        if new_global != *global_config {
+            if new_global.loaded {
+                global_config = new_global.*;
+            } else {
+                free_loaded_config(new_global);
+            }
+        }
+
+        if new_project && new_project != *project_config {
+            if new_project.loaded {
+                project_config = new_project.*;
+            } else {
+                free_loaded_config(new_project);
+            }
+        }
     }
 
     return diff.changed;
@@ -159,6 +187,8 @@ clamp_config_values :: (new_config: *Config) {
 }
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
+    old_keymap_memory_pool := config.keymap_memory_pool;
+
     // TODO:
     // - swap config atomically and make sure threads don't crash
     // - make sure the aho-corasick automaton doesn't leak (maybe allocate from the pool)
@@ -211,8 +241,8 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
     if diff.workspace_members_changed || diff.allow_ignore_changed {
         if unsaved_buffers_exist() {
             clear_user_messages();
-            if diff.workspace_members_changed   then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
-            if diff.allow_ignore_changed        then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+            if diff.workspace_members_changed then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+            if diff.allow_ignore_changed      then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
         }
         should_reload_workspace = true;
     }
@@ -242,8 +272,18 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
 
     platform_apply_config();
 
+    update_window_title();
+
     array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
                                                        //       keep pointers to old keymaps when the config is reloaded
+    array_reset_keeping_memory(*key_sequence_input.potential_multipart_matches);
+    array_reset_keeping_memory(*key_sequence_input.new_multipart_matches);
+    key_sequence_input.active_sequence_length = 0;
+
+    if old_keymap_memory_pool {
+        reset(old_keymap_memory_pool);
+        free(old_keymap_memory_pool);
+    }
 }
 
 Config_Diff :: struct {
@@ -263,6 +303,8 @@ Config_Diff :: struct {
 
     style_changed:                   bool;
     linux_config_changed:            bool;
+
+    project_changed:                 bool;
 }
 
 
@@ -284,6 +326,8 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
     diff.style_changed                   = style_changed(old, new);
     diff.linux_config_changed            = linux_config_changed(old, new);
 
+    diff.project_changed                 = old.project_path != new.project_path;
+
     diff.changed =
         diff.workspace_members_changed ||
         diff.allow_ignore_changed ||
@@ -294,7 +338,9 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
         diff.keymap_changed ||
         diff.build_config_changed ||
         diff.style_changed ||
-        diff.linux_config_changed;
+        diff.linux_config_changed ||
+        diff.project_changed;
+
 
     return diff;
 }
@@ -305,10 +351,6 @@ workspace_members_changed :: (old: Config, new: Config) -> changed: bool {
 }
 
 allow_ignore_changed :: (old: Config, new: Config) -> changed: bool {
-    print("OLD============\n");
-    print("allow: %\nignore: %\n", old.workspace.allow, old.workspace.ignore);
-    print("NEW============\n");
-    print("allow: %\nignore: %\n", new.workspace.allow, new.workspace.ignore);
     return
         !arrays_contain_the_same_items(old.workspace.allow,  new.workspace.allow) ||
         !arrays_contain_the_same_items(old.workspace.ignore, new.workspace.ignore);
@@ -372,38 +414,84 @@ maybe_defer_refresh_config_or_theme :: (path: string) {
 }
 
 refresh_config :: (path: string) {
-    if platform_path_equals(path, global_config.path) {
-        loaded_global_config := load_config(global_config.path);
-        if !loaded_global_config.loaded {
-            log_error("Attempted to refresh global config from file '%', but it has errors", global_config.path);
-            return;
-        }
-        changed := merge_and_apply_configs(*loaded_global_config, ifx project_config.loaded then *project_config else null);
+    is_global_config  := platform_path_equals(path, global_config.path);
+    is_project_config := platform_path_equals(path, project_config.path);
+
+    if !is_global_config && !is_project_config {
+        log_error("Attempted to refresh config from file '%', but it is not a global config or a current project config", path);
+        return;
+    }
+
+    file_data, success_read := read_entire_file(path,, temp);
+    if !success_read {
+        error_msg := tprint("Attempted to refresh config from file '%', but couldn't read the file", path);
+        log_error(error_msg);
+        add_user_error(error_msg);
+        return;
+    }
+
+    current_config := ifx is_global_config then *global_config else *project_config;
+    config_type    := ifx is_global_config then "global" else "project";
+
+    if current_config.hash == calculate_hash(to_bytes(file_data)) {
+        log("[refresh_config] Previous % config has identical hash, skip refreshing: '%'", config_type, path);
+        return;
+    }
+
+    // Always clear messages even if the configs are technically unchanged.
+    // Suppose the user had a bad line which produced an error and then deleted it and saved,
+    // then the generated config hasn't changed but the error should still go away
+    clear_user_messages(.config);
+
+    loaded_config := load_config(path, file_data);
+    current_config.hash = loaded_config.hash;
+
+    if !loaded_config.loaded {
+        log_error("Attempted to refresh % config from file '%', but it has errors", config_type, path);
+        free_loaded_config(*loaded_config);
+        return;
+    }
+
+    if is_global_config {
+        changed := merge_and_apply_configs(*loaded_config, ifx project_config.loaded then *project_config else null);
         if changed {
-            clear_user_messages(.config);
             add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
     }
-    else if platform_path_equals(path, project_config.path) {
-        loaded_project_config := load_config(project_config.path);
-        if !loaded_project_config.loaded {
-            log_error("Attempted to refresh project config from file '%', but it has errors", global_config.path);
-            return;
-        }
-        changed := merge_and_apply_configs(*global_config, *loaded_project_config);
+    else if is_project_config {
+        changed := merge_and_apply_configs(*global_config, *loaded_config);
         if changed {
-            clear_user_messages(.config);
             add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
         }
-    } else {
-        log_error("Attempted to refresh config from file '%', but it is not a global config or a current project config", path);
-        return;
     }
 }
 
 refresh_current_theme :: () {
-    merge_and_apply_configs(*global_config, ifx project_config.loaded then *project_config else null);
+    clear_user_messages(.config);
+
+    loaded_global := load_config(global_config.path);
+    if !loaded_global.loaded {
+        free_loaded_config(*loaded_global);
+        return;
+    }
+
+    loaded_project: Loaded_Config;
+    loaded_project_ptr: *Loaded_Config = null;
+
+    if project_config.loaded {
+        loaded_project = load_config(project_config.path);
+        if !loaded_project.loaded {
+            free_loaded_config(*loaded_project);
+            free_loaded_config(*loaded_global);
+            return;
+        }
+
+        loaded_project_ptr = *loaded_project;
+    }
+
+    merge_and_apply_configs(*loaded_global, loaded_project_ptr, refresh_style = true);
 }
+
 
 is_our_config_file :: (path: string) -> bool {
     return path != "" && (is_current_global_config(path) || is_current_project_config(path));
@@ -546,13 +634,10 @@ get_current_project_dir :: () -> string {
     return trim_right(path_strip_filename(project_config.path), "/");
 }
 
-
-#scope_file
-
 free_loaded_config :: (using loaded_config: *Loaded_Config) {
     if loaded_config == null return;
 
-    path = "";
+    path = "<freed>";
     parsed_config = Parsed_Config.{};
     if memory_pool {
         reset(memory_pool);
@@ -561,7 +646,12 @@ free_loaded_config :: (using loaded_config: *Loaded_Config) {
     }
 }
 
+
+#scope_file
+
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
+    if !dst.keymap_memory_pool then dst.keymap_memory_pool = New(Flat_Pool);
+
     // Completely replace the workspace subsections if present
     if parsed.members           then dst.workspace.members = parsed.members;
     if parsed.ignore            then dst.workspace.ignore  = parsed.ignore;
@@ -572,15 +662,32 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     if parsed.build.commands then dst.build = parsed.build;
 
     // Keymap
-    merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: *[..] Key_Mapping) #expand {
-        if !src_keymap return;
-        array_add(src_keymap, ..dst_keymap.*);
-        dst_keymap.* = src_keymap.*;
+    merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: [] Key_Mapping) {
+        if !src_keymap.count return;
+
+        merged: [..] Key_Mapping;
+        // Later config layers take priority without modifying the parsed sources.
+        for src_keymap {
+            mapping := it;
+            mapping.key_sequence = array_copy(it.key_sequence);
+            array_add(*merged, mapping);
+        }
+        for dst_keymap.* {
+            mapping := it;
+            mapping.key_sequence = array_copy(it.key_sequence);
+            array_add(*merged, mapping);
+        }
+        dst_keymap.* = merged;
     }
-    merge_keymaps(*dst.keymap.common,           *parsed.keymap_common);
-    merge_keymaps(*dst.keymap.editors,          *parsed.keymap_editors);
-    merge_keymaps(*dst.keymap.open_file_dialog, *parsed.keymap_open_file_dialog);
-    merge_keymaps(*dst.keymap.search_dialog,    *parsed.keymap_search_dialog);
+    {
+        allocator := Allocator.{ proc = flat_pool_allocator_proc, data = dst.keymap_memory_pool };
+        push_allocator(allocator);
+
+        merge_keymaps(*dst.keymap.common,           parsed.keymap_common);
+        merge_keymaps(*dst.keymap.editors,          parsed.keymap_editors);
+        merge_keymaps(*dst.keymap.open_file_dialog, parsed.keymap_open_file_dialog);
+        merge_keymaps(*dst.keymap.search_dialog,    parsed.keymap_search_dialog);
+    }
 
     // Settings
     #insert -> string {
@@ -687,6 +794,7 @@ project_config: Loaded_Config;
 Config :: struct {
     workspace: Workspace;
     keymap:    Keymap;
+    keymap_memory_pool: *Flat_Pool;  // Owns merged mappings and their key sequences.
 
     settings:  Settings;
     file_specific_settings: [] File_Specific_Settings;
@@ -694,6 +802,8 @@ Config :: struct {
     style:     Style;
     build:     Build_Config;
     linux:     Linux_Config;
+
+    project_path: string;
 
     comment_words_automaton: Aho_Corasick_Automaton;
 }
@@ -722,9 +832,8 @@ Loaded_Font :: struct {
 
 Loaded_Config :: struct {
     loaded := false;
-    there_were_warnings := false;
     path: string;
-    hash: u64;  // !!!!! TODO: remove @cleanup
+    hash: u64;
     parsed_config: Parsed_Config;
     memory_pool: *Flat_Pool;  // must be valid for the lifetime of the config
 }
@@ -1127,6 +1236,9 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
         check_added_keybinds(result.config);
         default_config: Config;
         merge_configs(*default_config, result.config);
+        // The compile-time allocator is not part of the embedded config data.
+        default_config.keymap_memory_pool = null;
+        apply_parsed_colors(result.config.colors);
         DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
         return default_config;
     };

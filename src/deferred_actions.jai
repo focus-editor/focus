@@ -39,11 +39,6 @@ defer_action_close_project :: () {
 }
 
 defer_action_refresh_config_or_theme :: (path: string) {
-    if action_already_queued(.refresh_config_or_theme) {
-        log("Skipping deferred action refresh_config_or_theme for path '%' because it's already queued", path);
-        return;
-    }
-
     // Insert actions at the back of the queue without destroying the existing queue
     push_actions_back(.[
         .{.refresh_config_or_theme, .{ type = .refresh_config_or_theme, refresh_config_or_theme = .{ path = copy_string(path) } }},
@@ -500,6 +495,7 @@ execute_load_project_config :: (action: Deferred_Action) -> Action_Result {
     loaded_project_config := load_config(path);
     if !loaded_project_config.loaded {
         add_user_error("Couldn't load project config from '%'", path, dismiss_in_seconds = 10, tag = .config);
+        free_loaded_config(*loaded_project_config);
         return .CANCEL;
     }
 
@@ -514,6 +510,7 @@ execute_close_project :: (action: Deferred_Action) -> Action_Result {
     loaded_global_config := load_config(global_config_path);
     if !loaded_global_config.loaded {
         add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10, tag = .config);
+        free_loaded_config(*loaded_global_config);
         return .CANCEL;
     }
 

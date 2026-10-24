@@ -439,7 +439,15 @@ load_configs_and_start_session :: (args: [] string) {
     loaded_global_config := load_config(global_config_path);
     if !loaded_global_config.loaded {
         log_error("Falling back to default config as global config '%' failed to load", global_config_path);
-        loaded_global_config = load_default_config_fallback();
+
+        fallback := load_default_config_fallback(global_config_path);
+
+        // Remember the invalid disk contents already processed, not the fallback defaults
+        fallback.hash = loaded_global_config.hash;
+
+        free_loaded_config(*loaded_global_config);
+        loaded_global_config = fallback;
+
         assert(loaded_global_config.loaded);
     }
 
