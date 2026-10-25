@@ -20,19 +20,11 @@ Found_Highlight_Word :: struct {
 build_aho_corasick_automaton :: (words: [] Highlight_Word) -> Aho_Corasick_Automaton {
     using automaton: Aho_Corasick_Automaton;
 
-    push_allocator(Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool });
-
     insert_words(*automaton, words);
     build_failure_links(*automaton);
     cleanup(*automaton);
 
     return automaton;
-}
-
-free :: (using automaton: *Aho_Corasick_Automaton) {
-    array_reset(*nodes);
-    array_reset(*raw_nodes);
-    reset(*memory_pool);
 }
 
 find_whole_words :: (using automaton: *Aho_Corasick_Automaton, text: string) -> found_words: [] Found_Highlight_Word /* temp */ {
@@ -78,8 +70,6 @@ find_whole_words :: (using automaton: *Aho_Corasick_Automaton, text: string) -> 
 Aho_Corasick_Automaton :: struct {
     nodes: [] Node;
     raw_nodes: [..] RawNode;  // used only when building
-
-    memory_pool: Flat_Pool;
 }
 
 #scope_file

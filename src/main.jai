@@ -281,6 +281,9 @@ main :: () {
 
         maybe_save_cursor_history();
 
+        // TODO: enable this when config migration to snapshots is finished
+        // cleanup_old_config_snapshots();
+
         reset_temporary_storage();
 
         #if OS == .MACOS {
@@ -422,6 +425,8 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 }
 
 load_configs_and_start_session :: (args: [] string) {
+    init(*config_snapshots.lock);
+
     global_config_path := get_global_config_path();
 
     // Create global config if it doesn't exist
@@ -1099,6 +1104,7 @@ focus_allocator: Allocator;
 #load "config.jai";
 #load "config_parser.jai";
 #load "config_migrator.jai";
+#load "config_snapshot.jai";
 #load "colors.jai";
 #load "keymap.jai";
 #load "session.jai";

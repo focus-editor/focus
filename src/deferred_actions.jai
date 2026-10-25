@@ -159,8 +159,6 @@ execute_top_action :: () -> Action_Result {
 
     action := actions[actions.count-1];
 
-    log("EXECUTE: %\n", action.kind);
-
     if #complete action.kind == {
         case .quit;                                     return execute_quit(action);
         case .save_as;                                  return execute_save_as(action);

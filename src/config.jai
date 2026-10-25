@@ -97,6 +97,7 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     log("Merging configs. Global: '%', Project: '%'", new_global.path, ifx new_project then new_project.path else "-");
 
     new_config: Config;
+    new_config.memory_pool = New(Flat_Pool);
 
     if new_global.loaded {
         merge_configs(*new_config, new_global.parsed_config);
@@ -108,13 +109,13 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     if new_project && new_project.loaded {
         log("Using project config '%'", new_project.path);
         merge_configs(*new_config, new_project.parsed_config);
-        new_config.project_path = new_project.path;
+        new_config.project_path = copy_string(new_project.path,, allocator_of(new_config.memory_pool));
     }
     else if new_project && !new_project.loaded {
         if project_config.loaded {
             log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
             merge_configs(*new_config, project_config.parsed_config);
-            new_config.project_path = new_project.path;
+            new_config.project_path = copy_string(new_project.path,, allocator_of(new_config.memory_pool));
         } else {
             log_error("Not using project config because it failed to load and there was no previous version");
         }
@@ -123,7 +124,14 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     clamp_config_values(*new_config);
 
     // Replace the config if changed
-    diff := get_config_diff(config, new_config);
+    diff: Config_Diff;
+    if config {
+        diff = get_config_diff(config, new_config);
+    } else {
+        diff.changed = true;
+        diff.settings_changed = true;
+        diff.build_config_changed = true;
+    }
 
     if refresh_style {
         diff.style_changed = true;
@@ -131,13 +139,12 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     }
 
     if diff.changed {
-        new_config.comment_words_automaton = build_comment_words_automaton(new_config);
+        new_config.comment_words_automaton = build_comment_words_automaton(new_config,, allocator_of(new_config.memory_pool));
         replace_and_apply_config(new_config, diff, new_global, new_project);
     }
     else {
         log("Merged config unchanged, skip applying");
-        reset(new_config.keymap_memory_pool);
-        free(new_config.keymap_memory_pool);
+        free_config(*new_config);
 
         // Keep the latest parsed sources even when their changes are currently masked by overrides.
         if new_global != *global_config {
@@ -187,16 +194,16 @@ clamp_config_values :: (new_config: *Config) {
 }
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
-    old_keymap_memory_pool := config.keymap_memory_pool;
+    publish_new_config_snapshot(new_config);
+    release_config_snapshot(context.config_snapshot);
+    context.config_snapshot = acquire_current_config_snapshot();
+    context.config = *context.config_snapshot.config;
 
-    // TODO:
-    // - swap config atomically and make sure threads don't crash
-    // - make sure the aho-corasick automaton doesn't leak (maybe allocate from the pool)
-    // - store loaded config pointers in the config and use it to free the previous config
-    config = new_config;
+    config = context.config;  // TODO: remove when the migration is done
 
-    // TODO: don't replace them like this, they need to be preserved and cleaned up
-    // later when no threads are using them
+    // It's safe to replace global_config and project_config like this, because only the main thread
+    // should use them. Actual config no longer borrows memory from these.
+    // TODO: should we free them first before replacing? @nocheckin
     global_config = new_global.*;
     if new_project && new_project.loaded {
         add_to_most_recent_projects(new_project.path);
@@ -279,11 +286,6 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
     array_reset_keeping_memory(*key_sequence_input.potential_multipart_matches);
     array_reset_keeping_memory(*key_sequence_input.new_multipart_matches);
     key_sequence_input.active_sequence_length = 0;
-
-    if old_keymap_memory_pool {
-        reset(old_keymap_memory_pool);
-        free(old_keymap_memory_pool);
-    }
 }
 
 Config_Diff :: struct {
@@ -640,33 +642,44 @@ free_loaded_config :: (using loaded_config: *Loaded_Config) {
     path = "<freed>";
     parsed_config = Parsed_Config.{};
     if memory_pool {
-        reset(memory_pool);
+        fini(memory_pool);
         free(memory_pool);
         memory_pool = null;
     }
+}
+
+free_config :: (config: *Config) {
+    if config.memory_pool == null return;
+
+    fini(config.memory_pool);
+    free(config.memory_pool);
+    config.* = .{};
 }
 
 
 #scope_file
 
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
-    if !dst.keymap_memory_pool then dst.keymap_memory_pool = New(Flat_Pool);
+    if !dst.memory_pool then dst.memory_pool = New(Flat_Pool);
+
+    // Do a deep copy of everything so that the destination config owns its own data
+    push_allocator(allocator_of(dst.memory_pool));
 
     // Completely replace the workspace subsections if present
-    if parsed.members           then dst.workspace.members = parsed.members;
-    if parsed.ignore            then dst.workspace.ignore  = parsed.ignore;
-    if parsed.allow             then dst.workspace.allow   = parsed.allow;
-    if parsed.file_associations then dst.workspace.file_associations = parsed.file_associations;
+    if parsed.members           then dst.workspace.members           = deep_copy(parsed.members);
+    if parsed.ignore            then dst.workspace.ignore            = deep_copy(parsed.ignore);
+    if parsed.allow             then dst.workspace.allow             = deep_copy(parsed.allow);
+    if parsed.file_associations then dst.workspace.file_associations = deep_copy(parsed.file_associations);
 
     // Build config completely overrides the previous config if present
-    if parsed.build.commands then dst.build = parsed.build;
+    if parsed.build.commands    then dst.build = deep_copy(parsed.build);
 
     // Keymap
     merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: [] Key_Mapping) {
         if !src_keymap.count return;
 
         merged: [..] Key_Mapping;
-        // Later config layers take priority without modifying the parsed sources.
+
         for src_keymap {
             mapping := it;
             mapping.key_sequence = array_copy(it.key_sequence);
@@ -679,21 +692,21 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         }
         dst_keymap.* = merged;
     }
-    {
-        allocator := Allocator.{ proc = flat_pool_allocator_proc, data = dst.keymap_memory_pool };
-        push_allocator(allocator);
 
-        merge_keymaps(*dst.keymap.common,           parsed.keymap_common);
-        merge_keymaps(*dst.keymap.editors,          parsed.keymap_editors);
-        merge_keymaps(*dst.keymap.open_file_dialog, parsed.keymap_open_file_dialog);
-        merge_keymaps(*dst.keymap.search_dialog,    parsed.keymap_search_dialog);
-    }
+    merge_keymaps(*dst.keymap.common,           parsed.keymap_common);
+    merge_keymaps(*dst.keymap.editors,          parsed.keymap_editors);
+    merge_keymaps(*dst.keymap.open_file_dialog, parsed.keymap_open_file_dialog);
+    merge_keymaps(*dst.keymap.search_dialog,    parsed.keymap_search_dialog);
 
     // Settings
     #insert -> string {
         b: String_Builder;
         for setting : type_info(Settings).members {
-            print_to_builder(*b, "if array_find(parsed.set_settings, \"%1\") { dst.settings.%1 = parsed.settings.%1; }\n", setting.name);
+            if setting.type.type == .STRING {
+                print_to_builder(*b, "if array_find(parsed.set_settings, \"%1\") { dst.settings.%1 = copy_string(parsed.settings.%1); }\n", setting.name);
+            } else {
+                print_to_builder(*b, "if array_find(parsed.set_settings, \"%1\") { dst.settings.%1 = parsed.settings.%1; }\n", setting.name);
+            }
         }
         return builder_to_string(*b);
     }
@@ -701,25 +714,21 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Merge file-specific settings
     // NOTE: if you have file-specific settings in the global config, they will take priority over any
     //       non-file-specific settings added in the project config
-    old_file_specific_settings_count := dst.file_specific_settings.count;
-    array_resize(*dst.file_specific_settings, dst.file_specific_settings.count + parsed.file_specific_settings.count);
-    for i : 0 .. parsed.file_specific_settings.count-1 {
-        dst_setting := *dst.file_specific_settings[old_file_specific_settings_count + i];
-        src_setting := *parsed.file_specific_settings[i];
-        dst_setting.overrides = src_setting.overrides;
-        dst_setting.match_rules.langs     = array_copy(src_setting.match_rules.langs);
-        dst_setting.match_rules.wildcards = array_copy(src_setting.match_rules.wildcards);
-        for * dst_setting.match_rules.wildcards  it.* = copy_string(it.*);  // @leak
+    {
+        old_count := dst.file_specific_settings.count;
+        array_resize(*dst.file_specific_settings, old_count + parsed.file_specific_settings.count);
+        for setting, i : parsed.file_specific_settings {
+            dst.file_specific_settings[old_count + i] = deep_copy(setting);
+        }
     }
 
     // Style
-    /// !!!!!!!!!!!! TODO: allocate using the resulting config's pool
-    if parsed.theme then dst.style.theme = copy_string(parsed.theme); /* @leak */  // TODO: rework how themes and styles are applied
+    if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // TODO: rework how themes and styles are applied
     if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing = parsed.font_anti_aliasing.value;
     if parsed.font_hinting.is_set       then dst.style.font_hinting       = parsed.font_hinting.value;
 
     // Platform config
-    dst.linux = parsed.linux;
+    dst.linux = deep_copy(parsed.linux);
 }
 
 build_comment_words_automaton :: (new_config: Config) -> Aho_Corasick_Automaton {
@@ -784,7 +793,7 @@ font_cache: Table(string, Loaded_Font);  // path -> loaded font
 #scope_export
 
 // Currently active config
-config: Config;
+config: *Config;
 
 // Info about currently loaded configs, useful when reloading etc.
 global_config:  Loaded_Config;
@@ -792,9 +801,10 @@ project_config: Loaded_Config;
 
 
 Config :: struct {
+    memory_pool: *Flat_Pool;
+
     workspace: Workspace;
     keymap:    Keymap;
-    keymap_memory_pool: *Flat_Pool;  // Owns merged mappings and their key sequences.
 
     settings:  Settings;
     file_specific_settings: [] File_Specific_Settings;
@@ -1014,6 +1024,17 @@ Settings :: struct {
     line_endings                                            := Line_Endings.lf;                                     @v25 @overridable
 }
 
+operator== :: (a: Settings, b: Settings) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for type_info(Settings).members {
+            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
+}
+
 // Generate a struct for the settings that can be overridden
 #insert -> string {
     b: String_Builder;
@@ -1113,14 +1134,7 @@ get_settings :: inline (buffer: Buffer) -> *Settings {
 }
 
 recalculate_settings :: (buffer: *Buffer) {
-    has_file_specific_settings := false;
-    aggregate_settings := config.settings;
-    for * config.file_specific_settings {
-        if buffer_matches_file_specific_rules(buffer, it.match_rules) {
-            _override_settings(*aggregate_settings, it.overrides);
-            has_file_specific_settings = true;
-        }
-    }
+    aggregate_settings, has_file_specific_settings := resolve_settings(config, buffer);
 
     lock(*buffer.content_lock);
     {
@@ -1133,6 +1147,20 @@ recalculate_settings :: (buffer: *Buffer) {
         }
     }
     unlock(*buffer.content_lock);
+}
+
+resolve_settings :: (config: Config, buffer: Buffer) -> Settings, has_file_specific_settings: bool {
+    result := config.settings;
+    has_file_specific_settings := false;
+
+    for * config.file_specific_settings {
+        if buffer_matches_file_specific_rules(buffer, it.match_rules) {
+            _override_settings(*result, it.overrides);
+            has_file_specific_settings = true;
+        }
+    }
+
+    return result, has_file_specific_settings;
 }
 
 
@@ -1237,7 +1265,7 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
         default_config: Config;
         merge_configs(*default_config, result.config);
         // The compile-time allocator is not part of the embedded config data.
-        default_config.keymap_memory_pool = null;
+        default_config.memory_pool = null;
         apply_parsed_colors(result.config.colors);
         DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
         return default_config;

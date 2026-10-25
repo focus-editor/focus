@@ -840,3 +840,80 @@ some :: (value: $T) -> Option(T) {
     return .{ value = value, is_set = true };
 }
 
+allocator_of :: (pool: *Flat_Pool) -> Allocator {
+    return .{ proc = flat_pool_allocator_proc, data = pool };
+}
+
+deep_copy :: (value: $T) -> T {
+    ti :: type_info(T);
+
+    #if T == string {
+        return copy_string(value);
+    }
+    else #if ti.type == .ARRAY {
+        result: T;
+
+        #insert -> string {
+            if ti.array_type == .FIXED return "";
+            return "array_resize(*result, value.count);";  // don't typecheck array_resize for fixed arrays
+        }
+
+        for * result {
+            it.* = deep_copy(value[it_index]);
+        }
+
+        return result;
+    }
+    else #if ti.type == .STRUCT {
+        #assert !(ti.textual_flags & .UNION) "deep_copy doesn't support unions";
+
+        result := value;
+
+        #insert -> string {
+            b: String_Builder;
+
+            for member : ti.members {
+                if member.flags & (.CONSTANT | .IMPORTED) continue;
+                if member.flags & .OVERLAY {
+                    info := ti;
+                    assert(is_value_only(info), "deep_copy: struct '%' has overlays and is not value-only. Provide an explicit copying function", ti.name);
+                    return "";  // nothing to copy for value-only structs after result := value;
+                }
+                print_to_builder(*b, "result.%1 = deep_copy(value.%1);\n", member.name);
+            }
+
+            return builder_to_string(*b);
+        }
+
+        return result;
+    }
+    else #if ti.type == .INTEGER || ti.type == .FLOAT || ti.type == .BOOL || ti.type == .ENUM {
+        return value;
+    }
+    else {
+        #assert false "Unsupported type in deep_copy";
+    }
+}
+
+is_value_only :: (info: *Type_Info) -> bool {
+    if info.type == .INTEGER || info.type == .FLOAT || info.type == .BOOL || info.type == .ENUM  return true;
+
+    if info.type == .ARRAY {
+        ai := cast(*Type_Info_Array) info;
+        if ai.array_type != .FIXED return false;  // needs allocated storage
+        return is_value_only(ai.element_type);
+    }
+
+    if info.type == .STRUCT {
+        si := cast(*Type_Info_Struct) info;
+        if si.textual_flags & .UNION return false;  // not supporting unions
+        for member : si.members {
+            if member.flags & (.CONSTANT | .IMPORTED) continue;
+            if !is_value_only(member.type) return false;
+        }
+        return true;
+    }
+
+    // Strings, pointers and other unsupported types
+    return false;
+}
