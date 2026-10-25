@@ -369,7 +369,7 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
         }
     }
 
-    if (OS == .WINDOWS || OS == .MACOS) && config.settings.prefer_system_file_dialogs {
+    if (OS == .WINDOWS || OS == .MACOS) && context.config.settings.prefer_system_file_dialogs {
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
         if !success return .CANCEL;  // the user did not select a file
         return _save_to_file_path(buffer, buffer_id, file_path, is_move);
@@ -398,7 +398,7 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
         for editor, editor_id : open_editors {
             if editor.buffer_id == buffer_id {
                 pane := close_editor_by_id(editor_id);
-                if config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
+                if context.config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
             }
         }
     }
@@ -534,7 +534,7 @@ execute_reload_workspace :: (action: Deferred_Action) -> Action_Result {
 
 execute_build_command :: (action: Deferred_Action) -> Action_Result {
     command_id := action.details.build_command.command_id;
-    command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
+    command := ifx command_id > 0 then *context.config.build.commands[command_id-1] else *context.config.build.defaults;
     execute_build_command(command);
     return .CANCEL;  // final command
 }
@@ -561,7 +561,7 @@ execute_wait_for_killed_command_to_stop :: (action: Deferred_Action) -> Action_R
 execute_close_editor :: (action: Deferred_Action) -> Action_Result {
     editor_id := action.details.close_editor.editor_id;
     pane := close_editor_by_id(editor_id);
-    if config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
+    if context.config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
     return .DONE;
 }
 

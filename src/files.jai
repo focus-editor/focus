@@ -272,7 +272,7 @@ should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool =
     // NOTE: assuming path is pre-lowercased on Windows!
 
     // Allow list has priority - check if path is explicitly allowed
-    for fp : config.workspace.allow {
+    for fp : context.config.workspace.allow {
         if fp.should_match_whole_path {
             if path_pattern_match(path, fp) return false, true;
         } else {
@@ -289,7 +289,7 @@ should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool =
     }
 
     // Then check the user-specified ignore list
-    for fp : config.workspace.ignore {
+    for fp : context.config.workspace.ignore {
         if fp.should_match_whole_path {
             if path_pattern_match(path, fp) return true;
         } else {
@@ -314,7 +314,7 @@ should_descend_into_dir :: (path: string) -> bool {
     // If we have ANY allow patterns in the config, we HAVE to descend into every dir,
     // because even though the dir might be ignored, some of its contents might be
     // explicitly allowed, so we have to check everything.
-    if config.workspace.allow return true;
+    if context.config.workspace.allow return true;
 
     #if OS == .WINDOWS {
         return !should_ignore_path(to_lower_copy(path),, temp);

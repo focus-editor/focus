@@ -31,7 +31,7 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
             if token.type == .comment || token.type == .multiline_comment {
                 // Highlight words in comments
                 comment_str  := cast(string) to_view(buffer.bytes, token.start, token.len);
-                output_words := find_whole_words(*config.comment_words_automaton, comment_str);
+                output_words := find_whole_words(*context.config.comment_words_automaton, comment_str);
                 for output_words  memset(buffer.tokens.data + token.start + it.offset, cast(u8) it.token_type, it.len);
             }
         } else {

@@ -64,7 +64,7 @@ commands_refresh_after_config_change :: () {
     array_resize(*commands, base_commands.count);
 
     // Add build commands on top of that
-    for config.build.commands {
+    for context.config.build.commands {
         array_add(*commands, Command.{
             action = cast(u16) (it_index + 1),
             name = sprint("Build Command: %", it.name),

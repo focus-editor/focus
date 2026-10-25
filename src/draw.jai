@@ -97,7 +97,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane, show_status_bar);
         }
         if pane == editors.active_pane && active_global_widget == .editors && editors_get_layout() == .Multi {
-            size := floor(config.settings.active_pane_border_width * dpi_scale);
+            size := floor(context.config.settings.active_pane_border_width * dpi_scale);
             if !pane.editor_ids && size <= 0 then size = floor(1 * dpi_scale);  // draw a border around empty panes because otherwise it's not clear which one is selected
             draw_rect_border(rect, size = size, color = Color.ACTIVE_PANE_BORDER);
         }
@@ -106,10 +106,10 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
                 // Draw a border around empty panes because otherwise they might not be visible
                 draw_rect_border(rect, size = floor(1 * dpi_scale), color = Color.BACKGROUND_0);
             }
-            if config.settings.inactive_pane_dim_overlay_opacity > 0 {
+            if context.config.settings.inactive_pane_dim_overlay_opacity > 0 {
                 // Dim inactive panes
                 dim_color := map_color_to_vec4(Color.INACTIVE_PANE_DIM_OVERLAY);
-                dim_color.w = config.settings.inactive_pane_dim_overlay_opacity;
+                dim_color.w = context.config.settings.inactive_pane_dim_overlay_opacity;
                 draw_rect_with_raw_color(rect, dim_color);
             }
         }
@@ -424,7 +424,7 @@ should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
 }
 
 maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = false, editor_rect: Rect = .{}) {
-    if config.settings.color_preview_popup == .disabled return;
+    if context.config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
     active_editor_id := get_visible_editor_id(editors.active_pane);
@@ -837,8 +837,8 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     draw_editor(editor_id, build_output_rect, get_ui_id_from_loc(), has_status_bar = false);
 
     is_active := build_panel_is_active();
-    if is_active && config.settings.active_pane_border_width > 0 {
-        draw_rect_border(build_output_rect, size = floor(config.settings.active_pane_border_width * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
+    if is_active && context.config.settings.active_pane_border_width > 0 {
+        draw_rect_border(build_output_rect, size = floor(context.config.settings.active_pane_border_width * dpi_scale), color = Color.ACTIVE_PANE_BORDER);
     }
 
     return is_active, build_output_rect;
@@ -873,11 +873,11 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -
 }
 
 status_bar_is_drawn_at_the_bottom :: inline () -> bool {
-    return config.settings.status_bar_position == .bottom && show_status_bar && editors_get_layout() != .None;
+    return context.config.settings.status_bar_position == .bottom && show_status_bar && editors_get_layout() != .None;
 }
 
 status_bar_is_drawn_at_the_top :: inline () -> bool {
-    return config.settings.status_bar_position == .top && show_status_bar && editors_get_layout() != .None;
+    return context.config.settings.status_bar_position == .top && show_status_bar && editors_get_layout() != .None;
 }
 
 get_text_offset :: inline () -> Vector2 {
@@ -1221,7 +1221,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             cursor_pos_from_left := cursor_coords[main_cursor].pos.col  * char_x_advance + text_offset.x;
             cursor_pos_from_top  := cursor_coords[main_cursor].pos.line * line_height;
             left_target          := cast(s32) max(cursor_pos_from_left - rect.w + char_x_advance * 3, 0);
-            top_target           := cast(s32) max(cursor_pos_from_top  - rect.h * config.settings.cursor_position_after_jump, -scroll_behind_height);
+            top_target           := cast(s32) max(cursor_pos_from_top  - rect.h * context.config.settings.cursor_position_after_jump, -scroll_behind_height);
             if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
             if top_target  != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
 
@@ -2070,7 +2070,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
             editor, buffer := get_editor_and_buffer(it);
 
             font_variant := File_Info_Font_Variant.bold;
-            if it_index == pane.temporary_editor_index && config.settings.enable_temporary_editors then font_variant = .bold_italic;
+            if it_index == pane.temporary_editor_index && context.config.settings.enable_temporary_editors then font_variant = .bold_italic;
 
             _, pen := draw_file_info(buffer, 0, padding, Vector2.{}, flags = .file_name | .modified, dry_run = true, font_variant = font_variant);
             if max_file_name_width < pen.x then max_file_name_width = pen.x;
@@ -2082,7 +2082,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
 
     // Get the status bar rect even if it's hidden
     status_bar_rect: Rect;
-    if config.settings.status_bar_position == .bottom {
+    if context.config.settings.status_bar_position == .bottom {
         status_bar_rect = cut_bottom(main_area, status_bar_height);
     } else {
         status_bar_rect = cut_top(main_area, status_bar_height);
@@ -2106,7 +2106,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
         status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
     };
     entry_rect.y = status_bar_rect.y + (status_bar_rect.h - entry_rect.h) / 2;
-    if config.settings.status_bar_position == .bottom {
+    if context.config.settings.status_bar_position == .bottom {
         entry_rect.y += (num_visible_entries - 1) * entry_height;
         pen.y        += (num_visible_entries - 1) * entry_height;
     }
@@ -2161,7 +2161,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
         }
 
         font_variant := File_Info_Font_Variant.bold;
-        if it_index == pane.temporary_editor_index && config.settings.enable_temporary_editors then font_variant = .bold_italic;
+        if it_index == pane.temporary_editor_index && context.config.settings.enable_temporary_editors then font_variant = .bold_italic;
 
         _, pen_after := draw_file_info(buffer, 0, padding, pen, flags = .file_name | .modified, font_variant = font_variant);
         file_name_width := pen_after.x - pen.x;
@@ -2213,7 +2213,7 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
     };
 
     // Maybe draw pane number
-    if config.settings.show_pane_numbers {
+    if context.config.settings.show_pane_numbers {
         pen_x_old := pen.x;
 
         width := Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, tprint("%", pane.number), xx Color.UI_DEFAULT);
@@ -2230,7 +2230,7 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
     }
 
     // Draw file name and path
-    is_temporary_editor := pane.editor_index == pane.temporary_editor_index && config.settings.enable_temporary_editors;
+    is_temporary_editor := pane.editor_index == pane.temporary_editor_index && context.config.settings.enable_temporary_editors;
     font_variant := ifx is_temporary_editor then File_Info_Font_Variant.bold_italic else File_Info_Font_Variant.bold;
     pen_old := pen;
     width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning, font_variant = font_variant);
@@ -4149,21 +4149,21 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
         if finished remove it;
         fadeout_opacity = value;
         if fadeout_opacity > 0 && !delayed then redraw_requested = true;  // only redraw when not delayed to avoid spinning while waiting
-        fadeout_opacity = clamp(fadeout_opacity, config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity);
+        fadeout_opacity = clamp(fadeout_opacity, context.config.settings.scrollbar_min_opacity, context.config.settings.scrollbar_max_opacity);
     }
 
     // Get another opacity value based on distance to mouse pointer
     distance_to_mouse_x := max(abs(mouse.pointer.x - (area.x + area.w / 2)) - area.w / 2, 0.0);
     distance_to_mouse_y := max(abs(mouse.pointer.y - (area.y + area.h / 2)) - area.h / 2, 0.0);
     distance_to_mouse := max(distance_to_mouse_x, distance_to_mouse_y);
-    fade_in_threshold := char_size * config.settings.scrollbar_fade_in_sensitivity;
+    fade_in_threshold := char_size * context.config.settings.scrollbar_fade_in_sensitivity;
     t := clamp((fade_in_threshold - distance_to_mouse) / fade_in_threshold, 0.0, 1.0);
-    opacity := lerp(config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity, t);
+    opacity := lerp(context.config.settings.scrollbar_min_opacity, context.config.settings.scrollbar_max_opacity, t);
     opacity = max(opacity, fadeout_opacity);
 
     maybe_set_hot_or_active(ui_id, area, .NORMAL);
 
-    if ui.active == ui_id then opacity = config.settings.scrollbar_max_opacity;  // we're actively dragging
+    if ui.active == ui_id then opacity = context.config.settings.scrollbar_max_opacity;  // we're actively dragging
 
     color       := Color.SCROLLBAR;
     color_bg    := Color.SCROLLBAR_BACKGROUND;
@@ -4334,7 +4334,7 @@ is_hovering_over :: (ui_id: Ui_Id) -> bool {
 }
 
 start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
-    if initial_value < 0 then initial_value = config.settings.scrollbar_max_opacity;
+    if initial_value < 0 then initial_value = context.config.settings.scrollbar_max_opacity;
 
     animation: *Scrollbar_Fade_Out_Animation;
     for * scrollbar_fade_out_animations {
@@ -4344,7 +4344,7 @@ start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
         animation = array_add(*scrollbar_fade_out_animations);
         animation.ui_id = ui_id;
     }
-    start_animation(*animation.anim, initial_value, 0.0, delay = config.settings.scrollbar_fade_out_delay_seconds);
+    start_animation(*animation.anim, initial_value, 0.0, delay = context.config.settings.scrollbar_fade_out_delay_seconds);
 }
 
 

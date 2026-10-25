@@ -1,5 +1,5 @@
 platform_apply_config :: () {
-    LD.set_fixed_scaling(config.linux.scaling_factor);
+    LD.set_fixed_scaling(context.config.linux.scaling_factor);
 }
 
 platform_setup :: inline () {
@@ -231,7 +231,7 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
-    local_run := (reveal && (config.linux.explorer_reveal_command.count > 0)) || (!reveal && (config.linux.explorer_command.count > 0));
+    local_run := (reveal && (context.config.linux.explorer_reveal_command.count > 0)) || (!reveal && (context.config.linux.explorer_command.count > 0));
     if local_run {
         args: [..]string;
         cmd_s: string;
@@ -239,11 +239,11 @@ platform_open_in_explorer :: (path: string, reveal := false) {
         defer free(cmd_s);
         defer array_reset(*args);
 
-        if !reveal && config.linux.explorer_command.count > 0 {
-            cmd_s = replace(config.linux.explorer_command, "%s", path);
+        if !reveal && context.config.linux.explorer_command.count > 0 {
+            cmd_s = replace(context.config.linux.explorer_command, "%s", path);
         }
-        if reveal && config.linux.explorer_reveal_command.count > 0 {
-            cmd_s = replace(config.linux.explorer_reveal_command, "%s", path);
+        if reveal && context.config.linux.explorer_reveal_command.count > 0 {
+            cmd_s = replace(context.config.linux.explorer_reveal_command, "%s", path);
         }
 
         if cmd_s.count > 0 {

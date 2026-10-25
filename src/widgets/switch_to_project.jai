@@ -56,7 +56,7 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     }
     visit_files(projects_dir, recursive = true, *project_configs, visitor, visit_files = true, visit_directories = false);
 
-    if #complete config.settings.projects_sorting_order == {
+    if #complete context.config.settings.projects_sorting_order == {
         case .most_recent_first;
             // already sorted this way
 

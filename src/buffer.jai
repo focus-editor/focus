@@ -1197,12 +1197,12 @@ create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     init_buffer(buffer);
     buffer.has_file = false;
 
-    if config.settings.line_endings == .crlf {
+    if context.config.settings.line_endings == .crlf {
         buffer.crlf = true;
     }
 
     // These values will be overwritten later if `detect_intentation` is true
-    buffer.indentation.type = config.settings.indent_using;
+    buffer.indentation.type = context.config.settings.indent_using;
     buffer.indentation.size = 0;
 
     rescan_for_lines(buffer);

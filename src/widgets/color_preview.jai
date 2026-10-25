@@ -39,7 +39,7 @@ init_color_preview :: () {
 
     color_preview_set_language(0);
 
-    if config.settings.color_preview_popup != .enabled then color_preview_is_shown = false;
+    if context.config.settings.color_preview_popup != .enabled then color_preview_is_shown = false;
 }
 
 deinit_color_preview :: () {
@@ -101,9 +101,9 @@ color_preview_begin_draw :: (editor_id: s64) {
     // Try to build it up as it would when the config is actually loaded
     reset_color_map_to_default();
 
-    if config.style.theme && !is_current_theme(buffer.file.full_path) {
-        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied.", config.style.theme);
-        if config.style.theme != "default" {
+    if context.config.style.theme && !is_current_theme(buffer.file.full_path) {
+        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied.", context.config.style.theme);
+        if context.config.style.theme != "default" {
             color_preview_warning = tprint("% You can edit the theme using the 'Edit Current Theme' command.", color_preview_warning);
         }
     }

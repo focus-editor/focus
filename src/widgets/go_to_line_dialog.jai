@@ -5,7 +5,7 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .escape;                   #through;
-            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = config.settings.can_cancel_go_to_line);
+            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = context.config.settings.can_cancel_go_to_line);
                                             return true;
             case .open_entry;               jump_to_line(); close_go_to_line_dialog(); return true;
             case .open_entry_in_side_pane;  jump_to_line(); close_go_to_line_dialog(); return true;

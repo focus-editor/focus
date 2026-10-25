@@ -50,12 +50,12 @@ main :: () {
     should_reload_workspace = false;
 
     // Create window
-    window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
+    window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(context.config.settings.open_on_the_biggest_monitor);
 
-    if config.settings.window_width  > 0 then window_width  = xx config.settings.window_width;
-    if config.settings.window_height > 0 then window_height = xx config.settings.window_height;
-    if config.settings.window_x != -1000 then window_x      = xx config.settings.window_x;
-    if config.settings.window_y != -1000 then window_y      = xx config.settings.window_y;
+    if context.config.settings.window_width  > 0 then window_width  = xx context.config.settings.window_width;
+    if context.config.settings.window_height > 0 then window_height = xx context.config.settings.window_height;
+    if context.config.settings.window_x != -1000 then window_x      = xx context.config.settings.window_x;
+    if context.config.settings.window_y != -1000 then window_y      = xx context.config.settings.window_y;
 
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
@@ -72,13 +72,13 @@ main :: () {
 
     #if OS == .MACOS {
         // On macOS, attempting to maximize the window before a frame has been drawn results in a crash, so we delay it until the end of the first frame.
-        should_maximize := config.settings.maximize_on_start;
+        should_maximize := context.config.settings.maximize_on_start;
     } else {
-        if config.settings.maximize_on_start then platform_maximize_window(window);
+        if context.config.settings.maximize_on_start then platform_maximize_window(window);
     }
     #if OS == .WINDOWS {
         // A hacky workaround to display the dark title bar properly. Nothing else we've tried worked
-        if config.settings.dark_titlebar && !config.settings.maximize_on_start {
+        if context.config.settings.dark_titlebar && !context.config.settings.maximize_on_start {
             ShowWindow(window, SW_HIDE);
             ShowWindow(window, SW_SHOW);
         }
@@ -184,7 +184,7 @@ main :: () {
 
                 case .KEYBOARD;
                     // Double shift click
-                    if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
+                    if context.config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
                         if !event.key_pressed then last_release = frame_time;
                         if event.key_pressed && only_shift_pressed(event.modifier_flags) {
@@ -406,15 +406,15 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
     if action == INVALID_KEYMAP_ACTION return false;
 
     command_id := cast(s64) action;
-    assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
+    assert(command_id <= context.config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, context.config.build.commands.count);
 
-    if config.settings.save_all_file_backed_buffers_on_build {
+    if context.config.settings.save_all_file_backed_buffers_on_build {
         for * buffer, buffer_id : open_buffers {
             if buffer.modified && buffer.has_file {
                 save_buffer(buffer, buffer_id);
             }
         }
-    } else if config.settings.save_current_buffer_on_build {
+    } else if context.config.settings.save_current_buffer_on_build {
         editor, buffer := get_visible_editor_and_buffer();
         if editor && buffer.has_file save_buffer(buffer, editor.buffer_id);
     }
@@ -569,10 +569,10 @@ load_configs_and_start_session :: (args: [] string) {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
-    Simp.set_anti_aliasing(config.style.font_anti_aliasing);
-    Simp.set_hinting(config.style.font_hinting);
+    Simp.set_anti_aliasing(context.config.style.font_anti_aliasing);
+    Simp.set_hinting(context.config.style.font_hinting);
 
-    Simp.set_show_tab_characters_in_selection(config.settings.show_tab_characters_in_selection);
+    Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
 
     font_main_size = clamp(font_main_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_size   = clamp(font_ui_size  , MIN_FONT_SIZE, MAX_FONT_SIZE);
@@ -655,8 +655,8 @@ init_fonts_and_dependent_things :: () {
     char_size             = cast(float) font_main.em_width;
     char_x_advance        = cast(float) font_main.x_advance;
     old_line_height       = line_height;
-    line_height           = floor(cast(float) font_main.default_line_spacing * cast(float) config.settings.line_height_scale_percent / 100.0);
-    scrollbar_width       = floor(1.5 * char_size) * config.settings.scrollbar_width_scale;
+    line_height           = floor(cast(float) font_main.default_line_spacing * cast(float) context.config.settings.line_height_scale_percent / 100.0);
+    scrollbar_width       = floor(1.5 * char_size) * context.config.settings.scrollbar_width_scale;
     rounding_radius       = floor(char_size / 2);
     rounding_radius_large = floor(char_size / 1.5);
     rounding_radius_small = floor(char_size / 3);
@@ -714,7 +714,7 @@ update_mouse_state :: () {
         }
     }
     mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
-    if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;
+    if !context.config.settings.smooth_scrolling then mouse.smooth_scroll = false;
 
     update_button :: (button: *Mouse_Button_State, key: Input.Key_Code) {
         button.is_down       = key_state(key) & .DOWN  != 0;  // NOTE: this doesn't include just_pressed!

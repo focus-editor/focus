@@ -295,7 +295,7 @@ start_new_search :: (force := false) {
 
     if !force && request.needle == new_needle && request.include == new_include && request.exclude == new_exclude return;  // nothing has changed, no need to repeat
 
-    if config.settings.search_is_case_sensitive_when_uppercase_present && !case_sensitive_toggled_manually {
+    if context.config.settings.search_is_case_sensitive_when_uppercase_present && !case_sensitive_toggled_manually {
         case_sensitive = contains_uppercase_ascii(new_needle);
     }
 

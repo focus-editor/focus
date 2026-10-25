@@ -7,7 +7,7 @@ init_build_system :: () {
     buffer.readonly = true;
     buffer.internal = true;
     buffer.lang = .Focus_Build_Panel;
-    if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
+    if context.config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
     commands_refresh_after_config_change();
 
@@ -280,7 +280,7 @@ action_toggle_build_panel_focus :: () {
 }
 
 build_panel_toggle_height :: () {
-    target := ifx build_panel_is_expanded then config.settings.build_panel_height_percent / 100.0 else 1.0;
+    target := ifx build_panel_is_expanded then context.config.settings.build_panel_height_percent / 100.0 else 1.0;
     target = clamp(target, 0.1, 1.0);
 
     start_animation(*build_panel_height_anim, build_panel_height, target);
@@ -299,7 +299,7 @@ build_panel_set_width :: (width: float) {
 }
 
 build_panel_get_position :: () -> Build_Panel_Position {
-    if config.settings.build_panel_stays_in_one_place return .right;
+    if context.config.settings.build_panel_stays_in_one_place return .right;
 
     // Get the center of the active pane
     leaf_pane_rects := gather_leaf_pane_rects();

@@ -31,7 +31,7 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
             }
 
         case .TEXT_INPUT;
-            if config.settings.hide_mouse_when_typing platform_show_cursor(false);
+            if context.config.settings.hide_mouse_when_typing platform_show_cursor(false);
             if !key_sequence_input_in_progress() {
                 active_editor_type_char(event.utf32);
                 return true;
@@ -779,7 +779,7 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
 
     // We always want to keep the editor if opening in a different pane
-    should_use_temporary_editor := config.settings.enable_temporary_editors && target_pane == editors.active_pane;
+    should_use_temporary_editor := context.config.settings.enable_temporary_editors && target_pane == editors.active_pane;
 
     // Open the editor in the target pane
     if should_use_temporary_editor && target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count{
@@ -1092,7 +1092,7 @@ get_max_y_scroll :: (editor: Editor, buffer: Buffer) -> s32 {
 }
 
 add_paste_animation :: (editor_id: s64, range: Offset_Range) {
-    if !config.settings.show_paste_effect return;
+    if !context.config.settings.show_paste_effect return;
 
     anim := array_add(*editor_paste_animations);
     anim.editor_id = editor_id;
@@ -1192,7 +1192,7 @@ close_editor_by_id :: (editor_id: s64) -> *Editor_Pane {
     pane := get_pane_by_editor_id(editor_id);
     if !pane return null;
 
-    if config.settings.closing_last_editor_should_exit_program && pane.editor_ids.count == 1 && pane == editors.root {
+    if context.config.settings.closing_last_editor_should_exit_program && pane.editor_ids.count == 1 && pane == editors.root {
         // Do it before actually closing the editor to avoid flickering
         defer_action_quit();
         return null;
@@ -1553,7 +1553,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
         editor.scroll_to_cursor = .yes;
     }
 
-    if !config.settings.persist_local_search_results {
+    if !context.config.settings.persist_local_search_results {
         reset_search_results(*editor.search_bar);
         editor.refresh_selection = true;
     }
@@ -1693,7 +1693,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     needle := to_string(search_bar.input.text);
     if !needle return;
 
-    if config.settings.search_is_case_sensitive_when_uppercase_present && !search_bar.case_sensitive_toggled_manually {
+    if context.config.settings.search_is_case_sensitive_when_uppercase_present && !search_bar.case_sensitive_toggled_manually {
         search_bar.case_sensitive = contains_uppercase_ascii(needle);
     }
 
@@ -2280,7 +2280,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
     path_, basename, extension, basename_with_extension := path_decomp(full_path);
 
     // Try to get lang from the user-provided mapping first
-    for config.workspace.file_associations {
+    for context.config.workspace.file_associations {
         if path_wildcard_match(basename_with_extension, it.wildcard) return it.lang;
     }
 
@@ -2405,7 +2405,7 @@ scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, 
 }
 
 cursors_start_blinking :: inline () {
-    if config.settings.cursor_blink_time_in_seconds <= 0 return;
+    if context.config.settings.cursor_blink_time_in_seconds <= 0 return;
 
     cursor_blink_start = frame_time;
     platform_set_cursor_timer(window);
@@ -2418,10 +2418,10 @@ cursors_stop_blinking :: inline () {
 }
 
 should_draw_cursors :: inline () -> bool {
-    if !cursors_blinking || config.settings.cursor_blink_time_in_seconds <= 0 return true;
+    if !cursors_blinking || context.config.settings.cursor_blink_time_in_seconds <= 0 return true;
 
     ms_since_start := cast(s64) (to_float64_seconds(frame_time - cursor_blink_start) * 1000);
-    if ms_since_start > config.settings.cursor_blink_time_in_seconds * 1000 {
+    if ms_since_start > context.config.settings.cursor_blink_time_in_seconds * 1000 {
         cursors_stop_blinking();
         return true;
     }
@@ -3575,7 +3575,7 @@ delete_right :: (editor: *Editor, buffer: *Buffer, by: Movement_Type) {
 delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     tab_size := get_buffer_tab_size(buffer);
 
-    should_delete_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_delete_closing_bracket(editor, buffer);
+    should_delete_closing_bracket := context.config.settings.auto_close_brackets && all_cursors_can_auto_delete_closing_bracket(editor, buffer);
 
     any_cursor_has_selection := false;
     for editor.cursors { if has_selection(it) { any_cursor_has_selection = true; break; } }
@@ -4356,7 +4356,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
     // Check if there's anything to copy else we exit early so we don't trash the clipboard
     any_selection := false;
     for editor.cursors { if has_selection(it) { any_selection = true; break; } }
-    if !any_selection && !cut && !config.settings.copy_whole_line_without_selection return;
+    if !any_selection && !cut && !context.config.settings.copy_whole_line_without_selection return;
 
     if cut && cut_lines_without_selection {
         // When cutting, cut whole lines for cursors which don't have selection.
@@ -4378,7 +4378,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
         if has_selection(cursor) {
             selected_str := get_selected_string(cursor, buffer);
             str = ifx !is_last_cursor then join(selected_str, "\n") else selected_str;
-        } else if cut || config.settings.copy_whole_line_without_selection {
+        } else if cut || context.config.settings.copy_whole_line_without_selection {
             line_num := offset_to_real_line(buffer, cursor.pos);
             str = get_real_line_as_string(buffer, line_num);
         } else {
@@ -4915,17 +4915,17 @@ action_toggle_line_numbers :: () {
     _, buffer := get_active_editor_and_buffer();
     if buffer {
         buffer_settings := get_settings(buffer);
-        if buffer_settings != *config.settings {
+        if buffer_settings != *context.config.settings {
             buffer_settings.show_line_numbers = !buffer_settings.show_line_numbers;
             return;
         }
     }
 
-    config.settings.show_line_numbers = !config.settings.show_line_numbers;
+    context.config.settings.show_line_numbers = !context.config.settings.show_line_numbers;
 }
 
 action_toggle_pane_numbers :: () {
-    config.settings.show_pane_numbers = !config.settings.show_pane_numbers;
+    context.config.settings.show_pane_numbers = !context.config.settings.show_pane_numbers;
 }
 
 action_toggle_indent_guides :: () {
@@ -4934,13 +4934,13 @@ action_toggle_indent_guides :: () {
     _, buffer := get_active_editor_and_buffer();
     if buffer {
         buffer_settings := get_settings(buffer);
-        if buffer_settings != *config.settings {
+        if buffer_settings != *context.config.settings {
             buffer_settings.draw_indent_guides = !buffer_settings.draw_indent_guides;
             return;
         }
     }
 
-    config.settings.draw_indent_guides = !config.settings.draw_indent_guides;
+    context.config.settings.draw_indent_guides = !context.config.settings.draw_indent_guides;
 }
 
 action_copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {

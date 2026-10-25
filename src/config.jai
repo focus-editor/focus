@@ -125,8 +125,8 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
 
     // Replace the config if changed
     diff: Config_Diff;
-    if config {
-        diff = get_config_diff(config, new_config);
+    if context.config {
+        diff = get_config_diff(context.config, new_config);
     } else {
         diff.changed = true;
         diff.settings_changed = true;
@@ -195,11 +195,7 @@ clamp_config_values :: (new_config: *Config) {
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
     publish_new_config_snapshot(new_config);
-    release_config_snapshot(context.config_snapshot);
-    context.config_snapshot = acquire_current_config_snapshot();
-    context.config = *context.config_snapshot.config;
-
-    config = context.config;  // TODO: remove when the migration is done
+    context_refresh_config_snapshot();
 
     // It's safe to replace global_config and project_config like this, because only the main thread
     // should use them. Actual config no longer borrows memory from these.
@@ -227,10 +223,10 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
     }
 
     if diff.settings_changed || diff.file_specific_settings_changed {
-        build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
-        build_panel_height = config.settings.build_panel_height_percent / 100.0;
+        build_panel_width  = context.config.settings.build_panel_width_percent  / 100.0;
+        build_panel_height = context.config.settings.build_panel_height_percent / 100.0;
         build_panel_height_anim.target = build_panel_height;
-        build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
+        build_panel_set_line_wrap(context.config.settings.build_panel_line_wrap_always_on);
 
         // Recalculate all file-specific settings
         for * open_buffers {
@@ -267,7 +263,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
         }
     }
 
-    if !config.settings.enable_temporary_editors then make_all_editors_permanent();
+    if !context.config.settings.enable_temporary_editors then make_all_editors_permanent();
 
     init_fonts_and_dependent_things();
 
@@ -508,7 +504,7 @@ is_current_project_config :: inline (path: string) -> bool {
 }
 
 is_current_theme :: (path: string) -> bool {
-    return config.style.theme && platform_path_equals(path, tprint("%/%.focus-theme", themes_dir, config.style.theme));
+    return context.config.style.theme && platform_path_equals(path, tprint("%/%.focus-theme", themes_dir, context.config.style.theme));
 }
 
 close_project :: () {
@@ -792,13 +788,9 @@ font_cache: Table(string, Loaded_Font);  // path -> loaded font
 
 #scope_export
 
-// Currently active config
-config: *Config;
-
 // Info about currently loaded configs, useful when reloading etc.
 global_config:  Loaded_Config;
 project_config: Loaded_Config;
-
 
 Config :: struct {
     memory_pool: *Flat_Pool;
@@ -1130,11 +1122,11 @@ get_settings :: inline (buffer: Buffer) -> *Settings {
     defer unlock(*buffer.content_lock);
 
     if buffer.settings != null return buffer.settings;
-    return *config.settings;
+    return *context.config.settings;
 }
 
 recalculate_settings :: (buffer: *Buffer) {
-    aggregate_settings, has_file_specific_settings := resolve_settings(config, buffer);
+    aggregate_settings, has_file_specific_settings := resolve_settings(context.config, buffer);
 
     lock(*buffer.content_lock);
     {

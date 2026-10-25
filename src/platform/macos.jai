@@ -156,7 +156,7 @@ platform_set_border_color :: inline () {
 
     appearance_name : string;
 
-    if config.settings.colored_titlebar {
+    if context.config.settings.colored_titlebar {
         bg := map_color_to_vec4(.BACKGROUND_0);
 
         // There is no way to set the color of the title bar directly. Instead we set the titlebar as
@@ -176,7 +176,7 @@ platform_set_border_color :: inline () {
         hsp := sqrt(bg.x * bg.x * .299 + bg.y * bg.y * .587 + bg.z * bg.z * .114) * 256.0;
         appearance_name = ifx hsp < 130 then dark_string else light_string;
     } else {
-        appearance_name = ifx config.settings.dark_titlebar then dark_string else light_string;
+        appearance_name = ifx context.config.settings.dark_titlebar then dark_string else light_string;
 
         NSWindow.setTitlebarAppearsTransparent(window, NO);
     }

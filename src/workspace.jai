@@ -1,5 +1,5 @@
 init_workspace :: () {
-    for path : config.workspace.members {
+    for path : context.config.workspace.members {
         if file_exists(path) && !is_directory(path) {
             add_file_to_workspace(path);
         } else {
@@ -31,7 +31,7 @@ init_workspace :: () {
     }
 
     // Change working directory to the first directory in the list
-    working_dir := get_working_directory_from_workspace(config.workspace.members);
+    working_dir := get_working_directory_from_workspace(context.config.workspace.members);
     if working_dir {
         set_working_directory(working_dir);
     } else {

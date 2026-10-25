@@ -168,15 +168,15 @@ key_sequence_input_in_progress :: inline () -> bool {
 
 get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
     #if Action == Action_Common {
-        return config.keymap.common;
+        return context.config.keymap.common;
     } else #if Action == Action_Editors {
-        return config.keymap.editors;
+        return context.config.keymap.editors;
     } else #if Action == Action_Open_File_Dialog {
-        return config.keymap.open_file_dialog;
+        return context.config.keymap.open_file_dialog;
     } else #if Action == Action_Search_Dialog {
-        return config.keymap.search_dialog;
+        return context.config.keymap.search_dialog;
     } else #if Action == Action_Build {
-        return config.build.keymap;
+        return context.config.build.keymap;
     } else {
         #assert(false, "In map_event_to_action, the passed action type is not supported.");
     }
