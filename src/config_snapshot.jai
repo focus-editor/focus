@@ -16,13 +16,6 @@ publish_new_config_snapshot :: (new_config: Config) {  // only done from the mai
     unlock(*config_snapshots.lock);
 }
 
-context_refresh_config_snapshot :: () {
-    new_snapshot := acquire_current_config_snapshot();
-    release_config_snapshot(context.config_snapshot);
-    context.config_snapshot = new_snapshot;
-    context.config = *new_snapshot.config;
-}
-
 acquire_current_config_snapshot :: () -> *Config_Snapshot {
     current_snapshot: *Config_Snapshot;
 

@@ -15,6 +15,15 @@ init_finder :: () {
 
 deinit_finder :: () {
     if finder.initted shutdown(*thread_group);
+
+    // These tasks are also tracked in outstanding_tasks.
+    array_reset_keeping_memory(*finder.request.completed_tasks);
+
+    while outstanding_tasks.count {
+        free_task(outstanding_tasks[outstanding_tasks.count - 1]);
+    }
+
+    reset_search_request(*finder.request, "", "", "");
     reset_results();
     text_input_fully_clear(*finder.input);
     finder.initted = false;
@@ -335,7 +344,9 @@ start_new_search :: (force := false) {
         task.case_sensitive = request.case_sensitive;
         task.whole_word = request.whole_word;
         task.regex_search = request.regex_search;
+        task.config_snapshot = acquire_current_config_snapshot();
 
+        array_add(*outstanding_tasks, task);
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
 
@@ -347,6 +358,9 @@ start_new_search :: (force := false) {
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     using task := cast(*Search_Task) work;
+
+    context.config_snapshot = task.config_snapshot;
+    context.config = *context.config_snapshot.config;
 
     regex: re.Regexp;
     if regex_search {
@@ -524,10 +538,15 @@ reset_results :: () {
 }
 
 free_task :: (task: *Search_Task) {
+    found, index := array_find(outstanding_tasks, task);
+    assert(found);
+    array_unordered_remove_by_index(*outstanding_tasks, index);
+
     free(task.needle);
     free(task.include);
     free(task.exclude);
     array_free(task.skip_table);
+    release_config_snapshot(task.config_snapshot);
     free(task);
 }
 
@@ -628,7 +647,11 @@ Search_Task :: struct {
     num_results: s64;
     results: [MAX_RESULTS_PER_TASK] Search_Result;
     worker_limit_reached: bool;
+
+    config_snapshot: *Config_Snapshot;
 }
+
+outstanding_tasks: [..] *Search_Task;
 
 thread_group: Thread_Group;
 

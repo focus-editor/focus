@@ -360,6 +360,11 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
 #scope_file
 
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    new_snapshot := acquire_current_config_snapshot();
+    context.config_snapshot = new_snapshot;
+    context.config = *new_snapshot.config;
+    defer release_config_snapshot(context.config_snapshot);
+
     reset(*scan_memory_pool);
     scan_pool_allocator := get_scan_pool_allocator();
     table_reset(*file_list_table);
@@ -391,6 +396,11 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 }
 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    new_snapshot := acquire_current_config_snapshot();
+    context.config_snapshot = new_snapshot;
+    context.config = *new_snapshot.config;
+    defer release_config_snapshot(context.config_snapshot);
+
     file_range := cast(*[] string) work;
 
     for path : file_range.* {

@@ -195,7 +195,11 @@ clamp_config_values :: (new_config: *Config) {
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
     publish_new_config_snapshot(new_config);
-    context_refresh_config_snapshot();
+
+    new_snapshot := acquire_current_config_snapshot();
+    release_config_snapshot(context.config_snapshot);
+    context.config_snapshot = new_snapshot;
+    context.config = *new_snapshot.config;
 
     // It's safe to replace global_config and project_config like this, because only the main thread
     // should use them. Actual config no longer borrows memory from these.
