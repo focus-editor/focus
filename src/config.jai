@@ -258,7 +258,13 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
 
     platform_apply_config();
 
-    update_window_title();
+    {
+        editor_id := get_active_editor_id();
+        if editor_id < 0 then editor_id = get_visible_editor_id(editors.active_pane);
+
+        buffer_id := ifx editor_id >= 0 then open_editors[editor_id].buffer_id else -1;
+        update_window_title(buffer_id);
+    }
 
     array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
                                                        //       keep pointers to old keymaps when the config is reloaded
