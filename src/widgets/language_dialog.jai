@@ -26,7 +26,7 @@ apply_selected_language :: (_: Editor_Placement) {
     if !buffer return;
 
     result := filtered[selected];
-    buffer.lang = result.details.value;
+    set_buffer_language(buffer, result.details.value);
 
     retokenize(buffer);
     recalculate_settings(buffer);

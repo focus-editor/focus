@@ -222,6 +222,19 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
 
+    // Update languages before any settings-dependent refreshes.
+    if diff.file_associations_changed {
+        for * buffer : open_buffers {
+            if !buffer.has_file continue;
+            lang := get_lang_from_path(buffer.file.full_path);
+            if lang != buffer.lang {
+                set_buffer_language(buffer, lang);
+                recalculate_settings(buffer);
+                buffer.needs_tokenizing = true;
+            }
+        }
+    }
+
     if diff.tab_size_changed {
         // Refresh all editors which have line wrap on
         for * editor : open_editors {
@@ -258,18 +271,6 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
         should_reload_workspace = true;
     }
 
-    if diff.file_associations_changed {
-        // Reassign languages for all buffers in the workspace
-        for * buffer : open_buffers {
-            if !buffer.has_file continue;
-            lang := get_lang_from_path(buffer.file.full_path);
-            if lang != buffer.lang {
-                buffer.lang = lang;
-                recalculate_settings(buffer);
-                buffer.needs_tokenizing = true;
-            }
-        }
-    }
 
     if !context.config.settings.enable_temporary_editors then make_all_editors_permanent();
 
@@ -1137,20 +1138,27 @@ Buffer_Settings_Cache :: struct {
     }
 }
 
+
 get_settings :: (buffer: Buffer) -> *Settings {
-    found, settings := table_find(*context.buffer_settings_cache.table, buffer.id);
-    if !found {
+    // Use the original buffer's mutex and metadata, not the copy
+    original := *open_buffers[buffer.id];
+    lock(*original.settings_lock);
+    defer unlock(*original.settings_lock);
+
+    found, entry := table_find(*context.buffer_settings_cache.table, buffer.id);
+    if !found || entry.revision != original.settings_revision {
         // Update the cache
-        resolved_settings, has_file_specific_settings := resolve_settings(context.config, buffer);
+        entry = Buffer_Settings_Cache.Entry.{ settings = null, revision = original.settings_revision };
+        resolved_settings, has_file_specific_settings := resolve_settings(context.config, original);
         if has_file_specific_settings {
-            settings = New(Settings,, allocator_of(*context.buffer_settings_cache.memory_pool));
-            settings.* = resolved_settings;
+            entry.settings = New(Settings,, allocator_of(*context.buffer_settings_cache.memory_pool));
+            entry.settings.* = resolved_settings;
         } else {
-            settings = *context.config.settings;
+            entry.settings = *context.config.settings;
         }
-        table_set(*context.buffer_settings_cache.table, buffer.id, settings);
+        table_set(*context.buffer_settings_cache.table, buffer.id, entry);
     }
-    return settings;
+    return entry.settings;
 }
 
 buffer_settings_cache_clear :: () {
@@ -1163,8 +1171,19 @@ buffer_settings_cache_destroy :: () {
     fini(*context.buffer_settings_cache.memory_pool);
 }
 
+set_buffer_language :: (buffer: *Buffer, lang: Buffer.Lang) {
+    lock(*buffer.settings_lock);
+    if buffer.lang != lang {
+        buffer.lang = lang;
+        buffer.settings_revision += 1;
+    }
+    unlock(*buffer.settings_lock);
+}
+
 recalculate_settings :: (buffer: *Buffer) {
+    lock(*buffer.settings_lock);
     aggregate_settings, has_file_specific_settings := resolve_settings(context.config, buffer);
+    unlock(*buffer.settings_lock);
 
     lock(*buffer.content_lock);
     {
@@ -1179,30 +1198,25 @@ recalculate_settings :: (buffer: *Buffer) {
     unlock(*buffer.content_lock);
 }
 
-resolve_settings :: (config: Config, buffer: Buffer) -> Settings, has_file_specific_settings: bool {
+resolve_settings :: (config: Config, buffer: *Buffer) -> Settings, has_file_specific_settings: bool {
     result := config.settings;
     has_file_specific_settings := false;
 
-    lang := ifx buffer.has_file then get_lang_from_path(buffer.file.full_path, *config) else buffer.lang;
-
     for * config.file_specific_settings {
-        // Check if there are any file-specific settings for this buffer
-        if buffer_matches_file_specific_rules(buffer, lang, it.match_rules) {
-            _override_settings(*result, it.overrides);
-            has_file_specific_settings = true;
-        }
+        if !buffer_matches_file_specific_rules(buffer, it.match_rules) continue;
+        _override_settings(*result, it.overrides);
+        has_file_specific_settings = true;
     }
 
     return result, has_file_specific_settings;
 }
 
-buffer_matches_file_specific_rules :: (buffer: Buffer, lang: Buffer.Lang, match_rules: File_Specific_Settings.Match_Rules) -> bool {
-    // We have to pass lang separately because when calculating buffer settings we might not have the correct lang stored in buffer.lang
-    if array_find(match_rules.langs, lang) return true;
-    if buffer.has_file {
-        for match_rules.wildcards  {
-            if path_wildcard_match(buffer.file.name, it) || path_wildcard_match(buffer.file.full_path, it)  return true;
-        }
+buffer_matches_file_specific_rules :: (buffer: *Buffer, match_rules: File_Specific_Settings.Match_Rules) -> bool {
+    if array_find(match_rules.langs, buffer.lang) return true;
+    if !buffer.has_file return false;
+
+    for match_rules.wildcards {
+        if path_wildcard_match(buffer.file.name, it) || path_wildcard_match(buffer.file.full_path, it) return true;
     }
     return false;
 }

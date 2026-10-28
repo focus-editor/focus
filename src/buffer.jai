@@ -752,9 +752,12 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
 
     if !buffer.has_file && !buffer.readonly {
         // We're saving a new buffer into a file (and the path has been chosen already)
+        lock(*buffer.settings_lock);
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(file_path);
         buffer.lang = get_lang_from_path(file_path);
+        buffer.settings_revision += 1;
+        unlock(*buffer.settings_lock);
         recalculate_settings(buffer);
         buffer.needs_tokenizing = true;
 
@@ -1195,7 +1198,6 @@ create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     buffer_id := open_buffers.count;
     buffer := bucket_array_add(*open_buffers);
     init_buffer(buffer, buffer_id);
-    buffer.has_file = false;
 
     if context.config.settings.line_endings == .crlf {
         buffer.crlf = true;
@@ -1243,6 +1245,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         buffer.binary = true;
     }
 
+    lock(*buffer.settings_lock);
     if load_error {
         free(file_data);
         file_data = load_error;
@@ -1255,6 +1258,8 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     // Fill in buffer data
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
+    buffer.settings_revision += 1;
+    unlock(*buffer.settings_lock);
     remember_last_mod_info(buffer);
 
     lock(*buffer.content_lock);
@@ -1822,7 +1827,12 @@ Buffer :: struct {
 
     cursors: Array(Cursor);  // cursor state before any current edits were made
 
-    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings TODO: remove
+    // Protects settings_revision, lang, has_file, and the file fields used to resolve settings.
+    // Do not acquire content_lock while holding settings_lock.
+    settings_lock: Mutex;
+    settings_revision: u64;
+    // TODO: remove
+    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 

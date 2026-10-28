@@ -257,7 +257,10 @@ reload_workspace :: (automatic := false) {
             if buffer.has_file {
                 table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
                 start_watching_file_if_not_already(buffer.file.full_path);
+                lock(*buffer.settings_lock);
                 buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
+                buffer.settings_revision += 1;
+                unlock(*buffer.settings_lock);
                 array_add(*buffers_to_refresh_from_disk, new_buffer_id);
             }
             recalculate_settings(buffer);

@@ -6,7 +6,7 @@ init_build_system :: () {
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
     buffer.readonly = true;
     buffer.internal = true;
-    buffer.lang = .Focus_Build_Panel;
+    set_buffer_language(buffer, .Focus_Build_Panel);
     if context.config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
     commands_refresh_after_config_change();
