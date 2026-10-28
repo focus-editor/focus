@@ -70,7 +70,7 @@ cleanup_old_config_snapshots :: () {
 // Thread-safety:
 // When the config is changed we publish a new snapshot, then threads can safely use their old snapshots
 // without risking memory unsafe behaviour.
-// Each thread, including the main thread, will have a reference to their config via context.config.
+// Each thread, including the main thread, will have a pointer to their snapshot's config via context.config.
 config_snapshots: struct {
     array: [..] *Config_Snapshot;
     current: *Config_Snapshot;

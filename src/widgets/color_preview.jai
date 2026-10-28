@@ -148,7 +148,6 @@ color_preview_set_language :: (lang_id: int) {
 
     editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
     set_buffer_language(buffer, languages[lang_id].lang);
-    recalculate_settings(buffer);
 
     close_search_bar(editor);
     reset_search_results(*editor.search_bar);

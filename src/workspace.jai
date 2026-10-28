@@ -122,8 +122,19 @@ start_workspace_scan :: () {
     file_list_thread_group.logging = false;
     for * file_list_thread_group.worker_info { it.thread.starting_context.logger_data = context.logger_data; }
 
+    // Use one config snapshot for the duration of the scan
+    assert(scan_config_snapshot == null);
+    scan_config_snapshot = acquire_current_config_snapshot();
+
     start(*file_list_thread_group);
     add_work(*file_list_thread_group, cast(*void) 0);  // a dummy piece of work
+}
+
+complete_workspace_scan :: () {
+    workspace_scan_complete = true;
+    reset(*scan_memory_pool);
+    release_config_snapshot(scan_config_snapshot);
+    scan_config_snapshot = null;
 }
 
 get_workspace_scan_progress :: () -> float {
@@ -156,7 +167,7 @@ workspace_update :: () {
 
                 files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
                 num_ranges  := (files_to_scan.count / files_per_thread) + 1;
-                file_ranges := NewArray(num_ranges, [] string,, allocator = get_scan_pool_allocator());
+                file_ranges := NewArray(num_ranges, [] string,, allocator = allocator_of(*scan_memory_pool));
 
                 for 0..num_ranges-1 {
                     file_range := *file_ranges[it];
@@ -181,11 +192,10 @@ workspace_update :: () {
 
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
-            workspace_scan_complete = true;
             shutdown(*scanner_thread_group);
             scanner_thread_group = Thread_Group.{};
 
-            reset(*scan_memory_pool);
+            complete_workspace_scan();
 
             start_file_watcher();
             init_open_file_dialog();
@@ -207,13 +217,11 @@ abort_workspace_scanning_and_shut_down_threads :: () {
         scanner_thread_group = Thread_Group.{};
     }
 
-    workspace_scan_complete = true;
+    complete_workspace_scan();
 }
 
 reload_workspace :: (automatic := false) {
-    // Make sure no threads are running
-    if file_list_thread_group.initted then shutdown(*file_list_thread_group);
-    if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
+    abort_workspace_scanning_and_shut_down_threads();
 
     // Deinit things
     deinit_finder();
@@ -263,10 +271,20 @@ reload_workspace :: (automatic := false) {
                 unlock(*buffer.settings_lock);
                 array_add(*buffers_to_refresh_from_disk, new_buffer_id);
             }
-            recalculate_settings(buffer);
 
             buffer.id = new_buffer_id;
-            bucket_array_add(*new_open_buffers, buffer.*);
+
+            destroy(*buffer.content_lock);
+            destroy(*buffer.settings_lock);
+
+            buffer.content_lock = .{};
+            buffer.settings_lock = .{};
+
+            new_buffer := bucket_array_add(*new_open_buffers);
+            new_buffer.* = buffer.*;
+
+            init(*new_buffer.content_lock);
+            init(*new_buffer.settings_lock);
 
             if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
                 array_add(*new_most_recent_buffers, new_buffer_id);
@@ -364,12 +382,11 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
 #scope_file
 
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    new_snapshot := acquire_current_config_snapshot();
-    context_set_config_snapshot(new_snapshot);
-    defer release_config_snapshot(context.config_snapshot);
+    context_set_config_snapshot(scan_config_snapshot);
+    defer buffer_settings_cache_destroy();
 
     reset(*scan_memory_pool);
-    scan_pool_allocator := get_scan_pool_allocator();
+    scan_pool_allocator := allocator_of(*scan_memory_pool);
     table_reset(*file_list_table);
 
     array_reset(*files_to_scan);
@@ -399,9 +416,8 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 }
 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    new_snapshot := acquire_current_config_snapshot();
-    context_set_config_snapshot(new_snapshot);
-    defer release_config_snapshot(context.config_snapshot);
+    context_set_config_snapshot(scan_config_snapshot);
+    defer buffer_settings_cache_destroy();
 
     file_range := cast(*[] string) work;
 
@@ -423,15 +439,10 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
 
 #scope_file
 
-get_scan_pool_allocator :: () -> Allocator {
-    a: Allocator;
-    a.proc = flat_pool_allocator_proc;
-    a.data = *scan_memory_pool;
-    return a;
-}
-
 file_list_thread_group:     Thread_Group;
 scanner_thread_group:       Thread_Group;
+
+scan_config_snapshot: *Config_Snapshot;
 
 scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;

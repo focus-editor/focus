@@ -281,8 +281,7 @@ main :: () {
 
         maybe_save_cursor_history();
 
-        // TODO: enable this when config migration to snapshots is finished
-        // cleanup_old_config_snapshots();
+        cleanup_old_config_snapshots();
 
         reset_temporary_storage();
 
@@ -1122,6 +1121,7 @@ focus_allocator: Allocator;
 #load "utils/utils.jai";
 #load "utils/unicode.jai";
 #load "utils/rw_lock.jai";
+#load "utils/threadsafe_table.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/generic_confirm_dialog.jai";

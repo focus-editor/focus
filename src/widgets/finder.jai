@@ -360,6 +360,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     using task := cast(*Search_Task) work;
 
     context_set_config_snapshot(task.config_snapshot);
+    defer buffer_settings_cache_destroy();
 
     regex: re.Regexp;
     if regex_search {

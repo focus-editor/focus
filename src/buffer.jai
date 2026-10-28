@@ -758,7 +758,6 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         buffer.lang = get_lang_from_path(file_path);
         buffer.settings_revision += 1;
         unlock(*buffer.settings_lock);
-        recalculate_settings(buffer);
         buffer.needs_tokenizing = true;
 
         lock(*open_buffers_lock);
@@ -1273,8 +1272,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     rescan_for_lines(buffer);
     retokenize(buffer);
 
-    recalculate_settings(buffer);
-
     // These values will be overwritten later if `detect_intentation` is true
     buffer_settings := get_settings(buffer);
     buffer.indentation.type = buffer_settings.indent_using;
@@ -1572,7 +1569,6 @@ free_buffer :: (using buffer: *Buffer) {
     free(redos);
     free(edits);
     free(cursors);
-    free(settings);
 
     if has_file && file.full_path then free(file.full_path);
 
@@ -1831,8 +1827,6 @@ Buffer :: struct {
     // Do not acquire content_lock while holding settings_lock.
     settings_lock: Mutex;
     settings_revision: u64;
-    // TODO: remove
-    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 

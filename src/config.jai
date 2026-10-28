@@ -120,7 +120,7 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
         if project_config.loaded {
             log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
             merge_configs(*new_config, project_config.parsed_config);
-            new_config.project_path = copy_string(new_project.path,, pool_allocator);
+            new_config.project_path = copy_string(project_config.path,, pool_allocator);
         } else {
             log_error("Not using project config because it failed to load and there was no previous version");
         }
@@ -143,30 +143,22 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
         diff.changed = true;
     }
 
+    // Remember this before transferring ownership out of new_project.
+    remember_project := new_project && new_project.loaded;
+
+    // Keep the latest parsed sources even when their changes are masked by overrides.
+    replace_loaded_config(*global_config,  new_global);
+    replace_loaded_config(*project_config, new_project);
+
     if diff.changed {
+        if remember_project then add_to_most_recent_projects(project_config.path);
+
         build_comment_words_automaton(*new_config,, pool_allocator);
-        replace_and_apply_config(new_config, diff, new_global, new_project);
+        replace_and_apply_config(new_config, diff);
     }
     else {
         log("Merged config unchanged, skip applying");
         free_config(*new_config);
-
-        // Keep the latest parsed sources even when their changes are currently masked by overrides.
-        if new_global != *global_config {
-            if new_global.loaded {
-                global_config = new_global.*;
-            } else {
-                free_loaded_config(new_global);
-            }
-        }
-
-        if new_project && new_project != *project_config {
-            if new_project.loaded {
-                project_config = new_project.*;
-            } else {
-                free_loaded_config(new_project);
-            }
-        }
     }
 
     return diff.changed;
@@ -198,23 +190,12 @@ clamp_config_values :: (new_config: *Config) {
     if settings.window_y      != -1000 Clamp(*settings.window_y,     -500, 3000);
 }
 
-replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: *Loaded_Config, new_project: *Loaded_Config) {
+replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
     publish_new_config_snapshot(new_config);
 
     new_snapshot := acquire_current_config_snapshot();
     release_config_snapshot(context.config_snapshot);
     context_set_config_snapshot(new_snapshot);
-
-    // It's safe to replace global_config and project_config like this, because only the main thread
-    // should use them. Actual config no longer borrows memory from these.
-    // TODO: should we free them first before replacing? @nocheckin
-    global_config = new_global.*;
-    if new_project && new_project.loaded {
-        add_to_most_recent_projects(new_project.path);
-        project_config = new_project.*;
-    } else {
-        project_config.loaded = false;
-    }
 
     // Apply new config
 
@@ -229,8 +210,6 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
             lang := get_lang_from_path(buffer.file.full_path);
             if lang != buffer.lang {
                 set_buffer_language(buffer, lang);
-                recalculate_settings(buffer);
-                buffer.needs_tokenizing = true;
             }
         }
     }
@@ -248,11 +227,6 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
         build_panel_height = context.config.settings.build_panel_height_percent / 100.0;
         build_panel_height_anim.target = build_panel_height;
         build_panel_set_line_wrap(context.config.settings.build_panel_line_wrap_always_on);
-
-        // Recalculate all file-specific settings
-        for * open_buffers {
-            recalculate_settings(it);
-        }
 
         // In case indentation rules changed, refresh them for all open editors
         for editor : open_editors {
@@ -641,16 +615,33 @@ get_current_project_dir :: () -> string {
     return trim_right(path_strip_filename(project_config.path), "/");
 }
 
+replace_loaded_config :: (dst: *Loaded_Config, src: *Loaded_Config) {
+    if dst == src return;
+
+    // A failed config must not replace the previously valid one
+    if src && !src.loaded {
+        free_loaded_config(src);
+        return;
+    }
+
+    free_loaded_config(dst);
+
+    if src {
+        dst.* = src.*;
+        src.* = .{};
+    }
+}
+
 free_loaded_config :: (using loaded_config: *Loaded_Config) {
     if loaded_config == null return;
 
-    path = "<freed>";
-    parsed_config = Parsed_Config.{};
     if memory_pool {
         fini(memory_pool);
         free(memory_pool);
         memory_pool = null;
     }
+
+    loaded_config.* = .{};
 }
 
 free_config :: (config: *Config) {
@@ -1138,10 +1129,10 @@ Buffer_Settings_Cache :: struct {
     }
 }
 
-
+// NOTE: pointers returned by this function will live until this thread's settings cache is cleared or destroyed.
+// Do not store them anywhere.
 get_settings :: (buffer: Buffer) -> *Settings {
-    // Use the original buffer's mutex and metadata, not the copy
-    original := *open_buffers[buffer.id];
+    original := *open_buffers[buffer.id];  // use the original buffer's mutex and metadata, not the copy
     lock(*original.settings_lock);
     defer unlock(*original.settings_lock);
 
@@ -1156,46 +1147,29 @@ get_settings :: (buffer: Buffer) -> *Settings {
         } else {
             entry.settings = *context.config.settings;
         }
-        table_set(*context.buffer_settings_cache.table, buffer.id, entry);
+        table_set(*context.buffer_settings_cache.table, buffer.id, entry,, allocator_of(*context.buffer_settings_cache.memory_pool));
     }
     return entry.settings;
 }
 
 buffer_settings_cache_clear :: () {
-    table_reset_keeping_memory(*context.buffer_settings_cache.table);
+    table_reset(*context.buffer_settings_cache.table);
     reset(*context.buffer_settings_cache.memory_pool);
 }
 
 buffer_settings_cache_destroy :: () {
-    deinit(*context.buffer_settings_cache.table);
     fini(*context.buffer_settings_cache.memory_pool);
+    context.buffer_settings_cache = .{};
 }
 
 set_buffer_language :: (buffer: *Buffer, lang: Buffer.Lang) {
     lock(*buffer.settings_lock);
     if buffer.lang != lang {
         buffer.lang = lang;
+        buffer.needs_tokenizing = true;
         buffer.settings_revision += 1;
     }
     unlock(*buffer.settings_lock);
-}
-
-recalculate_settings :: (buffer: *Buffer) {
-    lock(*buffer.settings_lock);
-    aggregate_settings, has_file_specific_settings := resolve_settings(context.config, buffer);
-    unlock(*buffer.settings_lock);
-
-    lock(*buffer.content_lock);
-    {
-        if has_file_specific_settings {
-            if buffer.settings == null then buffer.settings = New(Settings, initialized = false,, focus_allocator);
-            buffer.settings.* = aggregate_settings;
-        } else if buffer.settings != null {
-            free(buffer.settings,, focus_allocator);
-            buffer.settings = null;
-        }
-    }
-    unlock(*buffer.content_lock);
 }
 
 resolve_settings :: (config: Config, buffer: *Buffer) -> Settings, has_file_specific_settings: bool {

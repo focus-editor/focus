@@ -29,7 +29,6 @@ apply_selected_language :: (_: Editor_Placement) {
     set_buffer_language(buffer, result.details.value);
 
     retokenize(buffer);
-    recalculate_settings(buffer);
 }
 
 language_dialog_on_show :: () {
