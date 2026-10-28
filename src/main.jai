@@ -409,14 +409,14 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
     assert(command_id <= context.config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, context.config.build.commands.count);
 
     if context.config.settings.save_all_file_backed_buffers_on_build {
-        for * buffer, buffer_id : open_buffers {
+        for * buffer : open_buffers {
             if buffer.modified && buffer.has_file {
-                save_buffer(buffer, buffer_id);
+                save_buffer(buffer);
             }
         }
     } else if context.config.settings.save_current_buffer_on_build {
         editor, buffer := get_visible_editor_and_buffer();
-        if editor && buffer.has_file save_buffer(buffer, editor.buffer_id);
+        if editor && buffer.has_file save_buffer(buffer);
     }
 
     defer_action_build_command(command_id);

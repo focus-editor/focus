@@ -245,7 +245,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .create_cursor_above;              action_create_cursor                    (editor, buffer, .above);   keep_selection = true;
         case .create_cursor_below;              action_create_cursor                    (editor, buffer, .below);   keep_selection = true;
         case .create_cursors_around;            create_cursors_around                   (editor, buffer);           keep_selection = true;
-        case .strip_trailing_whitespace;        strip_trailing_whitespace               (buffer, editor.buffer_id); keep_selection = true;
+        case .strip_trailing_whitespace;        strip_trailing_whitespace               (buffer); keep_selection = true;
 
         case .choose_language;                  show_dialog                             (*language_dialog);
 
@@ -254,8 +254,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
         case .indentation_detect_from_buffer_contents;  indentation_detect_from_buffer_contents (buffer);
         case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
-        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer, editor.buffer_id);
-        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer, editor.buffer_id);
+        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer);
+        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer);
 
         // Actions that do something per cursor
         case .move_left;                         move_cursors_left                   (editor, buffer, by = .by_character,           shift_pressed);
@@ -2272,15 +2272,17 @@ deinit_buffers :: () {
     }
     deinit(*buffers_table);
     array_reset_keeping_memory(*most_recent_buffers);
+    buffer_settings_cache_clear();
 }
 
-get_lang_from_path :: (full_path: string) -> Buffer.Lang {
+get_lang_from_path :: (full_path: string, config: *Config = null) -> Buffer.Lang {
     lang: Buffer.Lang = .Plain_Text;
 
     path_, basename, extension, basename_with_extension := path_decomp(full_path);
 
     // Try to get lang from the user-provided mapping first
-    for context.config.workspace.file_associations {
+    active_config := ifx config then config else context.config;
+    for active_config.workspace.file_associations {
         if path_wildcard_match(basename_with_extension, it.wildcard) return it.lang;
     }
 

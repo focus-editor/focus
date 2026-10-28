@@ -345,7 +345,7 @@ refresh_entries :: (clear_input := true) {
     // This bit will be set when we want to make sure an entry appears on top
     top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
 
-    maybe_add_a_buffer_entry :: (buffer: Buffer, buffer_id: s64) #expand {
+    maybe_add_a_buffer_entry :: (buffer: Buffer) #expand {
         // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
         if (buffer.deleted && !buffer.modified) || buffer.internal continue;
 
@@ -356,7 +356,7 @@ refresh_entries :: (clear_input := true) {
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*entries.filtered);
-        entry.buffer_id = buffer_id;
+        entry.buffer_id = buffer.id;
         entry.file = buffer.file;
         entry.entry_name = buffer_name;
         if !buffer.has_file {
@@ -368,7 +368,7 @@ refresh_entries :: (clear_input := true) {
 
         // Sort open editors on top
         // @speed: could become slow if too many open buffers
-        _, most_recent_buffer_index := array_find(most_recent_buffers, buffer_id);
+        _, most_recent_buffer_index := array_find(most_recent_buffers, buffer.id);
         if most_recent_buffer_index >= 0 {
             most_recent_buffer_index = most_recent_buffers.count - most_recent_buffer_index;
         } else {
@@ -489,14 +489,14 @@ refresh_entries :: (clear_input := true) {
 
         case .search;
             // When there's text in the filter input, search in all workspace buffers
-            for buffer, buffer_id : open_buffers {
-                maybe_add_a_buffer_entry(buffer, buffer_id);
+            for buffer : open_buffers {
+                maybe_add_a_buffer_entry(buffer);
             }
 
         case .open_editors;
             for buffer_id : most_recent_buffers {
                 buffer := *open_buffers[buffer_id];
-                maybe_add_a_buffer_entry(buffer, buffer_id);
+                maybe_add_a_buffer_entry(buffer);
             }
     }
 

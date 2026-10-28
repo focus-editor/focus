@@ -1,3 +1,7 @@
+#add_context config: *Config;
+#add_context config_snapshot: *Config_Snapshot;
+#add_context buffer_settings_cache: Buffer_Settings_Cache;
+
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
 CURRENT_CONFIG_VERSION :: 25;
@@ -98,6 +102,7 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
 
     new_config: Config;
     new_config.memory_pool = New(Flat_Pool);
+    pool_allocator := allocator_of(new_config.memory_pool);
 
     if new_global.loaded {
         merge_configs(*new_config, new_global.parsed_config);
@@ -109,13 +114,13 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     if new_project && new_project.loaded {
         log("Using project config '%'", new_project.path);
         merge_configs(*new_config, new_project.parsed_config);
-        new_config.project_path = copy_string(new_project.path,, allocator_of(new_config.memory_pool));
+        new_config.project_path = copy_string(new_project.path,, pool_allocator);
     }
     else if new_project && !new_project.loaded {
         if project_config.loaded {
             log_error("Using previous project config version because the new one (%) failed to load", new_project.path);
             merge_configs(*new_config, project_config.parsed_config);
-            new_config.project_path = copy_string(new_project.path,, allocator_of(new_config.memory_pool));
+            new_config.project_path = copy_string(new_project.path,, pool_allocator);
         } else {
             log_error("Not using project config because it failed to load and there was no previous version");
         }
@@ -139,7 +144,7 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     }
 
     if diff.changed {
-        new_config.comment_words_automaton = build_comment_words_automaton(new_config,, allocator_of(new_config.memory_pool));
+        build_comment_words_automaton(*new_config,, pool_allocator);
         replace_and_apply_config(new_config, diff, new_global, new_project);
     }
     else {
@@ -198,8 +203,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff, new_global: 
 
     new_snapshot := acquire_current_config_snapshot();
     release_config_snapshot(context.config_snapshot);
-    context.config_snapshot = new_snapshot;
-    context.config = *new_snapshot.config;
+    context_set_config_snapshot(new_snapshot);
 
     // It's safe to replace global_config and project_config like this, because only the main thread
     // should use them. Actual config no longer borrows memory from these.
@@ -731,7 +735,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     dst.linux = deep_copy(parsed.linux);
 }
 
-build_comment_words_automaton :: (new_config: Config) -> Aho_Corasick_Automaton {
+build_comment_words_automaton :: (new_config: *Config) {
     highlight_words_settings := string.[
         new_config.settings.comment_highlight_words1,
         new_config.settings.comment_highlight_words2,
@@ -757,7 +761,7 @@ build_comment_words_automaton :: (new_config: Config) -> Aho_Corasick_Automaton 
         }
     }
 
-    return build_aho_corasick_automaton(words);
+    new_config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
 load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
@@ -1031,6 +1035,15 @@ operator== :: (a: Settings, b: Settings) -> bool {
     return true;
 }
 
+// Ideally we wouldn't have to do that, but Basic.array_add_if_unique is bugged right now
+array_add_if_unique :: (array: *[..] Settings, item: Settings) -> added: bool, index: int {
+    for array.* {
+        if item == it  return false, it_index;
+    }
+    array_add(array, item);
+    return true, array.count-1;
+}
+
 // Generate a struct for the settings that can be overridden
 #insert -> string {
     b: String_Builder;
@@ -1111,22 +1124,43 @@ operator== :: (a: File_Specific_Settings, b: File_Specific_Settings) -> bool {
     return a.match_rules == b.match_rules && a.overrides == b.overrides;
 }
 
-buffer_matches_file_specific_rules :: (buffer: Buffer, match_rules: File_Specific_Settings.Match_Rules) -> bool {
-    if array_find(match_rules.langs, buffer.lang) return true;
-    if buffer.has_file {
-        for match_rules.wildcards  {
-            if path_wildcard_match(buffer.file.name, it) || path_wildcard_match(buffer.file.full_path, it)  return true;
-        }
+// We lazily populate the buffer settings cache for each thread.
+// Based on our settings usage patterns it should be okay. Trying to do all this work
+// upfront and share between threads would result in more complexity.
+Buffer_Settings_Cache :: struct {
+    table: Table(s64, Entry);
+    memory_pool: Flat_Pool;
+
+    Entry :: struct {
+        settings: *Settings;
+        revision: u64;
     }
-    return false;
 }
 
-get_settings :: inline (buffer: Buffer) -> *Settings {
-    lock(*buffer.content_lock);
-    defer unlock(*buffer.content_lock);
+get_settings :: (buffer: Buffer) -> *Settings {
+    found, settings := table_find(*context.buffer_settings_cache.table, buffer.id);
+    if !found {
+        // Update the cache
+        resolved_settings, has_file_specific_settings := resolve_settings(context.config, buffer);
+        if has_file_specific_settings {
+            settings = New(Settings,, allocator_of(*context.buffer_settings_cache.memory_pool));
+            settings.* = resolved_settings;
+        } else {
+            settings = *context.config.settings;
+        }
+        table_set(*context.buffer_settings_cache.table, buffer.id, settings);
+    }
+    return settings;
+}
 
-    if buffer.settings != null return buffer.settings;
-    return *context.config.settings;
+buffer_settings_cache_clear :: () {
+    table_reset_keeping_memory(*context.buffer_settings_cache.table);
+    reset(*context.buffer_settings_cache.memory_pool);
+}
+
+buffer_settings_cache_destroy :: () {
+    deinit(*context.buffer_settings_cache.table);
+    fini(*context.buffer_settings_cache.memory_pool);
 }
 
 recalculate_settings :: (buffer: *Buffer) {
@@ -1149,8 +1183,11 @@ resolve_settings :: (config: Config, buffer: Buffer) -> Settings, has_file_speci
     result := config.settings;
     has_file_specific_settings := false;
 
+    lang := ifx buffer.has_file then get_lang_from_path(buffer.file.full_path, *config) else buffer.lang;
+
     for * config.file_specific_settings {
-        if buffer_matches_file_specific_rules(buffer, it.match_rules) {
+        // Check if there are any file-specific settings for this buffer
+        if buffer_matches_file_specific_rules(buffer, lang, it.match_rules) {
             _override_settings(*result, it.overrides);
             has_file_specific_settings = true;
         }
@@ -1159,6 +1196,16 @@ resolve_settings :: (config: Config, buffer: Buffer) -> Settings, has_file_speci
     return result, has_file_specific_settings;
 }
 
+buffer_matches_file_specific_rules :: (buffer: Buffer, lang: Buffer.Lang, match_rules: File_Specific_Settings.Match_Rules) -> bool {
+    // We have to pass lang separately because when calculating buffer settings we might not have the correct lang stored in buffer.lang
+    if array_find(match_rules.langs, lang) return true;
+    if buffer.has_file {
+        for match_rules.wildcards  {
+            if path_wildcard_match(buffer.file.name, it) || path_wildcard_match(buffer.file.full_path, it)  return true;
+        }
+    }
+    return false;
+}
 
 #scope_file
 

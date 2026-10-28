@@ -1,6 +1,3 @@
-#add_context config: *Config;
-#add_context config_snapshot: *Config_Snapshot;
-
 publish_new_config_snapshot :: (new_config: Config) {  // only done from the main thread
     snapshot := New(Config_Snapshot);
     snapshot.config = new_config;
@@ -27,6 +24,15 @@ acquire_current_config_snapshot :: () -> *Config_Snapshot {
     unlock(*config_snapshots.lock);
 
     return current_snapshot;
+}
+
+context_set_config_snapshot :: (snapshot: *Config_Snapshot) {
+    if context.config_snapshot == snapshot return;
+
+    context.config_snapshot = snapshot;
+    context.config = *context.config_snapshot.config;
+
+    buffer_settings_cache_clear();
 }
 
 release_config_snapshot :: (snapshot: *Config_Snapshot) {

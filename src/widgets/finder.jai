@@ -359,8 +359,7 @@ start_new_search :: (force := false) {
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     using task := cast(*Search_Task) work;
 
-    context.config_snapshot = task.config_snapshot;
-    context.config = *context.config_snapshot.config;
+    context_set_config_snapshot(task.config_snapshot);
 
     regex: re.Regexp;
     if regex_search {
@@ -405,9 +404,9 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
         if regex_search {
-            find_all_using_regex(task, regex, buffer, buffer_id, buffer_sort_key);
+            find_all_using_regex(task, regex, buffer, buffer_sort_key);
         } else {
-            find_all(task, buffer, buffer_id, buffer_sort_key);
+            find_all(task, buffer, buffer_sort_key);
         }
 
         if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; break; }
@@ -445,7 +444,7 @@ _buffer_matches_wildcards :: (buffer: Buffer, wildcards: [] string) -> bool {
     return false;
 }
 
-find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_sort_key: u64) {
     buffer_str := to_string(buffer.bytes);
 
     while true {
@@ -468,7 +467,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
 
         // Valid result, add to the list
         result := *results[num_results];
-        result.buffer_id    = buffer_id;
+        result.buffer_id    = xx buffer.id;
         result.match_offset = xx offset;
         result.match_count  = xx count;
 
@@ -480,7 +479,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
     }
 }
 
-find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+find_all :: (using task: *Search_Task, buffer: Buffer, buffer_sort_key: u64) {
     buffer_str := to_string(buffer.bytes);
     offset := 0;
 
@@ -494,7 +493,7 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_so
         if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
 
         result := *results[num_results];
-        result.buffer_id    = buffer_id;
+        result.buffer_id    = xx buffer.id;
         result.match_offset = xx offset;
         result.match_count  = xx needle.count;
 

@@ -262,6 +262,7 @@ reload_workspace :: (automatic := false) {
             }
             recalculate_settings(buffer);
 
+            buffer.id = new_buffer_id;
             bucket_array_add(*new_open_buffers, buffer.*);
 
             if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
@@ -361,8 +362,7 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
 
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     new_snapshot := acquire_current_config_snapshot();
-    context.config_snapshot = new_snapshot;
-    context.config = *new_snapshot.config;
+    context_set_config_snapshot(new_snapshot);
     defer release_config_snapshot(context.config_snapshot);
 
     reset(*scan_memory_pool);
@@ -397,8 +397,7 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     new_snapshot := acquire_current_config_snapshot();
-    context.config_snapshot = new_snapshot;
-    context.config = *new_snapshot.config;
+    context_set_config_snapshot(new_snapshot);
     defer release_config_snapshot(context.config_snapshot);
 
     file_range := cast(*[] string) work;

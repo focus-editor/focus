@@ -739,14 +739,14 @@ offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) 
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
 }
 
-save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
+save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
     // Two scenarios here:
     // 1. We're saving a new buffer to a file (in this case has_file=false)
     // 2. We're saving an existing buffer using "save as"
 
     if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
         log("Tried to 'save as' into the same file: %", file_path);
-        save_buffer(buffer, buffer_id);
+        save_buffer(buffer);
         return;
     }
 
@@ -762,7 +762,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         {
             found_existing, existing_buffer_id := table_find(*buffers_table, file_path);
             if found_existing {
-                assert(buffer_id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
+                assert(buffer.id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
                 // The user chose to save the buffer into an existing file. OK.
                 // Mark the old buffer as deleted and use the new one
                 removed := table_remove(*buffers_table, file_path);
@@ -772,14 +772,14 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
                 existing_buffer.modified = false;
                 existing_buffer.modified_on_disk = false;
 
-                reroute_editors_to_new_buffer(existing_buffer_id, buffer_id);
+                reroute_editors_to_new_buffer(existing_buffer_id, buffer.id);
             }
 
-            table_add(*buffers_table, copy_string(file_path), buffer_id);
+            table_add(*buffers_table, copy_string(file_path), buffer.id);
         }
         unlock(*open_buffers_lock);
 
-        save_buffer(buffer, buffer_id);
+        save_buffer(buffer);
     } else {
         // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
         buffer_contents := get_buffer_contents_for_writing(buffer);
@@ -796,7 +796,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
         if new_id < 0 return;  // logged elsewhere
 
-        reroute_editors_to_new_buffer(buffer_id, new_id);
+        reroute_editors_to_new_buffer(buffer.id, new_id);
         update_window_title(open_editors[get_active_editor_id()].buffer_id);
         update_most_recent_buffers(new_id);
     }
@@ -812,13 +812,13 @@ save :: (buffer_id: s64) {
         // Don't save without showing a confirmation dialog
         defer_action_overwrite_buffer(buffer_id);
     } else if buffer.has_file {
-        save_buffer(buffer, buffer_id);
+        save_buffer(buffer);
     } else {
         defer_action_save_as(buffer_id);
     }
 }
 
-save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
+save_buffer :: (using buffer: *Buffer) {
     if readonly return;
 
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
@@ -826,7 +826,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     buffer_settings := get_settings(buffer);
 
     if buffer_settings.strip_trailing_whitespace_on_save != .disabled {
-        strip_trailing_whitespace(buffer, buffer_id, except_lines_with_cursor = buffer_settings.strip_trailing_whitespace_on_save == .except_lines_with_cursor);
+        strip_trailing_whitespace(buffer, except_lines_with_cursor = buffer_settings.strip_trailing_whitespace_on_save == .except_lines_with_cursor);
     }
     if buffer_settings.insert_final_newline_on_save then insert_final_newline(buffer);  // important to do it after stripping
 
@@ -894,7 +894,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     return true;
 }
 
-strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_lines_with_cursor := false) {
+strip_trailing_whitespace :: (using buffer: *Buffer, except_lines_with_cursor := false) {
     auto_release_temp();
 
     tab_size := get_buffer_tab_size(buffer);
@@ -904,7 +904,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
     active_cursors: [] s32;
     {
         editor, _ := get_active_editor_and_buffer();
-        if editor && editor.buffer_id == buffer_id {
+        if editor && editor.buffer_id == buffer.id {
             active_cursors = NewArray(editor.cursors.count, s32,, allocator = temp);
             for * active_cursors  it.* = editor.cursors[it_index].pos;
         }
@@ -952,7 +952,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
 
     // Only remember and restore cursor positions in the active editor.
     // Any other editors will be handled by the edit notifications
-    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
 
     // Apply the delete edits
     offset_difference: s32 = 0;
@@ -964,8 +964,8 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
         offset_difference += range.end - range.start;
     }
 
-    restore_cursor_positions(buffer_id, cursor_positions);
-    refresh_all_editors_for_buffer(buffer_id);
+    restore_cursor_positions(buffer.id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer.id);
 }
 
 indentation_detect_from_buffer_contents :: (buffer: *Buffer) {
@@ -994,7 +994,7 @@ indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
 
 Replace_Edit :: struct { range: Offset_Range; new_string: string; }
 
-indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
+indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
     auto_release_temp();
 
     tab_size := get_buffer_tab_size(buffer);
@@ -1018,7 +1018,7 @@ indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
     }
 
     // Apply the edits
-    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
 
     offset_difference: s32 = 0;
     for edit : replace_edits {
@@ -1029,14 +1029,14 @@ indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
         offset_difference += cast(s32) edit.new_string.count - (range.end - range.start);
     }
 
-    restore_cursor_positions(buffer_id, cursor_positions);
-    refresh_all_editors_for_buffer(buffer_id);
+    restore_cursor_positions(buffer.id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer.id);
 
     buffer.indentation.type = .tabs;
     // Not setting the size because tabs use defaults unless explicitly set
 }
 
-indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
+indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
     auto_release_temp();
 
     tab_size := get_buffer_tab_size(buffer);
@@ -1057,7 +1057,7 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
     }
 
     // Apply the edits
-    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
 
     offset_difference: s32 = 0;
     for edit : replace_edits {
@@ -1068,8 +1068,8 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
         offset_difference += cast(s32) edit.new_string.count - (range.end - range.start);
     }
 
-    restore_cursor_positions(buffer_id, cursor_positions);
-    refresh_all_editors_for_buffer(buffer_id);
+    restore_cursor_positions(buffer.id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer.id);
 
     buffer_settings := get_settings(buffer);
     buffer.indentation.type = .spaces;
@@ -1194,7 +1194,7 @@ create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
 
     buffer_id := open_buffers.count;
     buffer := bucket_array_add(*open_buffers);
-    init_buffer(buffer);
+    init_buffer(buffer, buffer_id);
     buffer.has_file = false;
 
     if context.config.settings.line_endings == .crlf {
@@ -1223,7 +1223,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     if !found_buffer {
         buffer_id = open_buffers.count;
         buffer = bucket_array_add(*open_buffers);
-        init_buffer(buffer);
+        init_buffer(buffer, buffer_id);
         table_add(*buffers_table, copy_string(path), buffer_id);  // It should be ok to leak some memory here when we no longer need a buffer
     }
 
@@ -1610,8 +1610,10 @@ get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     return result;
 }
 
-init_buffer :: (using buffer: *Buffer) {
-    init(*content_lock);
+init_buffer :: (buffer: *Buffer, buffer_id: s64) {
+    init(*buffer.content_lock);
+    init(*buffer.settings_lock);
+    buffer.id = buffer_id;
 }
 
 get_unsaved_buffer_ids :: () -> [] s64 /* temp */ {
@@ -1805,6 +1807,8 @@ buffer_edit_notifications: Array(Buffer.Edit_Notification);
 
 
 Buffer :: struct {
+    id: s64 = -1;
+
     bytes:       Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
     tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
@@ -1818,7 +1822,7 @@ Buffer :: struct {
 
     cursors: Array(Cursor);  // cursor state before any current edits were made
 
-    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings
+    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings TODO: remove
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 

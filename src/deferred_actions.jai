@@ -342,10 +342,10 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
     buffer := *open_buffers[buffer_id];
     if is_move && !buffer.has_file then is_move = false;  // if we attempt to move a buffer without a file, save as instead
 
-    _save_to_file_path :: (buffer: *Buffer, buffer_id: s64, file_path: string, is_move: bool) -> Action_Result {
+    _save_to_file_path :: (buffer: *Buffer, file_path: string, is_move: bool) -> Action_Result {
         if file_exists(file_path) {
             remove_top_action();
-            push_action(.confirm_overwrite, .{ type = .confirm_overwrite, confirm_overwrite = .{ buffer_id = buffer_id, is_move = is_move, file_path = copy_string(file_path) } });
+            push_action(.confirm_overwrite, .{ type = .confirm_overwrite, confirm_overwrite = .{ buffer_id = buffer.id, is_move = is_move, file_path = copy_string(file_path) } });
             return .NEXT;
         } else {
             found, directory, file := split_from_right(file_path, #char "/");
@@ -356,7 +356,7 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
                     return .CANCEL;
                 }
             }
-            save_buffer_to_file(buffer, buffer_id, file_path);
+            save_buffer_to_file(buffer, file_path);
             if buffer.error_when_saving {
                 add_user_error("Unable to save file into '%'", file_path);
                 return .CANCEL;
@@ -372,7 +372,7 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
     if (OS == .WINDOWS || OS == .MACOS) && context.config.settings.prefer_system_file_dialogs {
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
         if !success return .CANCEL;  // the user did not select a file
-        return _save_to_file_path(buffer, buffer_id, file_path, is_move);
+        return _save_to_file_path(buffer, file_path, is_move);
     }
 
     result, file_path := open_file_dialog_get_result(action.id);
@@ -382,7 +382,7 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
             return .WAIT;
 
         case .SELECTED_PATH;
-            return _save_to_file_path(buffer, buffer_id, file_path, is_move);
+            return _save_to_file_path(buffer, file_path, is_move);
 
         case .PENDING;   return .WAIT;
         case .CANCEL;    return .CANCEL;
@@ -446,9 +446,9 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
 
             if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
                 // The user selected the same file as a target. Just save.
-                save_buffer(buffer, buffer_id);
+                save_buffer(buffer);
             } else {
-                save_buffer_to_file(buffer, buffer_id, file_path);
+                save_buffer_to_file(buffer, file_path);
                 if buffer.error_when_saving {
                     add_user_error("Unable to save file into '%'", file_path);
                     return .CANCEL;
