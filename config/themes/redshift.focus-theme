@@ -79,7 +79,7 @@ code_builtin_function:                  CB5D7DFF
 code_builtin_exception:                 CB5D7DFF
 code_directive:                         8C485CFF
 code_directive_modifier:                8A2845DF
-code_header:                            5C9FD1FF
+code_header1:                           5C9FD1FF
 code_header2:                           CB5D7DFF
 code_header3:                           CB5D7DFF
 code_header4:                           CB5D7DFF

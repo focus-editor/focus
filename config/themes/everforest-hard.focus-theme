@@ -82,7 +82,7 @@ code_builtin_function:                  7A8478FF
 code_builtin_exception:                 7A8478FF
 code_directive:                         E67E80FF
 code_directive_modifier:                E67E80FF
-code_header:                            E67E80FF
+code_header1:                           E67E80FF
 code_header2:                           7A8478FF
 code_header3:                           7A8478FF
 code_header4:                           7A8478FF

@@ -81,7 +81,7 @@ code_builtin_function:                  D20F39FF
 code_builtin_exception:                 D20F39FF
 code_directive:                         DF8E1DFF
 code_directive_modifier:                DF8E1DFF
-code_header:                            D20F39FF
+code_header1:                           D20F39FF
 code_header2:                           FE640BFF
 code_header3:                           DF8E1DFF
 code_header4:                           40A02BFF

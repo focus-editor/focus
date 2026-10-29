@@ -95,7 +95,7 @@ code_builtin_exception:                 E0AD82FF
 code_directive:                         FFA759FF
 code_directive_modifier:                FFA759FF
 
-code_header:                            FFA759FF
+code_header1:                           FFA759FF
 code_header2:                           E0AD82FF
 code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF

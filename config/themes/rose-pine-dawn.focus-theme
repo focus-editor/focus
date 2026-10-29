@@ -81,7 +81,7 @@ code_builtin_function:                  D7827EFF
 code_builtin_exception:                 D7827EFF
 code_directive:                         EA9D34FF
 code_directive_modifier:                EA9D34FF
-code_header:                            D7827EFF
+code_header1:                           D7827EFF
 code_header2:                           EA9D34FF
 code_header3:                           B4637AFF
 code_header4:                           56949FFF

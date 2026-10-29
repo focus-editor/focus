@@ -80,7 +80,7 @@ code_builtin_function:                  4C505EFF
 code_builtin_exception:                 4C505EFF
 code_directive:                         5A4A78FF
 code_directive_modifier:                5A4A78FF
-code_header:                            5A4A78FF
+code_header1:                           5A4A78FF
 code_header2:                           4C505EFF
 code_header3:                           4C505EFF
 code_header4:                           4C505EFF

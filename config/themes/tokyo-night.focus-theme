@@ -80,7 +80,7 @@ code_builtin_function:                  89DDFFFF
 code_builtin_exception:                 89DDFFFF
 code_directive:                         BB9AF7FF
 code_directive_modifier:                BB9AF7FF
-code_header:                            BB9AF7FF
+code_header1:                           BB9AF7FF
 code_header2:                           89DDFFFF
 code_header3:                           89DDFFFF
 code_header4:                           89DDFFFF
