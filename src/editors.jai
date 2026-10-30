@@ -4538,6 +4538,9 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Ini;
             comment = ";";
 
+        case .Matlab;
+            comment = "%";
+
         // Single-line comments are not supported, fallback to multi-line comment
         case .Css;      #through;
         case .Xml;      #through;
@@ -4779,6 +4782,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
         case .Shell;        #through; // You could with herestrings but it runs into having to use specific identifiers like #string in Jai so let's not
         case .Zig;          #through;
+        case .Matlab;       #through; // %{ and %} must be alone on their lines, so the generic block insert doesn't work
         case .Ini;          #through;
         case .Focus_Config; #through;
         case .Toml;         #through;

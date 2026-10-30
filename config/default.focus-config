@@ -26,6 +26,8 @@
 # Example:
 # *.hpp *.hh *.h : cpp
 # todo.txt : todo
+# .m is also used by Objective-C, so MATLAB is opt-in:
+# *.m : matlab
 
 
 [[settings]]

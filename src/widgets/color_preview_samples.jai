@@ -901,6 +901,38 @@ end
 LUAU
 
 
+SAMPLE_Matlab :: #string MATLAB
+% Comment
+%{
+    Multiline comment
+%}
+
+pi_approx = 3.14159;
+tolerance = 1.5e-3;
+scale = 2i;
+
+name = "MATLAB";
+legacy = 'don''t';
+
+A = [1 2 3; 4 5 6];
+B = A';
+C = A.';
+
+if pi_approx > 3
+    disp(name)
+end
+
+total = 0;
+for k = 1:10
+    total = total + k^2;
+end
+
+function y = square(x)
+    y = x .^ 2;
+end
+MATLAB
+
+
 SAMPLE_RenPy :: #string RENPY
 # Comment
 # Ren'Py script for a simple visual novel
