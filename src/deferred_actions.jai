@@ -521,7 +521,7 @@ execute_refresh_config_or_theme :: (action: Deferred_Action) -> Action_Result {
     path := action.details.refresh_config_or_theme.path;
     if is_our_config_file(path) {
         refresh_config(path);
-    } else if is_current_theme(path) {
+    } else if is_config_theme_dependency(path) {
         refresh_current_theme();
     }
     return .DONE;

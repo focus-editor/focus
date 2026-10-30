@@ -23,7 +23,7 @@ edit_current_theme :: (placement: Editor_Placement) {
         editors_show_default_config(placement);
         return;
     }
-    theme_path := tprint("%/%.focus-theme", themes_dir, context.config.style.theme);
+    theme_path := get_theme_path_from_name(context.config.style.theme);
     editors_open_file(theme_path, placement);
 }
 
@@ -39,16 +39,24 @@ edit_current_theme :: (pane: *Editor_Pane) {
         editors_show_default_config(pane);
         return;
     }
-    theme_path := tprint("%/%.focus-theme", themes_dir, context.config.style.theme);
+    theme_path := get_theme_path_from_name(context.config.style.theme);
     editors_open_file_in_pane(theme_path, pane);
 }
 
 maybe_revert_temporary_theme :: () {
-    if !temporary_theme || active_global_widget == .theme_dialog return;
+    if temporary_theme && active_global_widget != .theme_dialog {
+        revert_temporary_theme();
+    }
+}
 
+revert_temporary_theme :: () {
     apply_style(context.config.style);
-
     set_temporary_theme("");
+}
+
+get_theme_path_from_name :: (name: string) -> string /* temp */ {
+    theme_name := to_lower_copy(name,, temp);
+    return tprint("%/%.focus-theme", themes_dir, theme_name);
 }
 
 #scope_file
@@ -58,22 +66,36 @@ set_temporary_theme :: (theme_name: string) {
     temporary_theme = copy_string(theme_name,, allocator = focus_allocator);
 }
 
+get_last_config_with_style :: () -> *Loaded_Config {
+    return ifx project_config.loaded && project_config.parsed_config.offsets.style_section >= 0 then *project_config else *global_config;
+}
+
 apply_selected_theme :: (_: Editor_Placement) {
     using theme_dialog;
-    if selected >= filtered.count return;
+    if selected < 0 || selected >= filtered.count return;
 
-    // Change project config if it has a style section, otherwise change global config
-    config_to_change := ifx project_config.loaded && project_config.parsed_config.offsets.style_section >= 0 then *project_config else *global_config;
+    theme := filtered[selected];
+
+    // Verify the theme is okay
+    theme_result := load_theme(theme.config_name, path = theme.path, save_migration = false,, temp);
+    if !theme_result.success {
+        add_user_error(theme_result.error_msg);
+        return;
+    }
+
+    config_to_change := get_last_config_with_style();
 
     buffer_id := find_or_create_buffer(config_to_change.path);
     buffer := *open_buffers[buffer_id];
     if buffer.dirty rescan_for_lines(buffer);
+    if buffer.readonly {
+        add_user_error("Can't modify config '%' because it's read-only", config_to_change.path);
+        return;
+    }
 
     // Parse the buffer again because we can't trust the offsets we remembered when we last parsed it
     result := parse_config(config_to_change.path, config_to_change.path, to_string(buffer.bytes), for_highlighting = true /* lying */,, allocator = temp);
     offsets := result.config.offsets;  // even if it fails to parse, it's OK, the offsets might just be -1
-
-    theme := filtered[selected];
 
     if offsets.theme_line >= 0 {
         // Replace theme
@@ -91,54 +113,60 @@ apply_selected_theme :: (_: Editor_Placement) {
     }
 
     rescan_for_lines(buffer);
-    save_buffer(buffer);
-    add_success_message("Theme has been saved to %", config_to_change.path);
-
-    hide_dialog(theme_dialog);
+    saved := save_buffer(buffer);
+    if saved {
+        add_success_message("Theme has been saved to %", config_to_change.path);
+        hide_dialog(theme_dialog);
+    } else {
+        add_user_error("Couldn't save theme to %", config_to_change.path);
+    }
 }
 
 preview_selected_theme :: () {
     using theme_dialog;
-    if !filtered || selected < 0 || selected >= filtered.count return;
+    if !filtered || selected < 0 || selected >= filtered.count {
+        revert_temporary_theme();
+        return;
+    }
+
+    auto_release_temp();
+    push_allocator(temp);
 
     theme := filtered[selected];
 
     set_temporary_theme(theme.config_name);
 
-    if theme.config_name == "default" {
-        reset_color_map_to_default();
-        platform_set_border_color();
+    theme_result := load_theme(theme.config_name, path = theme.path, save_migration = false);
+
+    if !theme_result.success {
+        add_user_error(theme_result.error_msg);
+        revert_temporary_theme();
         return;
     }
 
-    push_allocator(temp);
-    auto_release_temp();
+    // Construct a temporary style
+    style := DEFAULT_CONFIG.style;
 
-    // We read and parse files each time without caching anything because we want flexibility and because it's cheap
-    file_data, success := read_entire_file(theme.path);
-    if !success {
-        add_user_error("Couldn't read theme file '%'", theme.path);
-        return;
+    target_config := get_last_config_with_style();
+
+    if global_config.loaded {
+        parsed_config := global_config.parsed_config;
+        if target_config == *global_config {
+            parsed_config.theme  = theme.config_name;
+            parsed_config.colors = theme_result.config.colors;
+        }
+        merge_style(*style, parsed_config);
+    }
+    if project_config.loaded {
+        parsed_config := project_config.parsed_config;
+        if target_config == *project_config {
+            parsed_config.theme  = theme.config_name;
+            parsed_config.colors = theme_result.config.colors;
+        }
+        merge_style(*style, parsed_config);
     }
 
-    migrated, new_file_data := maybe_migrate_config(theme.path, file_data);
-    if migrated {
-        success := write_entire_file(theme.path, new_file_data);
-        if !success then add_user_error("We migrated theme file '%' to version [%],\nbut could't save the file. Is it writable?", theme.path, CURRENT_CONFIG_VERSION);
-        file_data = new_file_data;
-    }
-
-    result := parse_config(theme.name, theme.path, file_data, as_theme = true);
-    if !result.success {
-        add_user_error("Couldn't parse theme file '%'.\nError: %", theme.path, result.error_msg);
-        return;
-    }
-
-    reset_color_map_to_default();
-    if global_config.loaded  then apply_style(global_config.parsed_config);
-    if project_config.loaded then apply_style(project_config.parsed_config);
-
-    apply_style(result.config);
+    apply_style(style);
 }
 
 theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {

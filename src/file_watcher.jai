@@ -65,6 +65,9 @@ file_watcher_process_changes :: () {
     if files_changed {
         using watchers;
 
+        for project_changes  color_preview_invalidate_theme(it.full_path);
+        for external_changes color_preview_invalidate_theme(it.full_path);
+
         // TODO:
         for project_changes   print("Project change: %\n", it);
         for external_changes  print("External change: %\n", it);

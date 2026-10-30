@@ -820,8 +820,8 @@ save :: (buffer_id: s64) {
     }
 }
 
-save_buffer :: (using buffer: *Buffer) {
-    if readonly return;
+save_buffer :: (using buffer: *Buffer) -> success: bool {
+    if readonly return false;
 
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
@@ -857,6 +857,8 @@ save_buffer :: (using buffer: *Buffer) {
     maybe_defer_refresh_config_or_theme(buffer.file.full_path);
 
     redraw_requested = true;
+
+    return !error_when_saving;
 }
 
 reroute_editors_to_new_buffer :: (old_buffer_id: s64, new_buffer_id: s64) {
@@ -1581,6 +1583,7 @@ free_buffer_extra :: (extra: *Buffer.Extra) {
     if #complete extra.type == {
         case .focus_config;
             config_extra := cast(*Focus_Config_Extra) extra;
+            free(config_extra.active_theme);
             array_free(config_extra.parsed_colors);
     }
     free(extra);
@@ -1963,6 +1966,7 @@ Focus_Config_Extra :: struct {
     using #as base: Buffer.Extra;
     base.type = .focus_config;
 
+    active_theme: string;
     parsed_colors: [] Parsed_Color;
     colors_section_start := -1;
     colors_section_end   := -1;

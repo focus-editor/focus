@@ -10,11 +10,9 @@ tokenize_focus_config :: (using buffer: *Buffer, start_offset := -1, count := -1
         extra = New(Focus_Config_Extra);
     }
 
-    push_allocator(temp);  // we don't care about anything else it might allocate
-
-    name := get_buffer_name(buffer);
+    name := get_buffer_name(buffer,, temp);
     file_path := ifx has_file then file.full_path else "";
-    result := parse_config(name, file_path, to_string(bytes), for_highlighting = true, as_theme = lang == .Focus_Theme);
+    result := parse_config(name, file_path, to_string(bytes), for_highlighting = true, as_theme = lang == .Focus_Theme,, temp);
 
     for result.highlights {
         memset(tokens.data + it.offset, xx it.token_type, it.count);
@@ -22,9 +20,11 @@ tokenize_focus_config :: (using buffer: *Buffer, start_offset := -1, count := -1
 
     // Remember things about this config
     config_extra := cast(*Focus_Config_Extra) extra;
+    free(config_extra.active_theme);
+    config_extra.active_theme = copy_string(result.config.theme);
     config_extra.colors_section_start = result.config.offsets.colors_section_start;
     config_extra.colors_section_end   = result.config.offsets.colors_section_end;
-    array_resize(*config_extra.parsed_colors, result.config.colors.count,, allocator = focus_allocator);
+    array_resize(*config_extra.parsed_colors, result.config.colors.count,, focus_allocator);
     focus_memcpy(config_extra.parsed_colors.data, result.config.colors.data, result.config.colors.count * size_of(Parsed_Color));
 
     return .[];

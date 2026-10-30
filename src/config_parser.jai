@@ -171,11 +171,6 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
     return "??";
 }
 
-get_theme_file_from_name :: (name: string) -> string /* temp */ {
-    theme_name := to_lower_copy(name,, temp);
-    return tprint("%/%.focus-theme", themes_dir, theme_name);
-}
-
 
 #scope_file
 
@@ -660,7 +655,6 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
         case .style_colors;
             if result.config.theme {
                 add_highlight(parser, 0, line.count, .comment);
-                return true, "";  // ignore all colors if theme is set
             }
 
             color_name, value := break_by_spaces(line);
@@ -723,50 +717,13 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting = trim_right(setting, ":");
             if setting == {
                 case "theme";
+                    result.config.theme = value;
                     result.config.offsets.theme_line = line_start_offset;
 
-                    theme_file := get_theme_file_from_name(value);
-                    if !file_exists(theme_file) && value != "default" {
+                    theme_path := get_theme_path_from_name(value);
+                    if !file_exists(theme_path) && value != "default" {
                         add_highlight(parser, value.data - line.data, value.count, .error);
-                        return true, tprint("Couldn't find theme file '%'", theme_file);
-                    }
-                    result.config.theme = value;
-
-                    if !parse_for_highlighting {
-                        theme_parse_result: Config_Parse_Result;
-
-                        // Parse theme
-                        if value != "default" {
-                            file_data, success := read_entire_file(theme_file);
-                            if !success return true, tprint("Couldn't read theme file '%'", theme_file);
-
-                            migrated, new_file_data := maybe_migrate_config(theme_file, file_data);
-                            if migrated {
-                                add_success_message("Theme file '%' has been migrated to version [%]", theme_file, CURRENT_CONFIG_VERSION);
-                                file_data = new_file_data;
-                            }
-                            theme_parse_result = parse_config(value, theme_file, file_data, as_theme = true);
-                            if theme_parse_result.success && migrated then write_entire_file(theme_file, new_file_data);
-                        } else {
-                            theme_parse_result = parse_config(value, "default", DEFAULT_CONFIG_FILE_DATA);
-                        }
-
-                        if !theme_parse_result.success return true, tprint("Couldn't parse theme file '%'.\nError: %", theme_file, theme_parse_result.error_msg);
-
-                        // Copy colors and font data (it points into the theme file data)
-                        array_add(*result.config.colors, ..theme_parse_result.config.colors);
-                        result.config.font         = theme_parse_result.config.font;
-                        result.config.font_ui      = theme_parse_result.config.font_ui;
-                        result.config.font_ui_bold = theme_parse_result.config.font_ui_bold;
-                        result.config.font_size    = theme_parse_result.config.font_size;
-                        result.config.font_ui_size = theme_parse_result.config.font_ui_size;
-
-                        // If font details are not specified in the theme, assume default
-                        if !result.config.font         then result.config.font         = "default";
-                        if !result.config.font_ui      then result.config.font_ui      = "default";
-                        if !result.config.font_ui_bold then result.config.font_ui_bold = "default";
-                        if !result.config.font_size    then result.config.font_size    = DEFAULT_FONT_MAIN_SIZE;
-                        if !result.config.font_ui_size then result.config.font_ui_size = DEFAULT_FONT_UI_SIZE;
+                        return true, tprint("Couldn't find theme file '%'", theme_path);
                     }
                 case;
                     add_highlight(parser, 0, setting.count, .error);

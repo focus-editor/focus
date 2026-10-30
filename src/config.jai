@@ -25,8 +25,7 @@ load_config :: (config_path: string, file_contents: string) -> Loaded_Config {
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
-    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
-    push_allocator(allocator);
+    push_allocator(allocator_of(loaded_config.memory_pool));
 
     path := copy_string(config_path);
     file_data := copy_string(file_contents);
@@ -73,6 +72,21 @@ load_config :: (config_path: string, file_contents: string) -> Loaded_Config {
         for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
     }
 
+    if parse_result.config.theme {
+        if parse_result.config.theme != "default" {
+            loaded_config.theme_path = copy_string(get_theme_path_from_name(parse_result.config.theme));
+        }
+
+        theme_result := load_theme(parse_result.config.theme, save_migration = true);
+        if theme_result.success {
+            parse_result.config.colors = theme_result.config.colors;
+        } else {
+            add_user_error(theme_result.error_msg, tag = .config);
+            parse_result.config.theme = "";
+        }
+        for theme_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
+    }
+
     loaded_config.loaded = true;
     loaded_config.parsed_config = parse_result.config;
 
@@ -95,6 +109,41 @@ load_default_config_fallback :: (config_path: string) -> Loaded_Config {
     loaded_config.loaded = true;
 
     return loaded_config;
+}
+
+// Parsed data uses the caller's pool or temporary allocator. Diagnostics use temporary storage.
+load_theme :: (name: string, path := "", save_migration := false) -> Config_Parse_Result {
+    result: Config_Parse_Result;
+
+    if name == "default" {
+        for color_id: 0..COLOR_MAP_SIZE-1 {
+            array_add(*result.config.colors, .{ color_id = cast(Color) color_id, color = DEFAULT_CONFIG.style.colors[color_id] });
+        }
+        result.success = true;
+        return result;
+    }
+
+    theme_path := ifx path then path else get_theme_path_from_name(name);
+    file_data, success := read_entire_file(theme_path);
+    if !success {
+        result.error_msg = tprint("Couldn't read theme file '%'", theme_path);
+        return result;
+    }
+
+    migrated, new_file_data := maybe_migrate_config(theme_path, file_data);
+    result = parse_config(name, theme_path, ifx migrated then new_file_data else file_data, as_theme = true);
+    if !result.success return result;
+
+    if migrated && save_migration {
+        backup_path := tprint("%.bak", theme_path);
+        if !write_entire_file(backup_path, file_data) {
+            array_add(*result.warnings, tprint("Theme file '%' was migrated in memory, but couldn't be backed up to '%'. The original file was not changed.", theme_path, backup_path));
+        } else if !write_entire_file(theme_path, new_file_data) {
+            array_add(*result.warnings, tprint("Theme file '%' was migrated in memory, but couldn't be saved. Is it writable?", theme_path));
+        }
+    }
+
+    return result;
 }
 
 merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) -> changed: bool {
@@ -408,7 +457,8 @@ linux_config_changed :: (old: Config, new: Config) -> changed: bool {
 #scope_export
 
 maybe_defer_refresh_config_or_theme :: (path: string) {
-    if is_our_config_file(path) || is_current_theme(path) {
+    color_preview_invalidate_theme(path);
+    if is_our_config_file(path) || is_config_theme_dependency(path) {
         defer_action_refresh_config_or_theme(path);
     }
 }
@@ -466,6 +516,8 @@ refresh_config :: (path: string) {
     }
 }
 
+// If more than 2 themes are in use (e.g. one in global config, one in project config),
+// this will reload them both.
 refresh_current_theme :: () {
     clear_user_messages(.config);
 
@@ -507,6 +559,13 @@ is_current_project_config :: inline (path: string) -> bool {
 
 is_current_theme :: (path: string) -> bool {
     return context.config.style.theme && platform_path_equals(path, tprint("%/%.focus-theme", themes_dir, context.config.style.theme));
+}
+
+is_config_theme_dependency :: (path: string) -> bool {
+    // Should we reload config if this file changes
+    if global_config.loaded  && global_config.theme_path  && platform_path_equals(path, global_config.theme_path)  return true;
+    if project_config.loaded && project_config.theme_path && platform_path_equals(path, project_config.theme_path) return true;
+    return true;
 }
 
 close_project :: () {
@@ -585,12 +644,6 @@ apply_style :: (style: Style) {
 }
 
 // TODO: remove
-apply_style :: (parsed: Parsed_Config) {
-    apply_parsed_colors(parsed.colors);
-    platform_set_border_color();
-}
-
-// TODO: remove
 apply_parsed_colors :: (colors: [] Parsed_Color) {
     for colors  COLOR_MAP[it.color_id] = it.color;
     // TODO: @colorref - resolve references
@@ -651,6 +704,24 @@ free_config :: (config: *Config) {
     fini(config.memory_pool);
     free(config.memory_pool);
     config.* = .{};
+}
+
+merge_style :: (dst: *Style, parsed: Parsed_Config) {
+    if parsed.theme {
+        dst.theme  = copy_string(parsed.theme);
+    }
+    for parsed.colors  dst.colors[it.color_id] = it.color;
+
+    if parsed.font                      then dst.font                 = copy_string(parsed.font);
+    if parsed.font_ui                   then dst.font_ui              = copy_string(parsed.font_ui);
+    if parsed.font_ui_bold              then dst.font_ui_bold         = copy_string(parsed.font_ui_bold);
+    if parsed.font_ui_bold_italic       then dst.font_ui_bold_italic  = copy_string(parsed.font_ui_bold_italic);
+
+    if parsed.font_size    > 0          then dst.font_size            = parsed.font_size;
+    if parsed.font_ui_size > 0          then dst.font_ui_size         = parsed.font_ui_size;
+
+    if parsed.font_anti_aliasing.is_set then dst.font_anti_aliasing   = parsed.font_anti_aliasing.value;
+    if parsed.font_hinting.is_set       then dst.font_hinting         = parsed.font_hinting.value;
 }
 
 
@@ -720,19 +791,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Style
-    if parsed.theme                     then dst.style.theme = copy_string(parsed.theme);
-    for parsed.colors  dst.style.colors[it.color_id] = it.color;
-
-    if parsed.font                      then dst.style.font                 = copy_string(parsed.font);
-    if parsed.font_ui                   then dst.style.font_ui              = copy_string(parsed.font_ui);
-    if parsed.font_ui_bold              then dst.style.font_ui_bold         = copy_string(parsed.font_ui_bold);
-    if parsed.font_ui_bold_italic       then dst.style.font_ui_bold_italic  = copy_string(parsed.font_ui_bold_italic);
-
-    if parsed.font_size    > 0          then dst.style.font_size            = parsed.font_size;
-    if parsed.font_ui_size > 0          then dst.style.font_ui_size         = parsed.font_ui_size;
-
-    if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing   = parsed.font_anti_aliasing.value;
-    if parsed.font_hinting.is_set       then dst.style.font_hinting         = parsed.font_hinting.value;
+    merge_style(*dst.style, parsed);
 
     // Platform config
     dst.linux = deep_copy(parsed.linux);
@@ -890,6 +949,7 @@ Loaded_Font :: struct {
 Loaded_Config :: struct {
     loaded := false;
     path: string;
+    theme_path: string;
     hash: u64;
     parsed_config: Parsed_Config;
     memory_pool: *Flat_Pool;  // must be valid for the lifetime of the config
@@ -1347,6 +1407,7 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
     DEFAULT_CONFIG :: #run,stallable -> Config {
         result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
         assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
+        assert(!result.config.theme, "The default config must define its colors directly, not select a theme.");
         check_added_keybinds(result.config);
         default_config: Config;
         merge_configs(*default_config, result.config);

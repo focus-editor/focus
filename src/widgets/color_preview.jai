@@ -49,6 +49,11 @@ deinit_color_preview :: () {
 
     target_editor_id = -1;
     target_buffer_id = -1;
+
+    free(preview_theme_path,, focus_allocator);
+    preview_theme_path = "";
+    array_free(preview_theme_colors);
+    preview_theme_valid = false;
 }
 
 show_color_preview :: () {
@@ -77,9 +82,15 @@ color_preview_set_width :: (width: float) {
     color_preview_width = clamp(width, 0.1, 1.0);
 }
 
+color_preview_invalidate_theme :: (path: string) {
+    if preview_theme_path && platform_path_equals(path, preview_theme_path) {
+        preview_theme_valid = false;
+    }
+}
+
 color_preview_begin_draw :: (editor_id: s64) {
     Simp.immediate_flush();
-    OLD_COLOR_MAP = COLOR_MAP;
+    previous_color_map = COLOR_MAP;
 
     color_preview_warning = "";  // reset warning
 
@@ -97,50 +108,55 @@ color_preview_begin_draw :: (editor_id: s64) {
     config_extra := cast(*Focus_Config_Extra) buffer.extra;
     if !config_extra return;
 
-    // Override the colors temporarily
-    // Try to build it up as it would when the config is actually loaded
-    reset_color_map_to_default();
+    push_allocator(temp);
 
-    if context.config.style.theme && !is_current_theme(buffer.file.full_path) {
-        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied.", context.config.style.theme);
-        if context.config.style.theme != "default" {
-            color_preview_warning = tprint("% You can edit the theme using the 'Edit Current Theme' command.", color_preview_warning);
+    edited: Parsed_Config;
+    array_add(*edited.colors, ..config_extra.parsed_colors);
+    if buffer.lang == .Focus_Config && config_extra.active_theme {
+        colors, success := color_preview_get_theme_colors(config_extra.active_theme);
+        if success {
+            edited.theme = config_extra.active_theme;
+            edited.colors.count = 0;
+            array_add(*edited.colors, ..colors);
+            color_preview_warning = tprint("Theme '%' is selected in this config. Its inline colors are not applied.", edited.theme);
         }
     }
 
-    if is_current_global_config(buffer.file.full_path) {
-        // Apply the colors we're editing
-        apply_parsed_colors(config_extra.parsed_colors);
-
-        // Apply the colors from the current project, if any
-        if project_config.loaded && project_config.parsed_config.colors {
-            apply_parsed_colors(project_config.parsed_config.colors);
-            color_preview_warning = "An active project config is overriding the colors from the config you are editing. Your changes may not be visible.";
+    style := DEFAULT_CONFIG.style;
+    active_config := is_our_config_file(buffer.file.full_path);
+    active_theme := buffer.lang == .Focus_Theme && is_config_theme_dependency(buffer.file.full_path);
+    if active_config || active_theme {
+        if global_config.loaded {
+            parsed := global_config.parsed_config;
+            if is_current_global_config(buffer.file.full_path) {
+                parsed = edited;
+            } else if active_theme && platform_path_equals(buffer.file.full_path, global_config.theme_path) {
+                parsed.colors = edited.colors;
+            }
+            merge_style(*style, parsed);
         }
-    } else if is_current_project_config(buffer.file.full_path) {
-        // Apply the existing global config first
-        assert(global_config.loaded);
-        apply_parsed_colors(global_config.parsed_config.colors);
-
-        // Then apply our stuff on top
-        apply_parsed_colors(config_extra.parsed_colors);
-
-    } else if is_current_theme(buffer.file.full_path) {
-        // Themes are supposed to override everything, so apply on top of default
-        apply_parsed_colors(config_extra.parsed_colors);
+        if project_config.loaded {
+            parsed := project_config.parsed_config;
+            if is_current_project_config(buffer.file.full_path) {
+                parsed = edited;
+            } else if active_theme && platform_path_equals(buffer.file.full_path, project_config.theme_path) {
+                parsed.colors = edited.colors;
+            }
+            merge_style(*style, parsed);
+            if is_current_global_config(buffer.file.full_path) && parsed.colors.count && !edited.theme {
+                color_preview_warning = "An active project config overrides some colors. Your changes may not be visible.";
+            }
+        }
     } else {
-        // This is not an active config or theme. Apply our stuff on top of the default config but show a warning
-        apply_parsed_colors(config_extra.parsed_colors);
-        if buffer.lang == {
-            case .Focus_Config;  color_preview_warning = "The current config is not active, so no changes will be applied when you save the file.";
-            case .Focus_Theme;   color_preview_warning = "The current theme is not active, so no changes will be applied when you save the file.";
-        }
+        merge_style(*style, edited);
+        color_preview_warning = "This config or theme is not active. Its colors are previewed against defaults and will not be applied when you save.";
     }
+    COLOR_MAP = style.colors;
 }
 
 color_preview_end_draw :: () {
     Simp.immediate_flush();
-    COLOR_MAP = OLD_COLOR_MAP;
+    COLOR_MAP = previous_color_map;
 }
 
 color_preview_set_language :: (lang_id: int) {
@@ -274,6 +290,41 @@ color_preview_scroll_y : s32;
 
 #scope_file
 
+color_preview_get_theme_colors :: (name: string) -> [] Parsed_Color, bool {
+    if global_config.loaded && global_config.parsed_config.theme == name {
+        return global_config.parsed_config.colors, true;
+    }
+    if project_config.loaded && project_config.parsed_config.theme == name {
+        return project_config.parsed_config.colors, true;
+    }
+
+    path := get_theme_path_from_name(name);
+    if !preview_theme_valid || !platform_path_equals(path, preview_theme_path) {
+        push_allocator(focus_allocator);
+        free(preview_theme_path);
+        preview_theme_path = copy_string(path);
+        array_free(preview_theme_colors);
+        preview_theme_valid = true;
+        preview_theme_success = false;
+
+        if name != "default" then start_watching_file_if_not_already(path);
+        result := load_theme(name, save_migration = false,, temp);
+        if result.success {
+            preview_theme_colors = array_copy(result.config.colors);
+            preview_theme_success = true;
+        } else {
+            add_user_error(result.error_msg, tag = .config);
+        }
+    }
+    return preview_theme_colors, preview_theme_success;
+}
+
+previous_color_map: [COLOR_MAP_SIZE] Vector4;
+preview_theme_path: string;
+preview_theme_colors: [] Parsed_Color;
+preview_theme_valid: bool;
+preview_theme_success: bool;
+
 get_language_sample_text :: (lang: Buffer.Lang) -> string {
     if #complete lang == {
         case .Jai;               return SAMPLE_Jai;
@@ -371,8 +422,6 @@ panel_buffer_id := -1;
 panel_editor_id := -1;
 
 color_preview_warning: string;
-
-OLD_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
 #load "color_preview_samples.jai";
 
