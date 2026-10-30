@@ -2512,6 +2512,8 @@ update_most_recent_buffers :: (buffer_id: s64) {
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
+    if !window return;  // configs and command-line files are loaded before the window is created.
+
     title := window_generic_title;
     current_project_name := get_current_project_name();
     if project_config.loaded && current_project_name then title = tprint("% - %", current_project_name, title);

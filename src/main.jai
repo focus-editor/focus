@@ -60,7 +60,11 @@ main :: () {
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
 
-    if project_config.loaded then update_window_title();
+    {
+        editor_id := get_visible_editor_id(editors.active_pane);
+        buffer_id := ifx editor_id >= 0 then open_editors[editor_id].buffer_id else -1;
+        update_window_title(buffer_id);
+    }
 
     init_workspace();
     init_build_system();
