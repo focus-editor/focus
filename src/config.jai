@@ -393,11 +393,11 @@ style_changed :: (old: Config, new: Config) -> changed: bool {
 }
 
 fonts_changed :: (old: Config, new: Config) -> changed: bool {
-    // TODO: cleanup this mess with things that depend on zoom and not fonts
+    // TODO: cleanup this mess with things that actually depend on zoom and not fonts
     return !style_font_fields_are_equal(old.style, new.style) ||
            old.settings.show_tab_characters_in_selection != new.settings.show_tab_characters_in_selection ||
            old.settings.line_height_scale_percent        != new.settings.line_height_scale_percent        ||
-           old.settings.scrollbar_width_scale            != new.settings.show_tab_characters_in_selection;
+           old.settings.scrollbar_width_scale            != new.settings.scrollbar_width_scale;
 }
 
 linux_config_changed :: (old: Config, new: Config) -> changed: bool {
