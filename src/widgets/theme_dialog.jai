@@ -46,9 +46,7 @@ edit_current_theme :: (pane: *Editor_Pane) {
 maybe_revert_temporary_theme :: () {
     if !temporary_theme || active_global_widget == .theme_dialog return;
 
-    reset_color_map_to_default();
-    if global_config.loaded  then apply_style(global_config.parsed_config);
-    if project_config.loaded then apply_style(project_config.parsed_config);
+    apply_style(context.config.style);
 
     set_temporary_theme("");
 }
@@ -140,7 +138,6 @@ preview_selected_theme :: () {
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
 
-    result.config.font = copy_string(result.config.font);  // @leak
     apply_style(result.config);
 }
 

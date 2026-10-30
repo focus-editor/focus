@@ -1433,14 +1433,17 @@ Parsed_Config :: struct {
 
     // Style
     theme:                  string;
+
     font:                   string;
     font_size:              int;
+
     font_ui:                string;
     font_ui_bold:           string;
     font_ui_bold_italic:    string;
     font_ui_size:           int;
-    font_hinting:       Option(bool);
-    font_anti_aliasing: Option(Font_Anti_Aliasing);
+
+    font_hinting:           Option(bool);
+    font_anti_aliasing:     Option(Font_Anti_Aliasing);
 
     colors:     [..] Parsed_Color;
     color_refs: [..] Color_Reference;  // @colorref: not finished

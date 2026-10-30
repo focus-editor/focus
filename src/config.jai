@@ -97,10 +97,11 @@ load_default_config_fallback :: (config_path: string) -> Loaded_Config {
     return loaded_config;
 }
 
-merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null, refresh_style := false) -> changed: bool {
+merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Config = null) -> changed: bool {
     log("Merging configs. Global: '%', Project: '%'", new_global.path, ifx new_project then new_project.path else "-");
 
     new_config: Config;
+    new_config.style = DEFAULT_CONFIG.style;
     new_config.memory_pool = New(Flat_Pool);
     pool_allocator := allocator_of(new_config.memory_pool);
 
@@ -133,14 +134,11 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     if context.config {
         diff = get_config_diff(context.config, new_config);
     } else {
+        // We don't have any config yet
         diff.changed = true;
         diff.settings_changed = true;
         diff.build_config_changed = true;
-    }
-
-    if refresh_style {
         diff.style_changed = true;
-        diff.changed = true;
     }
 
     // Remember this before transferring ownership out of new_project.
@@ -199,9 +197,9 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
 
     // Apply new config
 
-    reset_color_map_to_default();
-    if global_config.loaded  then apply_style(global_config.parsed_config);
-    if project_config.loaded then apply_style(project_config.parsed_config);
+    if diff.style_changed {
+        apply_style(context.config.style);
+    }
 
     // Update languages before any settings-dependent refreshes.
     if diff.file_associations_changed {
@@ -248,7 +246,9 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
 
     if !context.config.settings.enable_temporary_editors then make_all_editors_permanent();
 
-    init_fonts_and_dependent_things();
+    if diff.fonts_changed {
+        init_fonts_and_dependent_things();
+    }
 
     if diff.build_config_changed {
         commands_refresh_after_config_change();
@@ -289,6 +289,8 @@ Config_Diff :: struct {
     build_config_changed:            bool;
 
     style_changed:                   bool;
+    fonts_changed:                   bool;
+
     linux_config_changed:            bool;
 
     project_changed:                 bool;
@@ -311,6 +313,8 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
     diff.build_config_changed            = build_config_changed(old, new);
 
     diff.style_changed                   = style_changed(old, new);
+    diff.fonts_changed                   = fonts_changed(old, new);
+
     diff.linux_config_changed            = linux_config_changed(old, new);
 
     diff.project_changed                 = old.project_path != new.project_path;
@@ -325,6 +329,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
         diff.keymap_changed ||
         diff.build_config_changed ||
         diff.style_changed ||
+        diff.fonts_changed ||
         diff.linux_config_changed ||
         diff.project_changed;
 
@@ -385,6 +390,14 @@ build_config_changed :: (old: Config, new: Config) -> changed: bool {
 
 style_changed :: (old: Config, new: Config) -> changed: bool {
     return old.style != new.style;
+}
+
+fonts_changed :: (old: Config, new: Config) -> changed: bool {
+    // TODO: cleanup this mess with things that depend on zoom and not fonts
+    return !style_font_fields_are_equal(old.style, new.style) ||
+           old.settings.show_tab_characters_in_selection != new.settings.show_tab_characters_in_selection ||
+           old.settings.line_height_scale_percent        != new.settings.line_height_scale_percent        ||
+           old.settings.scrollbar_width_scale            != new.settings.show_tab_characters_in_selection;
 }
 
 linux_config_changed :: (old: Config, new: Config) -> changed: bool {
@@ -476,7 +489,7 @@ refresh_current_theme :: () {
         loaded_project_ptr = *loaded_project;
     }
 
-    merge_and_apply_configs(*loaded_global, loaded_project_ptr, refresh_style = true);
+    merge_and_apply_configs(*loaded_global, loaded_project_ptr);
 }
 
 
@@ -545,57 +558,39 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 }
 
 reset_color_map_to_default :: () {
-    COLOR_MAP = DEFAULT_COLOR_MAP;
+    COLOR_MAP = DEFAULT_CONFIG.style.colors;
 }
 
-apply_style :: (parsed: Parsed_Config) {
-    // Fonts
-    if parsed.font {
-        loaded_font, success := load_font_by_name(parsed.font, .main);
-        if success {
-            loaded_fonts.main = loaded_font;
-        } else {
-            add_user_error("Couldn't load font %", parsed.font);
-        }
-    }
-    if parsed.font_ui {
-        loaded_font, success := load_font_by_name(parsed.font_ui, .ui);
-        if success {
-            loaded_fonts.ui = loaded_font;
-        } else {
-            add_user_error("Couldn't load font %", parsed.font_ui);
-        }
-    }
-    if parsed.font_ui_bold {
-        loaded_font, success := load_font_by_name(parsed.font_ui_bold, .ui_bold);
-        if success {
-            loaded_fonts.ui_bold = loaded_font;
-        } else {
-            add_user_error("Couldn't load font %", parsed.font_ui_bold);
-        }
-    }
-    if parsed.font_ui_bold_italic {
-        loaded_font, success := load_font_by_name(parsed.font_ui_bold_italic, .ui_bold_italic);
-        if success {
-            loaded_fonts.ui_bold_italic = loaded_font;
-        } else {
-            add_user_error("Couldn't load font %", parsed.font_ui_bold_italic);
-        }
-    }
-    if parsed.font_size > 0 {
-        font_main_size = parsed.font_size;
-        default_font_main_size = font_main_size;
-    }
-    if parsed.font_ui_size > 0 {
-        font_ui_size = parsed.font_ui_size;
-        default_font_ui_size = font_ui_size;
+apply_style :: (style: Style) {
+    // Replace color map
+    COLOR_MAP = style.colors;
+
+    // Load and replace all fonts. If any fail to load they will fall back to defaults
+    load_and_replace_font(*loaded_fonts.main,           style.font,                .main);
+    load_and_replace_font(*loaded_fonts.ui,             style.font_ui,             .ui);
+    load_and_replace_font(*loaded_fonts.ui_bold,        style.font_ui_bold,        .ui_bold);
+    load_and_replace_font(*loaded_fonts.ui_bold_italic, style.font_ui_bold_italic, .ui_bold_italic);
+
+    if default_font_main_size != style.font_size {
+        font_main_size = style.font_size;
+        default_font_main_size = style.font_size;
     }
 
-    apply_parsed_colors(parsed.colors);
+    if default_font_ui_size != style.font_ui_size {
+        font_ui_size = style.font_ui_size;
+        default_font_ui_size = style.font_ui_size;
+    }
 
     platform_set_border_color();
 }
 
+// TODO: remove
+apply_style :: (parsed: Parsed_Config) {
+    apply_parsed_colors(parsed.colors);
+    platform_set_border_color();
+}
+
+// TODO: remove
 apply_parsed_colors :: (colors: [] Parsed_Color) {
     for colors  COLOR_MAP[it.color_id] = it.color;
     // TODO: @colorref - resolve references
@@ -725,9 +720,19 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Style
-    if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // TODO: rework how themes and styles are applied
-    if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing = parsed.font_anti_aliasing.value;
-    if parsed.font_hinting.is_set       then dst.style.font_hinting       = parsed.font_hinting.value;
+    if parsed.theme                     then dst.style.theme = copy_string(parsed.theme);
+    for parsed.colors  dst.style.colors[it.color_id] = it.color;
+
+    if parsed.font                      then dst.style.font                 = copy_string(parsed.font);
+    if parsed.font_ui                   then dst.style.font_ui              = copy_string(parsed.font_ui);
+    if parsed.font_ui_bold              then dst.style.font_ui_bold         = copy_string(parsed.font_ui_bold);
+    if parsed.font_ui_bold_italic       then dst.style.font_ui_bold_italic  = copy_string(parsed.font_ui_bold_italic);
+
+    if parsed.font_size    > 0          then dst.style.font_size            = parsed.font_size;
+    if parsed.font_ui_size > 0          then dst.style.font_ui_size         = parsed.font_ui_size;
+
+    if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing   = parsed.font_anti_aliasing.value;
+    if parsed.font_hinting.is_set       then dst.style.font_hinting         = parsed.font_hinting.value;
 
     // Platform config
     dst.linux = deep_copy(parsed.linux);
@@ -762,7 +767,23 @@ build_comment_words_automaton :: (new_config: *Config) {
     new_config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
-load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; ui_bold_italic; }) -> Loaded_Font, success: bool {
+Font_Kind :: enum {
+    main;
+    ui;
+    ui_bold;
+    ui_bold_italic;
+}
+
+load_and_replace_font :: (dst: *Loaded_Font, name: string, kind: Font_Kind) {
+    loaded_font, success := load_font_by_name(name, kind);
+    if !success {
+        add_user_error("Couldn't load font '%'", name);
+        loaded_font = load_font_by_name("default", kind);
+    }
+    dst.* = loaded_font;
+}
+
+load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bool {
     if name == "default" {
         if #complete kind == {
             case .main;             return FONT_MAIN,           true;
@@ -818,6 +839,17 @@ Config :: struct {
 
 Style :: struct {
     theme: string;
+
+    colors: [COLOR_MAP_SIZE] Vector4;
+
+    font                := "default";
+    font_ui             := "default";
+    font_ui_bold        := "default";
+    font_ui_bold_italic := "default";
+
+    font_size:      int = DEFAULT_FONT_MAIN_SIZE;
+    font_ui_size:   int = DEFAULT_FONT_UI_SIZE;
+
     font_anti_aliasing: Font_Anti_Aliasing = .lcd;
     font_hinting := true;
 }
@@ -826,7 +858,24 @@ operator== :: (a: Style, b: Style) -> bool {
     #insert -> string {
         builder: String_Builder;
         for type_info(Style).members {
-            print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+            if it.type.type == .ARRAY {
+                print_to_builder(*builder, "if !arrays_are_equal(a.%1, b.%1)  return false;\n", it.name);
+            } else {
+                print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+            }
+        }
+        return builder_to_string(*builder);
+    }
+    return true;
+}
+
+style_font_fields_are_equal :: (a: Style, b: Style) -> bool {
+    #insert -> string {
+        builder: String_Builder;
+        for type_info(Style).members {
+            if contains(it.name, "font") {
+                print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
+            }
         }
         return builder_to_string(*builder);
     }
@@ -1303,8 +1352,6 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
         merge_configs(*default_config, result.config);
         // The compile-time allocator is not part of the embedded config data.
         default_config.memory_pool = null;
-        apply_parsed_colors(result.config.colors);
-        DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
         return default_config;
     };
 

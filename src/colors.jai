@@ -72,9 +72,6 @@ Color :: enum u8 {
 // Will be populated when parsing config
 COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
-// Will contain the color map of the default config (useful when merging configs)
-#no_reset DEFAULT_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
-
 map_color_to_vec4 :: inline (color: Color) -> Vector4 {
     return COLOR_MAP[cast(s64) color];
 }
