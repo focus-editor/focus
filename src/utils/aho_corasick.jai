@@ -18,7 +18,7 @@ Found_Highlight_Word :: struct {
 
 
 build_aho_corasick_automaton :: (words: [] Highlight_Word) -> Aho_Corasick_Automaton {
-    using automaton: Aho_Corasick_Automaton;
+    automaton: Aho_Corasick_Automaton;
 
     insert_words(*automaton, words);
     build_failure_links(*automaton);
@@ -40,27 +40,28 @@ find_whole_words :: (using automaton: *Aho_Corasick_Automaton, text: string) -> 
         s.count -= bytes;
         if result != .CONVERSION_OK continue;
 
-        // Transition to the next state
-        node  := *nodes[state];
-        found := false;
-        for node.children {
-            if it.char == char { state = it.node_index; found = true; break; }
+        // Follow failure links until this character can transition, or we reach root.
+        while true {
+            node := *nodes[state];
+            found := false;
+            for node.children {
+                if it.char == char { state = it.node_index; found = true; break; }
+            }
+
+            if found || state == 0 break;
+            state = node.failure_link;
         }
 
-        if found {
-            node := *nodes[state];
-            for node.output_words {
-                result := Found_Highlight_Word.{
-                    offset = cast(s32) (s.data - text.data - it.word.count),
-                    len = cast(s32) it.word.count,
-                    token_type = it.token_type,
-                };
-                if inline is_whole_word(text, result.offset, result.len) {
-                    array_add(*found_words, result);
-                }
+        node := *nodes[state];
+        for node.output_words {
+            result := Found_Highlight_Word.{
+                offset = cast(s32) (s.data - text.data - it.word.count),
+                len = cast(s32) it.word.count,
+                token_type = it.token_type,
+            };
+            if inline is_whole_word(text, result.offset, result.len) {
+                array_add(*found_words, result);
             }
-        } else {
-            state = node.failure_link;
         }
     }
 
@@ -78,12 +79,16 @@ simulate_raw :: (using automaton: *Aho_Corasick_Automaton, chars: [] u32, start_
     state := start_state;
 
     for char : chars {
-        node  := *raw_nodes[state];
-        found := false;
-        for node.children {
-            if it.char == char { state = it.node_index; found = true; break; }
+        while true {
+            node := *raw_nodes[state];
+            found := false;
+            for node.children {
+                if it.char == char { state = it.node_index; found = true; break; }
+            }
+
+            if found || state == 0 break;
+            state = node.failure_link;
         }
-        if !found then state = node.failure_link;
     }
 
     return state;
