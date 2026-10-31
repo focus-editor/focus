@@ -725,10 +725,14 @@ adjust_viewports_for_line_height_change :: (previous_line_height: *float) {
     if current_line_height == previous_line_height.* return;
 
     if previous_line_height.* > 0 {
+        scale := current_line_height / previous_line_height.*;
+
         for * editor : open_editors {
-            lines_scrolled := editor.viewport.top / previous_line_height.*;
-            editor.viewport.scroll_y.target = xx (lines_scrolled * current_line_height);
-            editor.viewport.top = editor.viewport.scroll_y.target;
+            editor.viewport.glue_point.offset_within_line =
+                xx (editor.viewport.glue_point.offset_within_line * scale);
+
+            editor.viewport.top = xx (editor.viewport.top * scale);
+            editor.viewport.scroll_y.target = editor.viewport.top;
         }
     }
 

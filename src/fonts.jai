@@ -90,32 +90,23 @@ refresh_fonts :: () {
 
 }
 
-// Startup may create editors before sized fonts are available.
 get_font_line_height :: inline (role: Font_Role) -> float {
-    font := get_font(role);
-    if !font return 0;
-    return cast(float) font.default_line_spacing;
+    return cast(float) get_font(role).default_line_spacing;
 }
 
 get_char_size :: inline () -> float {
-    font := get_font(.editor);
-    if !font return 0;
-    return cast(float) font.em_width;
+    return cast(float) get_font(.editor).em_width;
 }
 
 get_char_x_advance :: inline () -> float {
-    font := get_font(.editor);
-    if !font return 0;
-    return cast(float) font.x_advance;
+    return cast(float) get_font(.editor).x_advance;
 }
 
 get_line_height :: inline () -> float {
-    if !context.config return 0;
     return floor(get_font_line_height(.editor) * cast(float) context.config.settings.line_height_scale_percent / 100.0);
 }
 
 get_scrollbar_width :: inline () -> float {
-    if !context.config return 0;
     return floor(1.5 * get_char_size()) * context.config.settings.scrollbar_width_scale;
 }
 
