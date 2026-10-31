@@ -50,7 +50,7 @@ maybe_revert_temporary_theme :: () {
 }
 
 revert_temporary_theme :: () {
-    apply_style(context.config.style);
+    apply_colors(context.config.style);
     set_temporary_theme("");
 }
 
@@ -166,7 +166,7 @@ preview_selected_theme :: () {
         merge_style(*style, parsed_config);
     }
 
-    apply_style(style);
+    apply_colors(style);
 }
 
 theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {

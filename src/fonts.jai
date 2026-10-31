@@ -1,3 +1,55 @@
+apply_fonts :: (style: Style) {
+    load_and_replace_font(*loaded_fonts.main,           style.font,                .main);
+    load_and_replace_font(*loaded_fonts.ui,             style.font_ui,             .ui);
+    load_and_replace_font(*loaded_fonts.ui_bold,        style.font_ui_bold,        .ui_bold);
+    load_and_replace_font(*loaded_fonts.ui_bold_italic, style.font_ui_bold_italic, .ui_bold_italic);
+}
+
+find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
+    if name == "default" return "default", "";
+
+    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
+
+    try_path :: (font_path: string) #expand {
+        if file_exists(font_path) {
+            absolute_path, ok := get_absolute_path(font_path,, temp);
+            if ok {
+                path_overwrite_separators(absolute_path, #char "/");
+                `return absolute_path, "";
+            }
+        }
+        array_add(*tried_paths, font_path);
+    }
+
+    tried_paths: [..] string;
+    tried_paths.allocator = temp;
+
+    try_path(name);
+
+    try_path(tprint("%/%", data_dir, name));
+    if !has_extension {
+        try_path(tprint("%/%.ttf", data_dir, name));
+        try_path(tprint("%/%.otf", data_dir, name));
+    }
+
+    // Try to look it up in system fonts
+    fonts_dir := platform_get_fonts_dir();
+
+    try_path(tprint("%/%", fonts_dir, name));
+    if !has_extension {
+        try_path(tprint("%/%.ttf", fonts_dir, name));
+        try_path(tprint("%/%.otf", fonts_dir, name));
+    }
+
+    if ! #compile_time {
+        found, path := platform_find_font_by_name(name);
+        if found then try_path(path);
+    }
+
+    error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ",, allocator = temp));
+    return "", error_msg;
+}
+
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
@@ -140,6 +192,51 @@ FONT_UI_BOLD_ITALIC :: #run load_font("OpenSans-SemiBoldItalic.ttf");
 FONT_ICONS          :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 #scope_file
+
+Font_Kind :: enum {
+    main;
+    ui;
+    ui_bold;
+    ui_bold_italic;
+}
+
+load_and_replace_font :: (dst: *Loaded_Font, name: string, kind: Font_Kind) {
+    loaded_font, success, error_msg := load_font_by_name(name, kind);
+    if !success {
+        add_user_error("%\nUsing the embedded default font for '%'.", error_msg, kind);
+        loaded_font = load_font_by_name("default", kind);
+    }
+    dst.* = loaded_font;
+}
+
+load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bool, error_msg: string /* temp */ {
+    if name == "default" {
+        if #complete kind == {
+            case .main;           return FONT_MAIN,           true, "";
+            case .ui;             return FONT_UI,             true, "";
+            case .ui_bold;        return FONT_UI_BOLD,        true, "";
+            case .ui_bold_italic; return FONT_UI_BOLD_ITALIC, true, "";
+        }
+    }
+
+    push_allocator(focus_allocator);  // FreeType borrows these bytes, so cached resources live for the process lifetime.
+
+    font_path, error_msg := find_font_by_name(name);
+    if !font_path return .{}, false, error_msg;
+
+    found, cached_font := table_find(*font_cache, font_path);
+    if found return cached_font, true, "";
+
+    font_data, success := read_entire_file(font_path);
+    if !success return .{}, false, tprint("Couldn't read font '%' from '%'.", name, font_path);
+
+    owned_path := copy_string(font_path);
+    loaded_font := Loaded_Font.{ name = owned_path, data = font_data };
+    table_set(*font_cache, owned_path, loaded_font);
+    return loaded_font, true, "";
+}
+
+font_cache: Table(string, Loaded_Font);  // absolute path -> loaded font
 
 Font_Source :: enum {
     main;

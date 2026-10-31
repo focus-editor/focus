@@ -188,6 +188,7 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
         diff.settings_changed = true;
         diff.build_config_changed = true;
         diff.style_changed = true;
+        diff.font_resources_changed = true;
     }
 
     // Remember this before transferring ownership out of new_project.
@@ -252,7 +253,11 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
     // Apply new config
 
     if diff.style_changed {
-        apply_style(context.config.style);
+        apply_colors(context.config.style);
+    }
+
+    if diff.font_resources_changed {
+        apply_fonts(context.config.style);
     }
 
     // Update languages before any settings-dependent refreshes.
@@ -343,6 +348,7 @@ Config_Diff :: struct {
     build_config_changed:            bool;
 
     style_changed:                   bool;
+    font_resources_changed:          bool;
     fonts_changed:                   bool;
 
     linux_config_changed:            bool;
@@ -367,6 +373,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
     diff.build_config_changed            = build_config_changed(old, new);
 
     diff.style_changed                   = style_changed(old, new);
+    diff.font_resources_changed          = font_resources_changed(old, new);
     diff.fonts_changed                   = fonts_changed(old, new);
 
     diff.linux_config_changed            = linux_config_changed(old, new);
@@ -383,6 +390,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
         diff.keymap_changed ||
         diff.build_config_changed ||
         diff.style_changed ||
+        diff.font_resources_changed ||
         diff.fonts_changed ||
         diff.linux_config_changed ||
         diff.project_changed;
@@ -444,6 +452,13 @@ build_config_changed :: (old: Config, new: Config) -> changed: bool {
 
 style_changed :: (old: Config, new: Config) -> changed: bool {
     return old.style != new.style;
+}
+
+font_resources_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.style.font                != new.style.font ||
+           old.style.font_ui             != new.style.font_ui ||
+           old.style.font_ui_bold        != new.style.font_ui_bold ||
+           old.style.font_ui_bold_italic != new.style.font_ui_bold_italic;
 }
 
 fonts_changed :: (old: Config, new: Config) -> changed: bool {
@@ -582,61 +597,9 @@ close_project :: () {
     defer_action_close_project();
 }
 
-find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
-    if name == "default" return "default", "";
 
-    has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
-
-    try_path :: (font_path: string) #expand {
-        if file_exists(font_path) {
-            absolute_path, ok := get_absolute_path(font_path,, temp);
-            if ok {
-                path_overwrite_separators(absolute_path, #char "/");
-                `return absolute_path, "";
-            }
-        }
-        array_add(*tried_paths, font_path);
-    }
-
-    tried_paths: [..] string;
-    tried_paths.allocator = temp;
-
-    try_path(name);
-
-    try_path(tprint("%/%", data_dir, name));
-    if !has_extension {
-        try_path(tprint("%/%.ttf", data_dir, name));
-        try_path(tprint("%/%.otf", data_dir, name));
-    }
-
-    // Try to look it up in system fonts
-    fonts_dir := platform_get_fonts_dir();
-
-    try_path(tprint("%/%", fonts_dir, name));
-    if !has_extension {
-        try_path(tprint("%/%.ttf", fonts_dir, name));
-        try_path(tprint("%/%.otf", fonts_dir, name));
-    }
-
-    if ! #compile_time {
-        found, path := platform_find_font_by_name(name);
-        if found then try_path(path);
-    }
-
-    error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ",, allocator = temp));
-    return "", error_msg;
-}
-
-apply_style :: (style: Style) {
-    // Replace color map
+apply_colors :: (style: Style) {
     COLOR_MAP = style.colors;
-
-    // Load and replace all fonts. If any fail to load they will fall back to defaults
-    load_and_replace_font(*loaded_fonts.main,           style.font,                .main);
-    load_and_replace_font(*loaded_fonts.ui,             style.font_ui,             .ui);
-    load_and_replace_font(*loaded_fonts.ui_bold,        style.font_ui_bold,        .ui_bold);
-    load_and_replace_font(*loaded_fonts.ui_bold_italic, style.font_ui_bold_italic, .ui_bold_italic);
-
     platform_set_border_color();
 }
 
@@ -817,52 +780,6 @@ build_comment_words_automaton :: (new_config: *Config) {
     new_config.comment_words_automaton = build_aho_corasick_automaton(words);
 }
 
-Font_Kind :: enum {
-    main;
-    ui;
-    ui_bold;
-    ui_bold_italic;
-}
-
-load_and_replace_font :: (dst: *Loaded_Font, name: string, kind: Font_Kind) {
-    loaded_font, success := load_font_by_name(name, kind);
-    if !success {
-        add_user_error("Couldn't load font '%'", name);
-        loaded_font = load_font_by_name("default", kind);
-    }
-    dst.* = loaded_font;
-}
-
-load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bool {
-    if name == "default" {
-        if #complete kind == {
-            case .main;             return FONT_MAIN,           true;
-            case .ui;               return FONT_UI,             true;
-            case .ui_bold;          return FONT_UI_BOLD,        true;
-            case .ui_bold_italic;   return FONT_UI_BOLD_ITALIC, true;
-        }
-    }
-
-    push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator, but we will always want to persist fonts
-
-    font_path := find_font_by_name(name);
-    if font_path {
-        found, cached_font := table_find(*font_cache, font_path);
-        if found return cached_font, true;
-
-        font_data, success := read_entire_file(font_path);
-        if success {
-            owned_path := copy_string(font_path);
-            loaded_font := Loaded_Font.{ name = owned_path, data = font_data };
-            table_set(*font_cache, owned_path, loaded_font);
-            return loaded_font, true;
-        }
-    }
-
-    return .{}, false;
-}
-
-font_cache: Table(string, Loaded_Font);  // path -> loaded font
 
 #scope_export
 
