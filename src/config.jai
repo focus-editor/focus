@@ -197,6 +197,8 @@ merge_and_apply_configs :: (new_global: *Loaded_Config, new_project: *Loaded_Con
     replace_loaded_config(*global_config,  new_global);
     replace_loaded_config(*project_config, new_project);
 
+    start_watching_config_themes();
+
     if diff.changed {
         if remember_project then add_to_most_recent_projects(project_config.path);
 
@@ -565,7 +567,7 @@ is_config_theme_dependency :: (path: string) -> bool {
     // Should we reload config if this file changes
     if global_config.loaded  && global_config.theme_path  && platform_path_equals(path, global_config.theme_path)  return true;
     if project_config.loaded && project_config.theme_path && platform_path_equals(path, project_config.theme_path) return true;
-    return true;
+    return false;
 }
 
 close_project :: () {
@@ -616,10 +618,6 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     return "", error_msg;
 }
 
-reset_color_map_to_default :: () {
-    COLOR_MAP = DEFAULT_CONFIG.style.colors;
-}
-
 apply_style :: (style: Style) {
     // Replace color map
     COLOR_MAP = style.colors;
@@ -641,12 +639,6 @@ apply_style :: (style: Style) {
     }
 
     platform_set_border_color();
-}
-
-// TODO: remove
-apply_parsed_colors :: (colors: [] Parsed_Color) {
-    for colors  COLOR_MAP[it.color_id] = it.color;
-    // TODO: @colorref - resolve references
 }
 
 get_current_project_name :: () -> string {

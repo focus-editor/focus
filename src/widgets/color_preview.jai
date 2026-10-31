@@ -53,6 +53,7 @@ deinit_color_preview :: () {
     free(preview_theme_path,, focus_allocator);
     preview_theme_path = "";
     array_free(preview_theme_colors);
+    preview_theme_colors = .[];
     preview_theme_valid = false;
 }
 
@@ -304,6 +305,7 @@ color_preview_get_theme_colors :: (name: string) -> [] Parsed_Color, bool {
         free(preview_theme_path);
         preview_theme_path = copy_string(path);
         array_free(preview_theme_colors);
+        preview_theme_colors = .[];
         preview_theme_valid = true;
         preview_theme_success = false;
 

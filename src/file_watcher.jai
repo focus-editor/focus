@@ -52,6 +52,7 @@ start_file_watcher :: () {
     // Start watching config files
     if global_config.loaded  then start_watching_file_if_not_already(global_config.path);
     if project_config.loaded then start_watching_file_if_not_already(project_config.path);
+    start_watching_config_themes();
 }
 
 file_watcher_process_changes :: () {
@@ -149,6 +150,19 @@ file_watcher_process_changes :: () {
         for dirs_to_scan {
             visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
         }
+    }
+}
+
+start_watching_config_themes :: () {
+    if !watchers.initialized return;
+
+    push_allocator(focus_allocator);
+
+    if global_config.loaded && global_config.theme_path {
+        start_watching_file_if_not_already(global_config.theme_path);
+    }
+    if project_config.loaded && project_config.theme_path {
+        start_watching_file_if_not_already(project_config.theme_path);
     }
 }
 
