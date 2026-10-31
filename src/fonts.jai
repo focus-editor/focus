@@ -1,13 +1,12 @@
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
-    Simp.set_anti_aliasing(context.config.style.font_anti_aliasing);
-    Simp.set_hinting(context.config.style.font_hinting);
-
-    Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
-
     style := context.config.style;
 
+    Simp.set_anti_aliasing(style.font_anti_aliasing);
+    Simp.set_hinting(style.font_hinting);
+
+    Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
 
     common_icons: String_Builder;
     common_icons.allocator = temp;
@@ -187,6 +186,6 @@ load_font :: (name: string) -> Loaded_Font {
     data, success := read_entire_file(path);
     assert(success, "Couldn't load font '%'", path);
 
-    return Loaded_Font.{ name = name, data = data};
+    return Loaded_Font.{ name = sprint("builtin:%", name), data = data };
 }
 

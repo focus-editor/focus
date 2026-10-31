@@ -588,7 +588,13 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
 
     try_path :: (font_path: string) #expand {
-        if file_exists(font_path) `return font_path, "";
+        if file_exists(font_path) {
+            absolute_path, ok := get_absolute_path(font_path,, temp);
+            if ok {
+                path_overwrite_separators(absolute_path, #char "/");
+                `return absolute_path, "";
+            }
+        }
         array_add(*tried_paths, font_path);
     }
 
@@ -614,7 +620,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
     if ! #compile_time {
         found, path := platform_find_font_by_name(name);
-        if found then return path, "";
+        if found then try_path(path);
     }
 
     error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ",, allocator = temp));
@@ -846,8 +852,9 @@ load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bo
 
         font_data, success := read_entire_file(font_path);
         if success {
-            loaded_font := Loaded_Font.{ copy_string(name), font_data };
-            table_set(*font_cache, copy_string(font_path), loaded_font);
+            owned_path := copy_string(font_path);
+            loaded_font := Loaded_Font.{ name = owned_path, data = font_data };
+            table_set(*font_cache, owned_path, loaded_font);
             return loaded_font, true;
         }
     }
