@@ -50,15 +50,13 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     return "", error_msg;
 }
 
-init_fonts_and_dependent_things :: () {
+refresh_fonts :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
     style := context.config.style;
 
     Simp.set_anti_aliasing(style.font_anti_aliasing);
     Simp.set_hinting(style.font_hinting);
-
-    Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
 
     common_icons: String_Builder;
     common_icons.allocator = temp;
@@ -90,21 +88,51 @@ init_fonts_and_dependent_things :: () {
         Simp.prepare_text(font, ifx description.source == .icons then icons_string else COMMON_CHARS);
     }
 
-    font_ui_line_height        = cast(float) get_font(.ui).default_line_spacing;
-    font_ui_big_line_height    = cast(float) get_font(.ui_big).default_line_spacing;
-    font_ui_medium_line_height = cast(float) get_font(.ui_medium).default_line_spacing;
-    status_bar_height = font_ui_line_height * 1.6;
+}
 
-    // Things that depend on char size
-    editor_font := get_font(.editor);
-    char_size             = cast(float) editor_font.em_width;
-    char_x_advance        = cast(float) editor_font.x_advance;
-    old_line_height       = line_height;
-    line_height           = floor(cast(float) editor_font.default_line_spacing * cast(float) context.config.settings.line_height_scale_percent / 100.0);
-    scrollbar_width       = floor(1.5 * char_size) * context.config.settings.scrollbar_width_scale;
-    rounding_radius       = floor(char_size / 2);
-    rounding_radius_large = floor(char_size / 1.5);
-    rounding_radius_small = floor(char_size / 3);
+// Startup may create editors before sized fonts are available.
+get_font_line_height :: inline (role: Font_Role) -> float {
+    font := get_font(role);
+    if !font return 0;
+    return cast(float) font.default_line_spacing;
+}
+
+get_char_size :: inline () -> float {
+    font := get_font(.editor);
+    if !font return 0;
+    return cast(float) font.em_width;
+}
+
+get_char_x_advance :: inline () -> float {
+    font := get_font(.editor);
+    if !font return 0;
+    return cast(float) font.x_advance;
+}
+
+get_line_height :: inline () -> float {
+    if !context.config return 0;
+    return floor(get_font_line_height(.editor) * cast(float) context.config.settings.line_height_scale_percent / 100.0);
+}
+
+get_scrollbar_width :: inline () -> float {
+    if !context.config return 0;
+    return floor(1.5 * get_char_size()) * context.config.settings.scrollbar_width_scale;
+}
+
+get_rounding_radius :: inline () -> float {
+    return floor(get_char_size() / 2);
+}
+
+get_rounding_radius_large :: inline () -> float {
+    return floor(get_char_size() / 1.5);
+}
+
+get_rounding_radius_small :: inline () -> float {
+    return floor(get_char_size() / 3);
+}
+
+get_status_bar_height :: inline () -> float {
+    return get_font_line_height(.ui) * 1.6;
 }
 
 adjust_zoom :: (delta: int) {
@@ -115,7 +143,7 @@ adjust_zoom :: (delta: int) {
     if new_zoom == font_zoom_steps return;
 
     font_zoom_steps = new_zoom;
-    init_fonts_and_dependent_things();
+    refresh_fonts();
 }
 
 zoom_in :: () {
@@ -128,7 +156,7 @@ zoom_out :: () {
 
 reset_zoom :: () {
     font_zoom_steps = 0;
-    init_fonts_and_dependent_things();
+    refresh_fonts();
 }
 
 Loaded_Font :: struct {

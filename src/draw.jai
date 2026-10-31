@@ -204,12 +204,12 @@ draw_welcome_screen :: (main_area: Rect) {
         }
         if version_width < info_area.w {
             x := (info_area.w - version_width) / 2;
-            y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
+            y := info_area.y + info_area.h - shrink_step - get_font_line_height(.ui);
             Simp.draw_prepared_text(font, xx x, xx y, color = xx Color.UI_DIM);
 
             // Copy version when clicking on it
             {
-                version_rect := Rect.{ x, y, version_width, font_ui_line_height};
+                version_rect := Rect.{ x, y, version_width, get_font_line_height(.ui)};
                 version_ui_id := get_ui_id_from_loc();
                 clicked := maybe_set_hot_or_active(version_ui_id, version_rect, .PRESSABLE);
                 if clicked {
@@ -221,7 +221,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
             date_width := Simp.prepare_text(get_font(.ui_medium), RELEASE_DATE);
             x = (info_area.w - date_width) / 2;
-            y -= 1.5 * font_ui_big_line_height;
+            y -= 1.5 * get_font_line_height(.ui_big);
             Simp.draw_prepared_text(get_font(.ui_medium), xx x, xx y, color = xx Color.UI_DIM);
         }
     }
@@ -327,7 +327,7 @@ draw_user_messages :: (main_area: Rect) {
     message_rect_src := shrink(main_area, margin);
     if !is_valid(message_rect_src) return;
 
-    if status_bar_is_drawn_at_the_bottom() then message_rect_src.y += status_bar_height;
+    if status_bar_is_drawn_at_the_bottom() then message_rect_src.y += get_status_bar_height();
 
     for < * user_messages {
         // Figure out message height
@@ -338,7 +338,7 @@ draw_user_messages :: (main_area: Rect) {
             line_width := Simp.get_text_width(get_font(.ui), line);
             max_seen_width = max(line_width, max_seen_width);
         }
-        message_height := lines.count * font_ui_line_height + 2 * padding;
+        message_height := lines.count * get_font_line_height(.ui) + 2 * padding;
 
         message_rect := message_rect_src;
         message_rect.h = message_height;
@@ -369,7 +369,7 @@ draw_user_messages :: (main_area: Rect) {
         for line : lines {
             x := pen_x;
             Simp.draw_text(get_font(.ui), x, y, line, xx text_color);
-            y -= xx font_ui_line_height;
+            y -= xx get_font_line_height(.ui);
         }
 
         message_rect_src.y += message_height + margin;
@@ -386,7 +386,7 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
     rect_height := cast(float) get_font(.ui_small).character_height + 2 * padding_v;
 
     pen := bottom_left(active_editor_rect) + Vector2.{ margin, margin };
-    if status_bar_is_drawn_at_the_bottom() then pen.y += status_bar_height;
+    if status_bar_is_drawn_at_the_bottom() then pen.y += get_status_bar_height();
 
     text_y := pen.y + padding_v * 1.5;
 
@@ -433,9 +433,9 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
     if !color_preview_is_shown {
         // Draw a "minimised" button instead of the popup
         padding := floor(12 * dpi_scale);
-        shrinked_screen  := shrink_x(shrink_y(active_editor_rect, font_ui_line_height + 2 * padding), 2 * padding);
-        buttons_row_rect := cut_bottom(shrinked_screen, font_ui_line_height + 2 * padding);
-        activated := draw_button(get_font(.ui), "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, .right, padding / 2, padding, shadow_size = char_x_advance);
+        shrinked_screen  := shrink_x(shrink_y(active_editor_rect, get_font_line_height(.ui) + 2 * padding), 2 * padding);
+        buttons_row_rect := cut_bottom(shrinked_screen, get_font_line_height(.ui) + 2 * padding);
+        activated := draw_button(get_font(.ui), "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, .right, padding / 2, padding, shadow_size = get_char_x_advance());
         if activated then show_color_preview();
         if !color_preview_is_shown return;  // if we just activated it, draw it right this frame. John Carmack would be happy
     }
@@ -455,13 +455,13 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
     color_preview_rect := cut_right(active_editor_rect, active_editor_rect.w * color_preview_width, margin = 2);
     color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
     if status_bar_is_drawn_at_the_bottom() {
-        _, color_preview_rect = cut_bottom(color_preview_rect, status_bar_height);
+        _, color_preview_rect = cut_bottom(color_preview_rect, get_status_bar_height());
     }
     if !is_valid(color_preview_rect) return;
 
-    draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
+    draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = get_char_size(), extra_draw_info = .{is_background = true});
 
-    title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
+    title_bar_height := get_font_line_height(.ui) + 2 * margin + 4 * dpi_scale;
     title_bar_rect, panel_body_rect := cut_top(color_preview_rect, title_bar_height);
 
     if !is_valid(title_bar_rect) return;
@@ -479,7 +479,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         draw_rect(title_bar_rect, Color.COLOR_PREVIEW_TITLE_BAR, extra_draw_info = .{is_background = true});
 
         pen := Vector2.{
-            x = title_bar_rect.x + char_x_advance,
+            x = title_bar_rect.x + get_char_x_advance(),
             y = title_bar_rect.y + (title_bar_rect.h - get_font(.ui_bold).character_height) / 2 + 2,
         };
         Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, "Color Preview — hover over text to view color names, click to jump to color definition", xx Color.UI_DEFAULT);
@@ -517,7 +517,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
     editor_rect, warning_rect: Rect;
     warning_text := color_preview_get_warning();
     if warning_text {
-        height := font_ui_line_height + 2 * padding;
+        height := get_font_line_height(.ui) + 2 * padding;
         warning_rect, editor_rect = cut_top(panel_body_rect, height);
 
         push_scissor(warning_rect);
@@ -547,7 +547,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         draw_rect(langs_rect, Color.BACKGROUND_2, extra_draw_info = .{is_background = true});
 
         languages, selected_lang := color_preview_get_languages();
-        entry_height := cast(s64) (font_ui_line_height + padding);
+        entry_height := cast(s64) (get_font_line_height(.ui) + padding);
         entry_rect := cut_top(langs_rect, xx entry_height);
         entry_rect.y -= padding;
 
@@ -631,7 +631,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         }
     }
 
-    color_picker_rect = shrink_y(color_picker_rect, font_ui_line_height / 2);
+    color_picker_rect = shrink_y(color_picker_rect, get_font_line_height(.ui) / 2);
     color_preview_draw_color_picker(color_picker_rect);
 
     return is_color_preview_panel(active_editor_id), editor_rect;
@@ -669,8 +669,8 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
 
     Simp.immediate_flush();
 
-    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
-    widget_size := line_height;
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = get_char_size(), extra_draw_info = .{is_background = true});
+    widget_size := get_line_height();
     bottom, top := cut_bottom(rect, widget_size);
     axis_rect, main_rect  := cut_left(top,    widget_size);
     mode_rect, alpha_rect := cut_left(bottom, widget_size);
@@ -770,14 +770,14 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
 
     if status_bar_is_drawn_at_the_bottom() {
-        _, build_panel_rect = cut_bottom(build_panel_rect, status_bar_height);
+        _, build_panel_rect = cut_bottom(build_panel_rect, get_status_bar_height());
     }
 
     if !is_valid(build_panel_rect) return;
-    draw_rounded_rect_with_shadow(build_panel_rect, Color.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
+    draw_rounded_rect_with_shadow(build_panel_rect, Color.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = get_char_size(), extra_draw_info = .{is_background = true});
 
     margin := floor(4 * dpi_scale);
-    title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
+    title_bar_height := get_font_line_height(.ui) + 2 * margin + 4 * dpi_scale;
     title_bar_rect, build_output_rect := cut_top(build_panel_rect, title_bar_height);
 
     if !is_valid(title_bar_rect) return;
@@ -801,7 +801,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR, extra_draw_info = .{is_background = true});
 
         pen := Vector2.{
-            x = title_bar_rect.x + char_x_advance,
+            x = title_bar_rect.x + get_char_x_advance(),
             y = title_bar_rect.y + (title_bar_rect.h - get_font(.ui_bold).character_height) / 2 + 2,
         };
         Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, "Build Output", xx Color.UI_DEFAULT);
@@ -849,9 +849,9 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -
     buffer_settings := get_settings(buffer);
 
     if buffer_settings.status_bar_position == .bottom {
-        status_bar_rect, rect = cut_bottom(main_area, ifx has_status_bar then status_bar_height else 0);
+        status_bar_rect, rect = cut_bottom(main_area, ifx has_status_bar then get_status_bar_height() else 0);
     } else {
-        status_bar_rect, rect = cut_top(main_area, ifx has_status_bar then status_bar_height else 0);
+        status_bar_rect, rect = cut_top(main_area, ifx has_status_bar then get_status_bar_height() else 0);
     }
 
     max_width := cast(float) buffer_settings.max_editor_width * dpi_scale;
@@ -863,7 +863,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -
     if buffer_settings.show_line_numbers && !is_build_panel(editor_id) {
         max_lines  := get_max_line_num(editor, buffer) + 1;
         num_digits := tprint("%", max_lines).count;
-        panel_width := (num_digits + 2) * char_x_advance;
+        panel_width := (num_digits + 2) * get_char_x_advance();
         if rect.w > panel_width then line_number_panel, rect = cut_left(rect, panel_width);
     }
 
@@ -879,7 +879,7 @@ status_bar_is_drawn_at_the_top :: inline () -> bool {
 }
 
 get_text_offset :: inline () -> Vector2 {
-    return Vector2.{char_x_advance, -char_x_advance};
+    return Vector2.{get_char_x_advance(), -get_char_x_advance()};
 }
 
 coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
@@ -887,7 +887,7 @@ coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
     mouse_pos := pointer - bottom_left(rect) - get_text_offset();
     mouse_pos.x += viewport.left;
     mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-    return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
+    return .{ line = xx (mouse_pos.y / get_line_height()), col = xx ((mouse_pos.x / get_char_x_advance()) + 0.5) };
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true) {
@@ -911,6 +911,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
     active_editor_id := get_active_editor_id();
     editor_is_active := editor_id == active_editor_id && Input.input_application_has_focus;
+
+    char_x_advance := get_char_x_advance();
+    line_height := get_line_height();
 
     // Calculate text origin in screen coordinates
     text_offset := get_text_offset();
@@ -1014,7 +1017,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             }
 
             // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-            if !mouse_pointer_is_within(shrink(rect, char_size)) then cursor_moved = true;
+            if !mouse_pointer_is_within(shrink(rect, get_char_size())) then cursor_moved = true;
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
 
@@ -1142,7 +1145,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     rect_with_scrollbar := rect;
     {
         free_space_on_right := right(main_area) - right(rect);
-        rect_with_scrollbar.w += min(free_space_on_right, scrollbar_width);
+        rect_with_scrollbar.w += min(free_space_on_right, get_scrollbar_width());
     }
     num_editor_lines := get_max_line_num(editor, buffer);
     content_height := (num_editor_lines + 2) * line_height;
@@ -1551,8 +1554,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
 
                 rect := make_rect(screen_pos.x, screen_pos.y, char_x_advance, line_height);
-                draw_rounded_rect(rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
-                draw_rounded_rect(shrink(rect, 1), Color.BACKGROUND_0, radius = rounding_radius_small, set_shader = false);
+                draw_rounded_rect(rect, Color.CURSOR, radius = get_rounding_radius_small(), set_shader = true);
+                draw_rounded_rect(shrink(rect, 1), Color.BACKGROUND_0, radius = get_rounding_radius_small(), set_shader = false);
             }
         }
 
@@ -1629,7 +1632,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
                 cursor_rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
                 cursor_rect = align_to_grid(cursor_rect);
-                draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
+                draw_rounded_rect(cursor_rect, Color.CURSOR, radius = get_rounding_radius_small(), set_shader = true);
 
                 // Draw the letter on top for better visibility
                 if cursor_as_block {
@@ -1648,7 +1651,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
     if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
         Simp.set_shader_for_color(enable_blend = true);
 
-        marks_rect := cut_right(rect_with_scrollbar, scrollbar_width);
+        marks_rect := cut_right(rect_with_scrollbar, get_scrollbar_width());
         marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
         marks_rect_top := marks_rect.y + marks_rect.h;
         assert(buffer.line_starts.count > 0);
@@ -1764,20 +1767,20 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         margin  := floor(8 * dpi_scale);
         padding := floor(4 * dpi_scale);
 
-        entry_height := font_ui_line_height + padding * 2;
+        entry_height := get_font_line_height(.ui) + padding * 2;
 
         max_search_results := cast(s32) (rect.h * 0.3 / entry_height);
         num_search_results := min(results.count, max_search_results);
 
         if mode == .classic then num_search_results = 0;
 
-        top_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+        top_rect_height := get_font_line_height(.ui) + 2 * padding + 2 * margin + 2;
         bar_rect_height := top_rect_height + entry_height * num_search_results;
 
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
         bar_rect.x -= 2 * char_x_advance;
-        if status_bar_is_drawn_at_the_top() then bar_rect.y -= status_bar_height;
+        if status_bar_is_drawn_at_the_top() then bar_rect.y -= get_status_bar_height();
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
@@ -2081,9 +2084,9 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
     // Get the status bar rect even if it's hidden
     status_bar_rect: Rect;
     if context.config.settings.status_bar_position == .bottom {
-        status_bar_rect = cut_bottom(main_area, status_bar_height);
+        status_bar_rect = cut_bottom(main_area, get_status_bar_height());
     } else {
-        status_bar_rect = cut_top(main_area, status_bar_height);
+        status_bar_rect = cut_top(main_area, get_status_bar_height());
     }
 
     // Figure out the position and dimensions of the rect
@@ -2091,7 +2094,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
     max_height := 0.5 * main_area.h;
     real_width := max_file_name_width + max_folder_name_width + text_offset.x * 2 + margin * 2;
     real_width = min(real_width, max_width);
-    entry_height := font_ui_line_height + padding * 2;
+    entry_height := get_font_line_height(.ui) + padding * 2;
     max_entries := cast(int) (max_height / entry_height);
     num_visible_entries := min(pane.editor_ids.count, max_entries);
 
@@ -2326,14 +2329,14 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
         // Maybe draw the number of cursors off screen
         if editor.cursors.count > 1 && cursors_off_screen && buffer_settings.status_bar_show_cursors_off_screen {
             width = xx Simp.prepare_text(get_font(.ui_bold), tprint("%", cursors_off_screen));
-            cursor_indicator_x := pen_x - width - char_x_advance;
+            cursor_indicator_x := pen_x - width - get_char_x_advance();
             Simp.draw_prepared_text(get_font(.ui_bold), xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
 
-            cursor_width := ifx buffer_settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
-            cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
-            cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
+            cursor_width := ifx buffer_settings.cursor_as_block then get_char_x_advance() else 2 * dpi_scale;
+            cursor_y := status_bar_rect.y + (status_bar_rect.h - get_line_height()) / 2;
+            cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, get_line_height()));
 
-            if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
+            if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = get_rounding_radius_small(), set_shader = true);
 
             hover_rect := Rect.{ cursor_rect.x - padding, status_bar_rect.y, cursor_rect.w + padding + width + 2 * padding, status_bar_rect.h };
             cursor_number_id := get_ui_id_from_loc(parent_id = editor_ui_id);
@@ -2513,8 +2516,8 @@ draw_open_file_dialog :: () {
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    entry_height := font_ui_line_height + padding * 2;
+    input_rect_height := get_font_line_height(.ui) + 2 * padding + 2 * margin + 2;
+    entry_height := get_font_line_height(.ui) + padding * 2;
 
     // Figure out the dialog box size
     box_rect: Rect = ---;
@@ -2530,7 +2533,7 @@ draw_open_file_dialog :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, extra_draw_info = .{is_background = true});
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = get_rounding_radius_large(), extra_draw_info = .{is_background = true});
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2773,7 +2776,7 @@ draw_open_file_dialog :: () {
         // Deselect any previously clicked entry
         if mouse.left.just_released || !mouse.left.is_down then entries.selected_by_mouse = -1;
 
-        if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_x_advance));
+        if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, get_char_x_advance()));
     }
 }
 
@@ -2841,8 +2844,8 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    entry_height := font_ui_line_height + padding * 2;
+    input_rect_height := get_font_line_height(.ui) + 2 * padding + 2 * margin + 2;
+    entry_height := get_font_line_height(.ui) + padding * 2;
 
     // Figure out the dialog box size
     box_rect: Rect = ---;
@@ -2854,7 +2857,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, extra_draw_info = .{is_background = true});
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = get_rounding_radius_large(), extra_draw_info = .{is_background = true});
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2976,7 +2979,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
 
         if mouse.left.just_released || !mouse.left.is_down then selected_by_mouse = -1;
 
-        if scroll_y != 0 then draw_top_down_shadow(cut_top(entries_rect, char_x_advance));
+        if scroll_y != 0 then draw_top_down_shadow(cut_top(entries_rect, get_char_x_advance()));
     }
 }
 
@@ -3001,7 +3004,7 @@ draw_delete_file_dialog :: () {
         "Delete file?",
         "Please confirm you want to delete the following file:",
         draw_extra_file_info,
-        extra_height = font_ui_medium_line_height,
+        extra_height = get_font_line_height(.ui_medium),
     );
 }
 
@@ -3026,7 +3029,7 @@ draw_theme_dialog :: () {
 
 draw_unsaved_buffers_dialog :: () {
     draw_extra_buffer_names :: (extra_rect: Rect, margin: float, padding: float) {
-        entry_height  := font_ui_line_height + padding * 2;
+        entry_height  := get_font_line_height(.ui) + padding * 2;
         entry_margin  := margin / 2;
         entry_rect := cut_top(extra_rect, entry_height);
 
@@ -3089,7 +3092,7 @@ draw_unsaved_buffers_dialog :: () {
         header,
         message,
         draw_extra_buffer_names,
-        extra_height = (font_ui_line_height + padding * 2 + margin / 2) * num_unsaved_buffers,
+        extra_height = (get_font_line_height(.ui) + padding * 2 + margin / 2) * num_unsaved_buffers,
     );
 }
 
@@ -3104,9 +3107,9 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
-    entry_height  := font_ui_line_height + padding * 2;
-    button_height := font_ui_medium_line_height + 2 * padding;
-    header_height := font_ui_medium_line_height + 2 * margin + 4 * dpi_scale;
+    entry_height  := get_font_line_height(.ui) + padding * 2;
+    button_height := get_font_line_height(.ui_medium) + 2 * padding;
+    header_height := get_font_line_height(.ui_medium) + 2 * margin + 4 * dpi_scale;
 
     box_rect := Rect.{
         w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
@@ -3114,7 +3117,7 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
     };
     if message then box_rect.h += entry_height + margin;
     box_rect.h = min(box_rect.h, screen.h * 0.9);
-    box_rect.h = max(box_rect.h, font_ui_line_height * 8);
+    box_rect.h = max(box_rect.h, get_font_line_height(.ui) * 8);
 
     box_rect.x = floor((screen.w - box_rect.w) / 2);
     box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
@@ -3197,7 +3200,7 @@ draw_confirm_overwrite_dialog :: () {
         "Overwrite file?",
         "Please confirm that you want to overwrite the following file:",
         draw_extra_file_info,
-        extra_height = font_ui_medium_line_height,
+        extra_height = get_font_line_height(.ui_medium),
     );
 }
 
@@ -3218,20 +3221,22 @@ draw_kill_running_command_dialog :: () {
         "Kill running command?",
         "The following command is currently running:",
         draw_extra_command_info,
-        extra_height = font_ui_medium_line_height,
+        extra_height = get_font_line_height(.ui_medium),
     );
 }
 
 draw_finder :: () {
     using finder;
 
+    char_x_advance := get_char_x_advance();
+
     ui_id := Ui_Id.finder;
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    entry_height := font_ui_line_height + padding * 2;
+    input_rect_height := get_font_line_height(.ui) + 2 * padding + 2 * margin + 2;
+    entry_height := get_font_line_height(.ui) + padding * 2;
 
     // Figure out the dialog box size
     box_rect: Rect = ---;
@@ -3251,7 +3256,7 @@ draw_finder :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, extra_draw_info = .{is_background = true});
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = get_rounding_radius_large(), extra_draw_info = .{is_background = true});
 
     if results {
         template := "% results found";
@@ -3604,14 +3609,14 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     padding := floor(4 * dpi_scale);
 
     label_width := cast(float) Simp.prepare_text(get_font(.ui), "Go to line");
-    width  := max(active_editor_rect.w * 0.5, 6 * char_x_advance + 2 * (margin + padding + 1));
-    height := font_ui_line_height + 2 * (margin + padding + 1);
+    width  := max(active_editor_rect.w * 0.5, 6 * get_char_x_advance() + 2 * (margin + padding + 1));
+    height := get_font_line_height(.ui) + 2 * (margin + padding + 1);
 
     bar_rect := cut_top(active_editor_rect, height);
     bar_rect = cut_right(bar_rect, width);
-    bar_rect.x -= 2 * char_x_advance;
+    bar_rect.x -= 2 * get_char_x_advance();
 
-    if status_bar_is_drawn_at_the_top() then bar_rect.y -= status_bar_height;
+    if status_bar_is_drawn_at_the_top() then bar_rect.y -= get_status_bar_height();
 
     maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
 
@@ -3632,12 +3637,14 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
 
 get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
     return .{
-        text_origin.x + coords.col * char_x_advance,
-        text_origin.y - coords.line * line_height,
+        text_origin.x + coords.col * get_char_x_advance(),
+        text_origin.y - coords.line * get_line_height(),
     };
 }
 
 draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color, alpha := 1.0) {
+    char_x_advance := get_char_x_advance();
+    line_height := get_line_height();
     tab_size := get_buffer_tab_size(buffer);
 
     // Scan the visible range and add the number of chars on each line
@@ -3698,6 +3705,9 @@ draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_star
 }
 
 draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+    char_x_advance := get_char_x_advance();
+    line_height := get_line_height();
+
     start := max(range.start.line, visible_start);
     end   := min(range.end.line,   visible_end);
 
@@ -3925,9 +3935,9 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
 draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, tab_size: s32, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {
     // Use different code paths for colored and uncolored texts to avoid checking if color is present for each letter
     if is_colored {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx,force selections, tab_size, start_col, is_colored = true);
+        Simp.draw_code(font, xx pen.x, xx pen.y, get_char_x_advance(), get_line_height(), code_lines, xx,force selections, tab_size, start_col, is_colored = true);
     } else {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx,force selections, tab_size, start_col, is_colored = false);
+        Simp.draw_code(font, xx pen.x, xx pen.y, get_char_x_advance(), get_line_height(), code_lines, xx,force selections, tab_size, start_col, is_colored = false);
     }
 }
 
@@ -3937,7 +3947,7 @@ Corner_Rounding :: enum { none; in; out; }
 draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, opacity := 1.0, $set_shader := true, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
     if !is_valid(rect) return;
     #if set_shader then Simp.set_shader_for_rects(extra_draw_info);
-    if radius <= 0 then radius = rounding_radius;
+    if radius <= 0 then radius = get_rounding_radius();
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };
@@ -3953,7 +3963,7 @@ draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, 
 draw_rounded_rect_with_raw_color :: (rect: Rect, color_vec4: Vector4, radius := 0.0, softness := 1.0, $set_shader := true) {
     if !is_valid(rect) return;
     #if set_shader then Simp.set_shader_for_rects();
-    if radius <= 0 then radius = rounding_radius;
+    if radius <= 0 then radius = get_rounding_radius();
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };
@@ -3968,7 +3978,7 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
                                    br: Corner_Rounding = .in, bl: Corner_Rounding = .in,
                                    radius := 0.0, softness := 1.0, alpha := 1.0,
                                    $extra_draw_info := Simp.Extra_Draw_Info.{}) {
-    if radius <= 0 then radius = rounding_radius;
+    if radius <= 0 then radius = get_rounding_radius();
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };
@@ -4029,8 +4039,8 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
 }
 
 draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shadow_size := 0.0, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
-    if radius <= 0 then radius = rounding_radius;
-    if shadow_size <= 0 then shadow_size = char_x_advance * 2;
+    if radius <= 0 then radius = get_rounding_radius();
+    if shadow_size <= 0 then shadow_size = get_char_x_advance() * 2;
     shadow_rect := expand(rect, shadow_size);
     shadow_radius := radius + shadow_size;
 
@@ -4055,7 +4065,7 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
 }
 
 draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0) {
-    if radius <= 0 then radius = rounding_radius;
+    if radius <= 0 then radius = get_rounding_radius();
 
     rect := Rect.{ x = center.x - radius, y = center.y - radius, w = radius * 2, h = radius * 2 };
 
@@ -4131,7 +4141,7 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
 
     if max_scroll <= min_scroll return scroll_target;
 
-    area := cut_right(main_rect, scrollbar_width);  // the scrollbar area of the main rect
+    area := cut_right(main_rect, get_scrollbar_width());  // the scrollbar area of the main rect
     scrollbar := area;  // handle
     scrollbar.h = floor(area.h * (area.h / content_height));
     scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
@@ -4154,7 +4164,7 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
     distance_to_mouse_x := max(abs(mouse.pointer.x - (area.x + area.w / 2)) - area.w / 2, 0.0);
     distance_to_mouse_y := max(abs(mouse.pointer.y - (area.y + area.h / 2)) - area.h / 2, 0.0);
     distance_to_mouse := max(distance_to_mouse_x, distance_to_mouse_y);
-    fade_in_threshold := char_size * context.config.settings.scrollbar_fade_in_sensitivity;
+    fade_in_threshold := get_char_size() * context.config.settings.scrollbar_fade_in_sensitivity;
     t := clamp((fade_in_threshold - distance_to_mouse) / fade_in_threshold, 0.0, 1.0);
     opacity := lerp(context.config.settings.scrollbar_min_opacity, context.config.settings.scrollbar_max_opacity, t);
     opacity = max(opacity, fadeout_opacity);
@@ -4175,15 +4185,15 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
     }
 
     // Draw
-    #if draw draw_rounded_rect(area, color_bg, radius = rounding_radius_small, opacity = opacity);
+    #if draw draw_rounded_rect(area, color_bg, radius = get_rounding_radius_small(), opacity = opacity);
     color = color_hover;
-    separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
+    separator_rect := shrink_y(cut_left(area, 1), get_rounding_radius_small());
     #if draw draw_rect(separator_rect, color_bg, opacity = opacity);
     scrollbar.y += (cast(float) (max_scroll - scroll) / (max_scroll - min_scroll)) * scroll_zone_size;
     scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);
     if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
-    #if draw draw_rounded_rect(scrollbar, color, radius = rounding_radius_small, opacity = opacity);
+    #if draw draw_rounded_rect(scrollbar, color, radius = get_rounding_radius_small(), opacity = opacity);
 
     // Maybe drag the slider
     if ui.active == ui_id {

@@ -965,7 +965,7 @@ action_move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     // We assume that editors always take up most of the screen vertically.
     // If that ever changes we'll need to change this code (and do it when we know the layout)
     cursor_px_pos := editor.viewport.top +  window_height / 2;
-    coords := Coords.{ line = xx (cursor_px_pos / line_height), col = 0 };
+    coords := Coords.{ line = xx (cursor_px_pos / get_line_height()), col = 0 };
     cursor.pos = coords_to_offset(editor, buffer, coords);
     cursor.sel = cursor.pos;
     editor.cursor_moved = true;
@@ -1094,7 +1094,7 @@ get_max_real_line_num :: inline (buffer: Buffer) -> s32 {
 
 get_max_y_scroll :: (editor: Editor, buffer: Buffer) -> s32 {
     assert(!buffer.dirty);
-    return max(cast(s32) (get_max_line_num(editor, buffer)  * line_height), 0);
+    return max(cast(s32) (get_max_line_num(editor, buffer)  * get_line_height()), 0);
 }
 
 add_paste_animation :: (editor_id: s64, range: Offset_Range) {
@@ -2437,8 +2437,8 @@ should_draw_cursors :: inline () -> bool {
 }
 
 viewport_remember_glue_point :: (using editor: *Editor, buffer: Buffer) {
-    viewport.glue_point.buffer_pos = get_line_start_offset(editor, buffer, viewport.top / cast(s32) line_height);
-    viewport.glue_point.offset_within_line = viewport.top % cast(s32) line_height;
+    viewport.glue_point.buffer_pos = get_line_start_offset(editor, buffer, viewport.top / cast(s32) get_line_height());
+    viewport.glue_point.offset_within_line = viewport.top % cast(s32) get_line_height();
     redraw_requested = true;
 }
 
@@ -2461,7 +2461,7 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
     glue_point.buffer_pos = clamp(glue_point.buffer_pos, 0, cast(s32)max(0, buffer.bytes.count-1));
     if top >= 0 {
         line := offset_to_line(editor, buffer, glue_point.buffer_pos);
-        top = line * cast(s32) line_height + glue_point.offset_within_line;
+        top = line * cast(s32) get_line_height() + glue_point.offset_within_line;
         scroll_y.target = top;
     }
     return top != old_top;
@@ -3367,7 +3367,7 @@ move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; 
 }
 
 move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
-    page_size := cast(s32) (window_height / line_height);
+    page_size := cast(s32) (window_height / get_line_height());
 
     for * cursor : editor.cursors {
         coords := offset_to_coords(editor, buffer, cursor.pos);

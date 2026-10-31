@@ -108,8 +108,8 @@ main :: () {
     start_workspace_scan();
 
     dpi_scale = platform_get_dpi_scale(window);
-    init_fonts_and_dependent_things();
-    old_line_height = line_height;
+    refresh_fonts();
+    previous_line_height := get_line_height();
 
     window_has_focus := true;
     window_resized   := false;
@@ -134,18 +134,19 @@ main :: () {
         frame_time = current_time;
         frame_time64 = to_float64_seconds(frame_time);
 
-        old_line_height = line_height;
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
             if (it.window == window) {
-                should_reinit := dont_ignore_next_window_resize || ((it.width != window_width) || (it.height != window_height));
+                should_update := dont_ignore_next_window_resize || ((it.width != window_width) || (it.height != window_height));
                 window_width = it.width;
                 window_height = it.height;
-                if should_reinit {
-                    // Cleanup: revisit this code, it's been touched by multiple people and needs simplification
-                    screen    = make_rect(0, 0, window_width, window_height);
-                    dpi_scale = platform_get_dpi_scale(window);
-                    init_fonts_and_dependent_things();
+                if should_update {
+                    screen = make_rect(0, 0, window_width, window_height);
+                    new_dpi_scale := platform_get_dpi_scale(window);
+                    if new_dpi_scale != dpi_scale {
+                        dpi_scale = new_dpi_scale;
+                        refresh_fonts();
+                    }
                     dont_ignore_next_window_resize = false;
                 }
                 window_resized = true;
@@ -164,15 +165,10 @@ main :: () {
         workspace_update();
         finder_update();
 
+        adjust_viewports_for_line_height_change(*previous_line_height);
+
         for * editor : open_editors {
-            using editor;
-            cursor_moved = false;
-            if old_line_height != line_height {
-                // Adjust viewport position
-                lines_scrolled := viewport.top / old_line_height;
-                viewport.scroll_y.target = xx (lines_scrolled * line_height);
-                viewport.top = viewport.scroll_y.target;
-            }
+            editor.cursor_moved = false;
         }
 
         // Keyboard and text input events may be generated for the same keypress.
@@ -277,6 +273,7 @@ main :: () {
 
         build_system_update();
         maybe_revert_temporary_theme();
+        adjust_viewports_for_line_height_change(*previous_line_height);
         refresh_open_buffers();
 
         draw_frame();
@@ -723,6 +720,21 @@ ctrl_or_cmd_pressed :: inline () -> bool {
     }
 }
 
+adjust_viewports_for_line_height_change :: (previous_line_height: *float) {
+    current_line_height := get_line_height();
+    if current_line_height == previous_line_height.* return;
+
+    if previous_line_height.* > 0 {
+        for * editor : open_editors {
+            lines_scrolled := editor.viewport.top / previous_line_height.*;
+            editor.viewport.scroll_y.target = xx (lines_scrolled * current_line_height);
+            editor.viewport.top = editor.viewport.scroll_y.target;
+        }
+    }
+
+    previous_line_height.* = current_line_height;
+}
+
 update_window_size :: (w: s64, h: s64) {
     window_width  = w;
     window_height = h;
@@ -731,7 +743,7 @@ update_window_size :: (w: s64, h: s64) {
     new_dpi_scale := platform_get_dpi_scale(window);
     if new_dpi_scale != dpi_scale {
         dpi_scale = new_dpi_scale;
-        init_fonts_and_dependent_things();
+        refresh_fonts();
     }
 }
 
@@ -835,19 +847,6 @@ Mouse_Button_State :: struct {
 WHEEL_SENSITIVITY :: 1.0;
 
 
-// Depend on font size
-char_size:                  float;
-char_x_advance:             float;
-line_height:                float;
-old_line_height:            float;  // to track font changes
-font_ui_line_height:        float;
-font_ui_big_line_height:    float;
-font_ui_medium_line_height: float;
-rounding_radius:            float;
-rounding_radius_large:      float;
-rounding_radius_small:      float;
-scrollbar_width:            float;
-status_bar_height:          float;
 
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually

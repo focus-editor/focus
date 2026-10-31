@@ -260,6 +260,14 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
         apply_fonts(context.config.style);
     }
 
+    if diff.font_rendering_changed {
+        refresh_fonts();
+    }
+
+    if diff.settings_changed {
+        Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
+    }
+
     // Update languages before any settings-dependent refreshes.
     if diff.file_associations_changed {
         for * buffer : open_buffers {
@@ -305,10 +313,6 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
 
     if !context.config.settings.enable_temporary_editors then make_all_editors_permanent();
 
-    if diff.fonts_changed {
-        init_fonts_and_dependent_things();
-    }
-
     if diff.build_config_changed {
         commands_refresh_after_config_change();
     }
@@ -349,7 +353,7 @@ Config_Diff :: struct {
 
     style_changed:                   bool;
     font_resources_changed:          bool;
-    fonts_changed:                   bool;
+    font_rendering_changed:          bool;
 
     linux_config_changed:            bool;
 
@@ -374,7 +378,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
 
     diff.style_changed                   = style_changed(old, new);
     diff.font_resources_changed          = font_resources_changed(old, new);
-    diff.fonts_changed                   = fonts_changed(old, new);
+    diff.font_rendering_changed          = diff.font_resources_changed || font_rendering_changed(old, new);
 
     diff.linux_config_changed            = linux_config_changed(old, new);
 
@@ -391,7 +395,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
         diff.build_config_changed ||
         diff.style_changed ||
         diff.font_resources_changed ||
-        diff.fonts_changed ||
+        diff.font_rendering_changed ||
         diff.linux_config_changed ||
         diff.project_changed;
 
@@ -461,13 +465,13 @@ font_resources_changed :: (old: Config, new: Config) -> changed: bool {
            old.style.font_ui_bold_italic != new.style.font_ui_bold_italic;
 }
 
-fonts_changed :: (old: Config, new: Config) -> changed: bool {
-    // TODO: cleanup this mess with things that actually depend on zoom and not fonts
-    return !style_font_fields_are_equal(old.style, new.style) ||
-           old.settings.show_tab_characters_in_selection != new.settings.show_tab_characters_in_selection ||
-           old.settings.line_height_scale_percent        != new.settings.line_height_scale_percent        ||
-           old.settings.scrollbar_width_scale            != new.settings.scrollbar_width_scale;
+font_rendering_changed :: (old: Config, new: Config) -> changed: bool {
+    return old.style.font_size          != new.style.font_size ||
+           old.style.font_ui_size       != new.style.font_ui_size ||
+           old.style.font_anti_aliasing != new.style.font_anti_aliasing ||
+           old.style.font_hinting       != new.style.font_hinting;
 }
+
 
 linux_config_changed :: (old: Config, new: Config) -> changed: bool {
     return old.linux != new.linux;
@@ -837,18 +841,6 @@ operator== :: (a: Style, b: Style) -> bool {
     return true;
 }
 
-style_font_fields_are_equal :: (a: Style, b: Style) -> bool {
-    #insert -> string {
-        builder: String_Builder;
-        for type_info(Style).members {
-            if contains(it.name, "font") {
-                print_to_builder(*builder, "if a.%1 != b.%1  return false;\n", it.name);
-            }
-        }
-        return builder_to_string(*builder);
-    }
-    return true;
-}
 
 Loaded_Config :: struct {
     loaded := false;
