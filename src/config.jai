@@ -926,11 +926,6 @@ style_font_fields_are_equal :: (a: Style, b: Style) -> bool {
     return true;
 }
 
-Loaded_Font :: struct {
-    name: string;
-    data: string;
-}
-
 Loaded_Config :: struct {
     loaded := false;
     path: string;

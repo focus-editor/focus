@@ -195,11 +195,11 @@ draw_welcome_screen :: (main_area: Rect) {
         circle = shrink(circle, shrink_step);
         draw_rounded_rect(circle, Color.BACKGROUND_3, radius = circle.w / 2, set_shader = false);
 
-        font := font_ui_big;
+        font := get_font(.ui_big);
         version_text := tprint("Version %", VERSION);
         version_width := cast(float) Simp.prepare_text(font, version_text);
         if version_width / info_area.w > 0.8 {
-            font = font_ui;
+            font = get_font(.ui);
             version_width = cast(float) Simp.prepare_text(font, version_text);
         }
         if version_width < info_area.w {
@@ -219,10 +219,10 @@ draw_welcome_screen :: (main_area: Rect) {
                 if is_hovering_over(version_ui_id) then draw_tooltip_bottom_left("Click to copy to clipboard", Vector2.{ mouse.pointer.x, y });
             }
 
-            date_width := Simp.prepare_text(font_ui_medium, RELEASE_DATE);
+            date_width := Simp.prepare_text(get_font(.ui_medium), RELEASE_DATE);
             x = (info_area.w - date_width) / 2;
             y -= 1.5 * font_ui_big_line_height;
-            Simp.draw_prepared_text(font_ui_medium, xx x, xx y, color = xx Color.UI_DIM);
+            Simp.draw_prepared_text(get_font(.ui_medium), xx x, xx y, color = xx Color.UI_DIM);
         }
     }
 
@@ -248,7 +248,7 @@ draw_welcome_screen :: (main_area: Rect) {
         padding_h := floor(6 * dpi_scale);
         align_x := right_area.w - (right_area.w / GOLDEN_RATIO);
 
-        key_height  := cast(float) font_ui.character_height + 2 * padding_v;
+        key_height  := cast(float) get_font(.ui).character_height + 2 * padding_v;
         line_height := max(key_height * 2, (logo_rect.h - key_height * SHORTCUTS_TO_DISPLAY.count) / (SHORTCUTS_TO_DISPLAY.count - 1) + key_height);
         line_height = min(line_height, key_height * 3);
 
@@ -262,12 +262,12 @@ draw_welcome_screen :: (main_area: Rect) {
 
             // Figure out key sequence width for aligning right
             key_sequence_width := 0.0;
-            plus_width  := cast(float) Simp.get_text_width(font_ui, "+");
+            plus_width  := cast(float) Simp.get_text_width(get_font(.ui), "+");
             padding_between_parts := plus_width + 2 * padding_h;
 
             for combo_strings: key_sequence_strings {
                 for combo_strings {
-                    key_sequence_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
+                    key_sequence_width += xx Simp.get_text_width(get_font(.ui), it) + 2 * padding_h;
                     if it_index < combo_strings.count - 1 {
                         key_sequence_width += plus_width + 2 * padding_h;
                     }
@@ -285,16 +285,16 @@ draw_welcome_screen :: (main_area: Rect) {
                 key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
                 for combo_strings {
                     key_rect.x = x;
-                    key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
+                    key_rect.w = xx Simp.prepare_text(get_font(.ui), it) + 2 * padding_h;
                     key_rect = align_to_grid(key_rect);
                     shadow_rect := expand(key_rect, 1);
                     shadow_rect.y -= 2;
                     draw_rounded_rect(shadow_rect, Color.BACKGROUND_1);
                     draw_rounded_rect(key_rect, Color.SELECTION_ACTIVE);
-                    Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, xx Color.UI_DEFAULT);
+                    Simp.draw_prepared_text(get_font(.ui), xx (x + padding_h), xx text_y, xx Color.UI_DEFAULT);
                     x += key_rect.w;
                     if it_index < combo_strings.count - 1 {
-                        Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", xx Color.UI_DEFAULT);
+                        Simp.draw_text(get_font(.ui), xx (x + padding_h), xx text_y, "+", xx Color.UI_DEFAULT);
                         x += plus_width + 2 * padding_h;
                     }
                 }
@@ -303,11 +303,11 @@ draw_welcome_screen :: (main_area: Rect) {
             }
 
             if !key_sequence_strings {
-                Simp.draw_text(font_ui, xx (x - padding_h), xx text_y, "-", xx Color.UI_DEFAULT);
+                Simp.draw_text(get_font(.ui), xx (x - padding_h), xx text_y, "-", xx Color.UI_DEFAULT);
                 x += padding_between_parts;
             }
 
-            Simp.draw_text(font_ui, xx (x + padding_h * 10), xx text_y, shortcut.description, xx Color.UI_DEFAULT);
+            Simp.draw_text(get_font(.ui), xx (x + padding_h * 10), xx text_y, shortcut.description, xx Color.UI_DEFAULT);
 
             y -= line_height;
         }
@@ -335,7 +335,7 @@ draw_user_messages :: (main_area: Rect) {
 
         max_seen_width := 0;
         for line : lines {
-            line_width := Simp.get_text_width(font_ui, line);
+            line_width := Simp.get_text_width(get_font(.ui), line);
             max_seen_width = max(line_width, max_seen_width);
         }
         message_height := lines.count * font_ui_line_height + 2 * padding;
@@ -363,12 +363,12 @@ draw_user_messages :: (main_area: Rect) {
 
         text_color := Color.UI_DEFAULT;
         pen_x := cast(s64) (message_rect.x + padding);
-        pen_y := cast(s64) (message_rect.y + message_rect.h - padding) - font_ui.character_height;
+        pen_y := cast(s64) (message_rect.y + message_rect.h - padding) - get_font(.ui).character_height;
 
         y := pen_y;
         for line : lines {
             x := pen_x;
-            Simp.draw_text(font_ui, x, y, line, xx text_color);
+            Simp.draw_text(get_font(.ui), x, y, line, xx text_color);
             y -= xx font_ui_line_height;
         }
 
@@ -383,7 +383,7 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
     padding_v := floor(4 * dpi_scale);
     padding_h := floor(6 * dpi_scale);
 
-    rect_height := cast(float) font_ui_small.character_height + 2 * padding_v;
+    rect_height := cast(float) get_font(.ui_small).character_height + 2 * padding_v;
 
     pen := bottom_left(active_editor_rect) + Vector2.{ margin, margin };
     if status_bar_is_drawn_at_the_bottom() then pen.y += status_bar_height;
@@ -396,13 +396,13 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
         if it == key_sequence_input.active_sequence_length - 1 then combo = tprint("% ...", combo);
 
         rect := Rect.{ pen.x, pen.y, 0, rect_height };
-        rect.w = xx Simp.prepare_text(font_ui_small, combo) + 2 * padding_h;
+        rect.w = xx Simp.prepare_text(get_font(.ui_small), combo) + 2 * padding_h;
         rect = align_to_grid(rect);
         shadow_rect := expand(rect, 1);
         shadow_rect.y -= 2;
         draw_rounded_rect(shadow_rect, Color.BACKGROUND_1);
         draw_rounded_rect(rect, Color.SELECTION_ACTIVE);
-        Simp.draw_prepared_text(font_ui_small, xx (pen.x + padding_h), xx text_y, xx Color.UI_DEFAULT);
+        Simp.draw_prepared_text(get_font(.ui_small), xx (pen.x + padding_h), xx text_y, xx Color.UI_DEFAULT);
         pen.x += rect.w + padding_h;
     }
 }
@@ -435,7 +435,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         padding := floor(12 * dpi_scale);
         shrinked_screen  := shrink_x(shrink_y(active_editor_rect, font_ui_line_height + 2 * padding), 2 * padding);
         buttons_row_rect := cut_bottom(shrinked_screen, font_ui_line_height + 2 * padding);
-        activated := draw_button(font_ui, "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, .right, padding / 2, padding, shadow_size = char_x_advance);
+        activated := draw_button(get_font(.ui), "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, .right, padding / 2, padding, shadow_size = char_x_advance);
         if activated then show_color_preview();
         if !color_preview_is_shown return;  // if we just activated it, draw it right this frame. John Carmack would be happy
     }
@@ -480,9 +480,9 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
-            y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
+            y = title_bar_rect.y + (title_bar_rect.h - get_font(.ui_bold).character_height) / 2 + 2,
         };
-        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview — hover over text to view color names, click to jump to color definition", xx Color.UI_DEFAULT);
+        Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, "Color Preview — hover over text to view color names, click to jump to color definition", xx Color.UI_DEFAULT);
 
         // Draw the close button
         {
@@ -497,9 +497,9 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
             color := Color.UI_DIM;
             if is_hovering_over(button_id) color = Color.UI_DEFAULT;
             icon_char := convert_utf32_to_utf8(xx Icon.xmark);
-            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+            icon_width := Simp.prepare_text(get_font(.icons), to_string(*icon_char));
             icon_x := button_rect.x + (button_rect.w - icon_width) / 2 ;
-            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx color);
+            Simp.draw_prepared_text(get_font(.icons), xx icon_x, xx pen.y, color = xx color);
         }
 
         hr := cut_bottom(title_bar_rect, 1);
@@ -525,8 +525,8 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
 
         draw_rect(warning_rect, Color.UI_WARNING_DIM);
         x := cast(s64) (warning_rect.x + padding);
-        y := cast(s64) (warning_rect.y + warning_rect.h - padding) - font_ui.character_height;
-        Simp.draw_text(font_ui, x, y, warning_text, xx Color.UI_DEFAULT);
+        y := cast(s64) (warning_rect.y + warning_rect.h - padding) - get_font(.ui).character_height;
+        Simp.draw_text(get_font(.ui), x, y, warning_text, xx Color.UI_DEFAULT);
     } else {
         editor_rect = panel_body_rect;
     }
@@ -586,7 +586,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
         entry_rect.y += first_visible_language_y_offset;
 
         text_x := cast(s64) (entry_rect.x + padding * 1.5);
-        text_y := cast(s64) (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2.0 + 2);
+        text_y := cast(s64) (entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2.0 + 2);
 
         visible_languages := array_view(languages, first_visible_language_index);
 
@@ -599,7 +599,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
             if it_index + first_visible_language_index == selected_lang {
                 draw_rect(entry_rect, Color.LIST_CURSOR);
             }
-            Simp.draw_text(font_ui, text_x, text_y, lang, xx Color.UI_DEFAULT);
+            Simp.draw_text(get_font(.ui), text_x, text_y, lang, xx Color.UI_DEFAULT);
             text_y -= entry_height;
             entry_rect.y -= entry_height;
         }
@@ -802,9 +802,9 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
-            y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
+            y = title_bar_rect.y + (title_bar_rect.h - get_font(.ui_bold).character_height) / 2 + 2,
         };
-        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Build Output", xx Color.UI_DEFAULT);
+        Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, "Build Output", xx Color.UI_DEFAULT);
 
         // Draw the close button
         {
@@ -819,9 +819,9 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
             color := Color.UI_DIM;
             if is_hovering_over(button_id) color = Color.UI_DEFAULT;
             icon_char := convert_utf32_to_utf8(xx Icon.xmark);
-            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+            icon_width := Simp.prepare_text(get_font(.icons), to_string(*icon_char));
             icon_x := button_rect.x + (button_rect.w - icon_width) / 2 ;
-            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx color);
+            Simp.draw_prepared_text(get_font(.icons), xx icon_x, xx pen.y, color = xx color);
         }
 
         hr := cut_bottom(title_bar_rect, 1);
@@ -1586,14 +1586,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
             array_add(*selections, selection);
         }
 
-        draw_code(font_main, pen, code_lines, tab_size, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
+        draw_code(get_font(.editor), pen, code_lines, tab_size, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !buffer_settings.show_line_numbers && !as_build_panel {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
-            y_offset := (font_main.character_height - char_x_advance / 2) / 2;
+            y_offset := (get_font(.editor).character_height - char_x_advance / 2) / 2;
 
             for line_num : visible_lines_start .. visible_lines_end {
                 end_offset := get_line_end_offset(editor, buffer, line_num);
@@ -1635,7 +1635,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 if cursor_as_block {
                     letter := get_char_at_offset_as_string(buffer, cursor.pos);
                     if letter != "\n" {
-                        Simp.draw_text(font_main, xx cursor_rect.x, xx (cursor_rect.y + (line_height - char_x_advance) / 2), letter, xx Color.CHAR_UNDER_CURSOR);
+                        Simp.draw_text(get_font(.editor), xx cursor_rect.x, xx (cursor_rect.y + (line_height - char_x_advance) / 2), letter, xx Color.CHAR_UNDER_CURSOR);
                     }
                 }
             }
@@ -1727,8 +1727,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
                 if real_line_num != last_line_num {
                     active := array_find(active_lines, real_line_num);
-                    width := Simp.prepare_text(font_main, tprint("%", real_line_num + 1));
-                    Simp.draw_prepared_text(font_main, xx (x - width), xx y, color = ifx active then cast(u8) Color.UI_DEFAULT else cast(u8) Color.UI_DIM);
+                    width := Simp.prepare_text(get_font(.editor), tprint("%", real_line_num + 1));
+                    Simp.draw_prepared_text(get_font(.editor), xx (x - width), xx y, color = ifx active then cast(u8) Color.UI_DEFAULT else cast(u8) Color.UI_DIM);
                     last_line_num = real_line_num;
                 }
 
@@ -1737,8 +1737,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         } else {
             for line_num : visible_lines_start .. visible_lines_end {
                 active := array_find(active_lines, line_num);
-                width := Simp.prepare_text(font_main, tprint("%", line_num + 1));
-                Simp.draw_prepared_text(font_main, xx (x - width), xx y, color = ifx active then cast(u8) Color.UI_DEFAULT else cast(u8) Color.UI_DIM);
+                width := Simp.prepare_text(get_font(.editor), tprint("%", line_num + 1));
+                Simp.draw_prepared_text(get_font(.editor), xx (x - width), xx y, color = ifx active then cast(u8) Color.UI_DEFAULT else cast(u8) Color.UI_DIM);
                 y -= line_height;
             }
         }
@@ -1786,16 +1786,16 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
         maybe_set_hot_or_active(input_id,   bar_rect, .NORMAL);
         maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
 
-        numbers_width := cast(float) Simp.prepare_text(font_ui_small, " No results ");
+        numbers_width := cast(float) Simp.prepare_text(get_font(.ui_small), " No results ");
         if !is_empty(results) {
-            width := cast(float) Simp.prepare_text(font_ui_small, tprint(" % of % ", selected_result + 1, results.count));
+            width := cast(float) Simp.prepare_text(get_font(.ui_small), tprint(" % of % ", selected_result + 1, results.count));
             if width > numbers_width then numbers_width = width;
         }
 
         top_rect = shrink(top_rect, margin);
         numbers_rect, input_rect := cut_right(top_rect, numbers_width + padding);
 
-        Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = xx Color.UI_DEFAULT);
+        Simp.draw_prepared_text(get_font(.ui_small), xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - get_font(.ui_small).character_height) / 2.0), color = xx Color.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
         color := ifx !regex_search || (regex_search && regex_is_valid) then Color.UI_DEFAULT else Color.UI_ERROR_BRIGHT;
         draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 3, color = color);
@@ -1953,7 +1953,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
 
                 pen := Vector2.{
                     entry_rect.x + margin + padding,
-                    entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                    entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
                 };
                 width: float;
 
@@ -1961,8 +1961,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                 text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
                 // Line number
-                width = xx Simp.prepare_text(font_ui_small, tprint("%", entry.line + 1));
-                Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
+                width = xx Simp.prepare_text(get_font(.ui_small), tprint("%", entry.line + 1));
+                Simp.draw_prepared_text(get_font(.ui_small), xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
 
                 // Draw code line
                 {
@@ -1994,7 +1994,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                     pen.x = text_x;
                     if col_offset > 0 {
                         // Line was cut on the left, draw an ellipsis
-                        Simp.draw_text(font_main, xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
+                        Simp.draw_text(get_font(.editor), xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
                         pen.x += char_x_advance;
                     }
 
@@ -2014,7 +2014,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pan
                         tokens := to_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
-                        draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
+                        draw_code(get_font(.editor), pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                     }
                 }
             }
@@ -2101,7 +2101,7 @@ draw_pane_editors :: (pane: *Editor_Pane, main_area: Rect, text_offset: Vector2,
     entry_rect.x += file_info_offset;
     pen := Vector2.{
         entry_rect.x + text_offset.x,
-        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        status_bar_rect.y + (status_bar_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
     };
     entry_rect.y = status_bar_rect.y + (status_bar_rect.h - entry_rect.h) / 2;
     if context.config.settings.status_bar_position == .bottom {
@@ -2207,14 +2207,14 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
 
     pen := Vector2.{
         status_bar_rect.x,
-        status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        status_bar_rect.y + (status_bar_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
     };
 
     // Maybe draw pane number
     if context.config.settings.show_pane_numbers {
         pen_x_old := pen.x;
 
-        width := Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, tprint("%", pane.number), xx Color.UI_DEFAULT);
+        width := Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, tprint("%", pane.number), xx Color.UI_DEFAULT);
         pen.x += width;
 
         // Separator
@@ -2281,12 +2281,12 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             }
 
             #if DEBUG {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
+                width = xx Simp.prepare_text(get_font(.ui_bold), tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
             } else {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
+                width = xx Simp.prepare_text(get_font(.ui_bold), tprint("Line: %  Col: %", line + 1, col + 1));
             }
             pen_x -= width;
-            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+            Simp.draw_prepared_text(get_font(.ui_bold), xx pen_x, xx pen.y, color = xx Color.UI_DIM);
         }
 
         // Draw line separator type
@@ -2296,9 +2296,9 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             if buffer.crlf {
                 label = "CRLF";
             }
-            width = xx Simp.prepare_text(font_ui_bold, label);
+            width = xx Simp.prepare_text(get_font(.ui_bold), label);
             pen_x -= width;
-            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+            Simp.draw_prepared_text(get_font(.ui_bold), xx pen_x, xx pen.y, color = xx Color.UI_DIM);
         }
 
         // Draw indentation type
@@ -2306,9 +2306,9 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             _maybe_draw_separator();
             indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
             label := tprint("%: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
-            width = xx Simp.prepare_text(font_ui_bold, label);
+            width = xx Simp.prepare_text(get_font(.ui_bold), label);
             pen_x -= width;
-            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+            Simp.draw_prepared_text(get_font(.ui_bold), xx pen_x, xx pen.y, color = xx Color.UI_DIM);
         }
 
         // Draw length of selected text if any text is currently selected
@@ -2316,18 +2316,18 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
             _maybe_draw_separator();
             label := tprint("Selected: % chars", num_selected_chars);
             if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes", num_selected_chars, num_selected_bytes);
-            width = xx Simp.prepare_text(font_ui_bold, label);
+            width = xx Simp.prepare_text(get_font(.ui_bold), label);
             pen_x -= width;
-            Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
+            Simp.draw_prepared_text(get_font(.ui_bold), xx pen_x, xx pen.y, color = xx Color.UI_DIM);
         }
 
         _maybe_draw_separator();
 
         // Maybe draw the number of cursors off screen
         if editor.cursors.count > 1 && cursors_off_screen && buffer_settings.status_bar_show_cursors_off_screen {
-            width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
+            width = xx Simp.prepare_text(get_font(.ui_bold), tprint("%", cursors_off_screen));
             cursor_indicator_x := pen_x - width - char_x_advance;
-            Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
+            Simp.draw_prepared_text(get_font(.ui_bold), xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
 
             cursor_width := ifx buffer_settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
             cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
@@ -2385,59 +2385,59 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     // Icon + file name
     if flags & .file_name {
         icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
-        icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
-        icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-        if !dry_run then Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
-        width += font_icons.em_width * 1.2;
+        icon_width := Simp.prepare_text(get_font(.icons), to_string(*icon_char));
+        icon_x := pen.x - (icon_width - get_font(.icons).em_width) / 2.0;
+        if !dry_run then Simp.draw_prepared_text(get_font(.icons), xx icon_x, xx pen.y, color = xx file_name_color);
+        width += get_font(.icons).em_width * 1.2;
 
         pen.x += width + padding;
-        file_name_font := font_ui;
-        if      font_variant == .bold        then file_name_font = font_ui_bold;
-        else if font_variant == .bold_italic then file_name_font = font_ui_bold_italic;
+        file_name_font := get_font(.ui);
+        if      font_variant == .bold        then file_name_font = get_font(.ui_bold);
+        else if font_variant == .bold_italic then file_name_font = get_font(.ui_bold_italic);
         width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
         if !dry_run then Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
     }
 
     if buffer.modified && (flags & .modified) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
-        y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
-        if !dry_run then Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
+        width = xx Simp.prepare_text(get_font(.icons_very_small), PEN_ICON);
+        y_padding := (get_font(.icons).character_height - get_font(.icons_very_small).character_height) / 4.0;
+        if !dry_run then Simp.draw_prepared_text(get_font(.icons_very_small), xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
     }
 
     // Maybe warnings
     if buffer.deleted && !buffer.readonly && (flags & .deleted_on_disk) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
-        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+        width = xx Simp.prepare_text(get_font(.ui_bold), "[deleted on disk]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_bold), xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     } else if buffer.modified_on_disk  && (flags & .modified_on_disk) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+        width = xx Simp.prepare_text(get_font(.ui_bold), "[modified on disk]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_bold), xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
     if buffer.readonly && (flags & .read_only) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
-        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+        width = xx Simp.prepare_text(get_font(.ui_bold), "[readonly]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_bold), xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
     if buffer.error_when_saving && (flags & .error_when_saving) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
-        if !dry_run then Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
+        width = xx Simp.prepare_text(get_font(.ui_bold), "[couldn't save file]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_bold), xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
 
     settings := get_settings(buffer);
 
     if buffer.crlf && settings.line_endings == .lf && (flags & .crlf_warning) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
-        if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+        width = xx Simp.prepare_text(get_font(.ui), "[CRLF will be replaced with LF on save]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui), xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
     if !buffer.crlf && settings.line_endings == .crlf && (flags & .crlf_warning) {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui, "[LF will be replaced with CRLF on save]");
-        if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+        width = xx Simp.prepare_text(get_font(.ui), "[LF will be replaced with CRLF on save]");
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui), xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
     if buffer.has_file && (flags & .config_warning) {
@@ -2451,23 +2451,23 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         }
         if label {
             pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui, label);
-            if !dry_run then Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
+            width = xx Simp.prepare_text(get_font(.ui), label);
+            if !dry_run then Simp.draw_prepared_text(get_font(.ui), xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
         }
     }
 
     if buffer.has_file && (flags & .folder_separator) {
         // Draw separator
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
-        if !dry_run then Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
+        width = xx Simp.prepare_text(get_font(.ui_small), BULLET_ICON);
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_small), xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
     if buffer.has_file && (flags & .folder) {
         // Draw file path
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-        if !dry_run then Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
+        width = xx Simp.prepare_text(get_font(.ui_small), buffer.file.path);
+        if !dry_run then Simp.draw_prepared_text(get_font(.ui_small), xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
     pen.x += width;
@@ -2564,11 +2564,11 @@ draw_open_file_dialog :: () {
 
             half_padding := floor(padding / 2);
 
-            min_cursor_area_width := cast(float)font_ui.em_width * 5;  // leave enough space to type text
+            min_cursor_area_width := cast(float)get_font(.ui).em_width * 5;  // leave enough space to type text
 
             // Figure out how much to pad on the left (if only there were a Javascript library for that…)
             margin_left  := 0.0;
-            for path_chunks { margin_left += cast(float) Simp.get_text_width(font_ui, it) + padding * 2 + half_padding * 3; }
+            for path_chunks { margin_left += cast(float) Simp.get_text_width(get_font(.ui), it) + padding * 2 + half_padding * 3; }
 
             margin_delta := margin_left + min_cursor_area_width - input_rect.w;
             if margin_delta > 0 {
@@ -2583,9 +2583,9 @@ draw_open_file_dialog :: () {
 
             dir_rect := shrink(input_rect, padding);
             if margin_delta > 0 then dir_rect.x -= margin_delta;
-            text_y := dir_rect.y + floor((dir_rect.h - cast(float)font_ui.em_width) / 2);
+            text_y := dir_rect.y + floor((dir_rect.h - cast(float)get_font(.ui).em_width) / 2);
             for path_chunks {
-                width := cast(float) Simp.prepare_text(font_ui, it);
+                width := cast(float) Simp.prepare_text(get_font(.ui), it);
                 dir_rect.w = width + 2 * padding + 2 * half_padding;
                 color := Color.SELECTION_ACTIVE;
                 if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
@@ -2607,7 +2607,7 @@ draw_open_file_dialog :: () {
                     }
                 }
                 draw_rounded_rect(dir_rect, color);
-                Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, color = xx Color.UI_DEFAULT);
+                Simp.draw_prepared_text(get_font(.ui), xx (dir_rect.x + padding + half_padding), xx text_y, color = xx Color.UI_DEFAULT);
                 dir_rect.x += dir_rect.w + half_padding;
             }
     }
@@ -2727,7 +2727,7 @@ draw_open_file_dialog :: () {
 
             pen := Vector2.{
                 entry_rect.x + margin + padding,
-                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
             };
             width: float;
 
@@ -2735,28 +2735,28 @@ draw_open_file_dialog :: () {
 
             // Draw file icon
             icon_char := convert_utf32_to_utf8(xx entry.icon);
-            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
-            icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx name_color);
+            icon_width := Simp.prepare_text(get_font(.icons), to_string(*icon_char));
+            icon_x := pen.x - (icon_width - get_font(.icons).em_width) / 2.0;
+            Simp.draw_prepared_text(get_font(.icons), xx icon_x, xx pen.y, color = xx name_color);
 
             // Draw name
-            pen.x += xx font_icons.em_width + padding * 1.5;
+            pen.x += xx get_font(.icons).em_width + padding * 1.5;
             if entry.type != .save {
-                width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
+                width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
             } else {
-                width = xx Simp.draw_text(font_ui, xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);
+                width = xx Simp.draw_text(get_font(.ui), xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);
             }
 
             if entry.flags & .MODIFIED {
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
-                y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
-                Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx name_color);
+                width = xx Simp.prepare_text(get_font(.icons_very_small), PEN_ICON);
+                y_padding := (get_font(.icons).character_height - get_font(.icons_very_small).character_height) / 4.0;
+                Simp.draw_prepared_text(get_font(.icons_very_small), xx pen.x, xx (pen.y + y_padding), color = xx name_color);
             }
 
             if entry.flags & .MODIFIED_ON_DISK {
                 pen.x += width + padding;
-                width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = xx Color.UI_ERROR_BRIGHT);
+                width = xx Simp.draw_text(get_font(.ui_bold), xx pen.x, xx pen.y, "[modified on disk]", color = xx Color.UI_ERROR_BRIGHT);
             }
 
             // // Draw score
@@ -2767,7 +2767,7 @@ draw_open_file_dialog :: () {
             // Draw file path
             pen.x += width + padding;
             if pen.x < path_align_x then pen.x = path_align_x;
-            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = xx Color.UI_DIM, highlight_color = xx Color.LETTER_HIGHLIGHT);
+            width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = xx Color.UI_DIM, highlight_color = xx Color.LETTER_HIGHLIGHT);
         }
 
         // Deselect any previously clicked entry
@@ -2788,11 +2788,11 @@ draw_language_dialog :: () {
             active_rect.x += name_width;
             active_rect.w -= name_width + padding;
 
-            active_text_width := cast(float) Simp.prepare_text(font_ui_small, active_text);
+            active_text_width := cast(float) Simp.prepare_text(get_font(.ui_small), active_text);
 
             if is_valid(active_rect) && active_text_width < active_rect.w {
                 x := active_rect.x + active_rect.w - active_text_width;
-                Simp.draw_prepared_text(font_ui_small, xx x, xx pen.y, color = xx Color.UI_DIM);
+                Simp.draw_prepared_text(get_font(.ui_small), xx x, xx pen.y, color = xx Color.UI_DIM);
             }
         }
     }
@@ -2816,11 +2816,11 @@ draw_commands_dialog :: () {
             key_sequence_rect.x += name_width;
             key_sequence_rect.w -= name_width + padding;
 
-            key_sequence_width := cast(float) Simp.prepare_text(font_ui_small, key_sequence);
+            key_sequence_width := cast(float) Simp.prepare_text(get_font(.ui_small), key_sequence);
 
             if is_valid(key_sequence_rect) && key_sequence_width < key_sequence_rect.w {
                 x := key_sequence_rect.x + key_sequence_rect.w - key_sequence_width;
-                Simp.draw_prepared_text(font_ui_small, xx x, xx pen.y, color = xx Color.UI_DIM);
+                Simp.draw_prepared_text(get_font(.ui_small), xx x, xx pen.y, color = xx Color.UI_DIM);
             }
         }
     }
@@ -2965,11 +2965,11 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
 
             pen := Vector2.{
                 entry_rect.x + margin + padding,
-                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
             };
 
             // Draw name
-            width := Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.highlights, color = xx Color.UI_DEFAULT, highlight_color = xx Color.LETTER_HIGHLIGHT);
+            width := Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.name, entry.highlights, color = xx Color.UI_DEFAULT, highlight_color = xx Color.LETTER_HIGHLIGHT);
 
             if draw_entry_extra then draw_entry_extra(*entry, entry_rect, xx width, pen, margin, padding);
         }
@@ -2989,7 +2989,7 @@ draw_delete_file_dialog :: () {
 
         pen := Vector2.{
             x = extra_rect.x + margin,
-            y = extra_rect.y + margin / 2 + (extra_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            y = extra_rect.y + margin / 2 + (extra_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
         };
 
         draw_file_info(buffer, 0, padding, pen);
@@ -3010,9 +3010,9 @@ draw_switch_to_project_dialog :: () {
         entry := cast(*Switch_To_Project_Dialog.Entry) entry_ptr;
         if !entry.config_parent_dir return;
 
-        width := Simp.prepare_text(font_ui_small, entry.config_parent_dir);
+        width := Simp.prepare_text(get_font(.ui_small), entry.config_parent_dir);
         x := entry_rect.x + entry_rect.w - width - margin;
-        Simp.draw_text(font_ui_small, xx x, xx pen.y, entry.config_parent_dir, color = xx Color.UI_DIM);
+        Simp.draw_text(get_font(.ui_small), xx x, xx pen.y, entry.config_parent_dir, color = xx Color.UI_DIM);
     }
 
     label := ifx switch_to_project_dialog.filtered then " Select project to switch to" else tprint(" No projects found in %", projects_dir);
@@ -3052,7 +3052,7 @@ draw_unsaved_buffers_dialog :: () {
 
                 pen := Vector2.{
                     x = entry_rect.x + margin,
-                    y = entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                    y = entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
                 };
                 width: float;
 
@@ -3065,10 +3065,10 @@ draw_unsaved_buffers_dialog :: () {
             extra_files_message := tprint("and % additional files...", num_entries - num_entries_to_draw);
 
             x := entry_rect.x + margin;
-            y := entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;
-            y = max(y, extra_rect.y + font_ui.character_height / 2); // Clamp to bottom of dialog.
+            y := entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale;
+            y = max(y, extra_rect.y + get_font(.ui).character_height / 2); // Clamp to bottom of dialog.
 
-            Simp.draw_text(font_ui, xx x, xx y, extra_files_message, xx Color.UI_WARNING);
+            Simp.draw_text(get_font(.ui), xx x, xx y, extra_files_message, xx Color.UI_WARNING);
         }
     }
 
@@ -3134,8 +3134,8 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none, extra_draw_info = .{is_background = true});
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
-        pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
-        Simp.draw_text(font_ui_medium, pen_x, pen_y, header, xx Color.UI_DEFAULT);
+        pen_y := cast(s32) (header_rect.y + (header_rect.h - get_font(.ui_medium).character_height) / 2 + 2);
+        Simp.draw_text(get_font(.ui_medium), pen_x, pen_y, header, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
         draw_rect(hr, Color.BACKGROUND_1, extra_draw_info = .{is_background = true});
@@ -3150,9 +3150,9 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
 
         if message {
             Simp.draw_text(
-                font_ui,
+                get_font(.ui),
                 xx (entry_rect.x + margin),
-                xx (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale),
+                xx (entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale),
                 message,
                 xx Color.UI_DEFAULT,
             );
@@ -3173,7 +3173,7 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         for < button : dialog.get_buttons() {
             button_id := cast(s64) get_ui_id_from_loc(parent_id = ui_id) + it_index;  // could theoretically clash with something right below so don't get any ui ids close to here!
             focused := dialog.focused_button_index == it_index;
-            activated, width := draw_button(font_ui, button.label, button.color, button.text_color, ui_id, buttons_row_rect, .right, margin / 2, margin, button_id = cast(Ui_Id) button_id, outline = focused, outline_background_color = Color.BACKGROUND_3);
+            activated, width := draw_button(get_font(.ui), button.label, button.color, button.text_color, ui_id, buttons_row_rect, .right, margin / 2, margin, button_id = cast(Ui_Id) button_id, outline = focused, outline_background_color = Color.BACKGROUND_3);
             if activated close_dialog(dialog, button.result);
             buttons_row_rect.w -= width + margin;
         }
@@ -3182,11 +3182,11 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
 
 draw_confirm_overwrite_dialog :: () {
     draw_extra_file_info :: (extra_rect: Rect, margin: float, padding: float) {
-        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog.path);
+        width := xx Simp.prepare_text(get_font(.ui_bold), confirm_overwrite_dialog.path);
         Simp.draw_prepared_text(
-            font_ui_bold,
+            get_font(.ui_bold),
             xx (extra_rect.x + margin),
-            xx (extra_rect.y + (extra_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
+            xx (extra_rect.y + (extra_rect.h + get_font(.ui_bold).character_height) / 2 + 2 * dpi_scale),
             color = xx Color.UI_WARNING,
         );
     }
@@ -3203,11 +3203,11 @@ draw_confirm_overwrite_dialog :: () {
 
 draw_kill_running_command_dialog :: () {
     draw_extra_command_info :: (extra_rect: Rect, margin: float, padding: float) {
-        width := xx Simp.prepare_text(font_ui_bold, build_get_running_command_name());
+        width := xx Simp.prepare_text(get_font(.ui_bold), build_get_running_command_name());
         Simp.draw_prepared_text(
-            font_ui_bold,
+            get_font(.ui_bold),
             xx (extra_rect.x + margin),
-            xx (extra_rect.y + (extra_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
+            xx (extra_rect.y + (extra_rect.h + get_font(.ui_bold).character_height) / 2 + 2 * dpi_scale),
             color = xx Color.UI_WARNING,
         );
     }
@@ -3468,7 +3468,7 @@ draw_finder :: () {
 
             pen := Vector2.{
                 entry_rect.x + margin + padding,
-                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
             };
             width: float;
 
@@ -3488,8 +3488,8 @@ draw_finder :: () {
             }
 
             // Line number
-            width = xx Simp.prepare_text(font_ui_small, tprint("%", line_num + 1));
-            Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
+            width = xx Simp.prepare_text(get_font(.ui_small), tprint("%", line_num + 1));
+            Simp.draw_prepared_text(get_font(.ui_small), xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
 
             // Draw code line
             {
@@ -3521,7 +3521,7 @@ draw_finder :: () {
                 pen.x = text_x;
                 if col_offset > 0 {
                     // Line was cut on the left, draw an ellipsis
-                    Simp.draw_text(font_main, xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
+                    Simp.draw_text(get_font(.editor), xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
                     pen.x += char_x_advance;
                 }
                 if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
@@ -3542,7 +3542,7 @@ draw_finder :: () {
                     tokens := to_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
-                    draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
+                    draw_code(get_font(.editor), pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                 }
             }
         }
@@ -3580,9 +3580,9 @@ draw_finder :: () {
             entry_rect := cut_top(files_rect, entry_height);
             pen := Vector2.{
                 entry_rect.x + margin + padding,
-                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                entry_rect.y + (entry_rect.h - get_font(.ui).character_height) / 2 + 2 * dpi_scale,
             };
-            Simp.draw_text(font_ui_small, xx pen.x, xx pen.y, label, xx Color.UI_DIM);
+            Simp.draw_text(get_font(.ui_small), xx pen.x, xx pen.y, label, xx Color.UI_DIM);
         }
 
         // Deselect any previously clicked entry
@@ -3603,7 +3603,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     margin  := floor(8 * dpi_scale);
     padding := floor(4 * dpi_scale);
 
-    label_width := cast(float) Simp.prepare_text(font_ui, "Go to line");
+    label_width := cast(float) Simp.prepare_text(get_font(.ui), "Go to line");
     width  := max(active_editor_rect.w * 0.5, 6 * char_x_advance + 2 * (margin + padding + 1));
     height := font_ui_line_height + 2 * (margin + padding + 1);
 
@@ -3622,9 +3622,9 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
 
     pen := Vector2.{
         x = bar_rect.x + margin,
-        y = bar_rect.y + (bar_rect.h - cast(s32)font_ui.character_height) / 2 + 2,  // sigh
+        y = bar_rect.y + (bar_rect.h - cast(s32)get_font(.ui).character_height) / 2 + 2,  // sigh
     };
-    Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_DEFAULT);
+    Simp.draw_prepared_text(get_font(.ui), xx pen.x, xx pen.y, color = xx Color.UI_DEFAULT);
 
     color := ifx go_to_line_dialog.input_is_valid then Color.UI_DEFAULT else Color.UI_ERROR;
     draw_text_input(*go_to_line_dialog.input, input_rect, ui_id = input_id, active = true, label = " line number", color = color);
@@ -3753,7 +3753,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active { active = true; redraw_requested = true; }  // draw as activated right away and schedule a redraw to deactivate other things
 
-    if font == null then font = font_ui;
+    if font == null then font = get_font(.ui);
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
     draw_rect(rect, ifx active then Color.CURSOR_INACTIVE else Color.BACKGROUND_1);
@@ -3852,13 +3852,13 @@ draw_text_input_modifier_button :: (input_id: Ui_Id, input_rect: Rect, width: fl
         draw_rounded_rect(shrink(btn, 2), bg_color);
     }
 
-    text_w := cast(float) Simp.prepare_text(font_icons_small, icon);
-    text_h := font_icons_small.character_height;
+    text_w := cast(float) Simp.prepare_text(get_font(.icons_small), icon);
+    text_h := get_font(.icons_small).character_height;
     text_x := btn.x + btn.w / 2 - text_w / 2 + 1;
     text_y := btn.y + btn.h / 2 - text_h / 2 + 1;
     text_color := ifx enabled then Color.UI_DEFAULT else Color.UI_DIM;
 
-    Simp.draw_prepared_text(font_icons_small, xx text_x, xx text_y, xx text_color);
+    Simp.draw_prepared_text(get_font(.icons_small), xx text_x, xx text_y, xx text_color);
 
     return hover && mouse.left.just_pressed, hover;
 }
@@ -3884,13 +3884,13 @@ draw_icon_button :: (ui_id: Ui_Id, rect: Rect, icon: string, style : enum { none
             draw_rect(shrink(btn, 2), bg_color);
     }
 
-    text_w := cast(float) Simp.prepare_text(font_icons_small, icon);
-    text_h := font_icons_small.character_height;
+    text_w := cast(float) Simp.prepare_text(get_font(.icons_small), icon);
+    text_h := get_font(.icons_small).character_height;
     text_x := btn.x + btn.w / 2 - text_w / 2 + 1;
     text_y := btn.y + btn.h / 2 - text_h / 2 + 1;
     text_color := ifx hover then Color.UI_DEFAULT else Color.UI_DIM;
 
-    Simp.draw_prepared_text(font_icons_small, xx text_x, xx text_y, xx text_color);
+    Simp.draw_prepared_text(get_font(.icons_small), xx text_x, xx text_y, xx text_color);
 
     return hover && mouse.left.just_pressed, hover;
 }
@@ -3898,28 +3898,28 @@ draw_icon_button :: (ui_id: Ui_Id, rect: Rect, icon: string, style : enum { none
 draw_tooltip_top_left :: (text: string, pos: Vector2) {
     padding := 4 * dpi_scale;
 
-    width := cast(float) Simp.prepare_text(font_ui_very_small, text);
+    width := cast(float) Simp.prepare_text(get_font(.ui_very_small), text);
     rect := Rect.{ x = pos.x, y = pos.y };
     rect.w = width + 2 * padding;
     rect.x -= rect.w;
-    rect.h = 2 * padding + font_ui_very_small.character_height;
+    rect.h = 2 * padding + get_font(.ui_very_small).character_height;
 
     draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{is_background = true});
-    Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
+    Simp.draw_prepared_text(get_font(.ui_very_small), xx (rect.x + padding), xx (rect.y + (rect.h - get_font(.ui_very_small).character_height) / 2) + 1, xx Color.UI_DEFAULT);
 }
 
 draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     padding := 4 * dpi_scale;
 
-    width := cast(float) Simp.prepare_text(font_ui_very_small, text);
+    width := cast(float) Simp.prepare_text(get_font(.ui_very_small), text);
     rect := Rect.{ x = pos.x, y = pos.y };
     rect.w = width + 2 * padding;
     rect.x -= rect.w;
-    rect.h = 2 * padding + font_ui_very_small.character_height;
+    rect.h = 2 * padding + get_font(.ui_very_small).character_height;
     rect.y -= rect.h;
 
     draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{is_background = true});
-    Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
+    Simp.draw_prepared_text(get_font(.ui_very_small), xx (rect.x + padding), xx (rect.y + (rect.h - get_font(.ui_very_small).character_height) / 2) + 1, xx Color.UI_DEFAULT);
 }
 
 draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, tab_size: s32, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {

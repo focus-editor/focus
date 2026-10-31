@@ -569,104 +569,6 @@ load_configs_and_start_session :: (args: [] string) {
     }
 }
 
-init_fonts_and_dependent_things :: () {
-    push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
-
-    Simp.set_anti_aliasing(context.config.style.font_anti_aliasing);
-    Simp.set_hinting(context.config.style.font_hinting);
-
-    Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
-
-    style := context.config.style;
-
-    font_main_size := clamp(style.font_size    + font_zoom_steps, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_size   := clamp(style.font_ui_size + font_zoom_steps, MIN_FONT_SIZE, MAX_FONT_SIZE);
-
-    delta := style.font_ui_size - DEFAULT_FONT_UI_SIZE + font_zoom_steps;
-
-    font_ui_big_size           := clamp(DEFAULT_FONT_UI_BIG_SIZE           + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_medium_size        := clamp(DEFAULT_FONT_UI_MEDIUM_SIZE        + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_small_size         := clamp(DEFAULT_FONT_UI_SMALL_SIZE         + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_very_small_size    := clamp(DEFAULT_FONT_UI_VERY_SMALL_SIZE    + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_size            := clamp(DEFAULT_FONT_ICONS_SIZE            + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_small_size      := clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_very_small_size := clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-
-    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale));
-    assert(font_main != null, "Couldn't init main text font\n");
-
-    font_ui = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_size * dpi_scale));
-    assert(font_ui != null, "Couldn't init main ui font\n");
-    font_ui_line_height = cast(float) font_ui.default_line_spacing;
-
-    font_ui_big = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_big_size * dpi_scale));
-    assert(font_ui_big != null, "Couldn't init big ui font\n");
-    font_ui_big_line_height = cast(float) font_ui_big.default_line_spacing;
-
-    font_ui_medium = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_medium_size * dpi_scale));
-    assert(font_ui_medium != null, "Couldn't init medium ui font\n");
-    font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
-
-    font_ui_bold = Simp.get_font_at_size(loaded_fonts.ui_bold.name, loaded_fonts.ui_bold.data, cast(int) (font_ui_size * dpi_scale));
-    assert(font_ui_bold != null, "Couldn't init bold ui font\n");
-
-    font_ui_bold_italic = Simp.get_font_at_size(loaded_fonts.ui_bold_italic.name, loaded_fonts.ui_bold_italic.data, cast(int) (font_ui_size * dpi_scale));
-    assert(font_ui_bold_italic != null, "Couldn't init bold italic ui font\n");
-
-    font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale));
-    assert(font_ui_small != null, "Couldn't init small ui font\n");
-
-    font_ui_very_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_very_small_size * dpi_scale));
-    assert(font_ui_very_small != null, "Couldn't init very small ui font\n");
-
-    font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
-    assert(font_icons != null, "Couldn't init main icon font\n");
-
-    font_icons_small = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_small_size * dpi_scale));
-    assert(font_icons_small != null, "Couldn't init small icon font\n");
-
-    font_icons_very_small = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_very_small_size * dpi_scale));
-    assert(font_icons_very_small != null, "Couldn't init very small icon font\n");
-
-    status_bar_height = font_ui_line_height * 1.6;
-
-    // WORKAROUND:
-    // Make a dummy call with most common chars for each font so that
-    // we have all the font atlases loaded in the GPU memory once
-    // (TODO: maybe there's an easy way for Simp to only update textures on flush?)
-    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶•";
-    Simp.prepare_text(font_main,        COMMON_CHARS);
-    Simp.prepare_text(font_ui,          COMMON_CHARS);
-    Simp.prepare_text(font_ui_bold,     COMMON_CHARS);
-    Simp.prepare_text(font_ui_small,    COMMON_CHARS);
-    Simp.prepare_text(font_ui_big,      COMMON_CHARS);
-    Simp.prepare_text(font_ui_medium,   COMMON_CHARS);
-
-    common_icons: String_Builder;
-    common_icons.allocator = temp;
-    for enum_values_as_enum(Icon) {
-        char := convert_utf32_to_utf8(xx it);
-        append(*common_icons, to_string(*char));
-    }
-    append(*common_icons, PEN_ICON);
-    append(*common_icons, XMARK_ICON);
-    icons_string := builder_to_string(*common_icons,, allocator = temp);
-
-    Simp.prepare_text(font_icons,            icons_string);
-    Simp.prepare_text(font_icons_small,      icons_string);
-    Simp.prepare_text(font_icons_very_small, icons_string);
-
-    // Things that depend on char size
-    char_size             = cast(float) font_main.em_width;
-    char_x_advance        = cast(float) font_main.x_advance;
-    old_line_height       = line_height;
-    line_height           = floor(cast(float) font_main.default_line_spacing * cast(float) context.config.settings.line_height_scale_percent / 100.0);
-    scrollbar_width       = floor(1.5 * char_size) * context.config.settings.scrollbar_width_scale;
-    rounding_radius       = floor(char_size / 2);
-    rounding_radius_large = floor(char_size / 1.5);
-    rounding_radius_small = floor(char_size / 3);
-}
-
 update_mouse_state :: () {
     x, y := get_mouse_pointer_position(window, false);
     mouse.pointer.x = xx x;
@@ -768,30 +670,6 @@ open_another_editor_instance :: () {
         kill_children := true;
     }
     create_process(*new_window_process, .. focus_executable_args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED, kill_process_if_parent_exits = kill_children);
-}
-
-adjust_zoom :: (delta: int) {
-    min_zoom := MIN_FONT_SIZE - context.config.style.font_size;
-    max_zoom := MAX_FONT_SIZE - context.config.style.font_size;
-
-    new_zoom := clamp(font_zoom_steps + delta, min_zoom, max_zoom);
-    if new_zoom == font_zoom_steps return;
-
-    font_zoom_steps = new_zoom;
-    init_fonts_and_dependent_things();
-}
-
-zoom_in :: () {
-    adjust_zoom(1);
-}
-
-zoom_out :: () {
-    adjust_zoom(-1);
-}
-
-reset_zoom :: () {
-    font_zoom_steps = 0;
-    init_fonts_and_dependent_things();
 }
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
@@ -956,48 +834,6 @@ Mouse_Button_State :: struct {
 
 WHEEL_SENSITIVITY :: 1.0;
 
-PEN_ICON            :: #run to_string(*convert_utf32_to_utf8(0xf304));
-CASE_SENSITIVE_ICON :: #run to_string(*convert_utf32_to_utf8(0xf031));
-WHOLE_WORD_ICON     :: #run to_string(*convert_utf32_to_utf8(0xe4ba));
-REGEX_SEARCH_ICON   :: #run to_string(*convert_utf32_to_utf8(0xf621));
-BULLET_ICON         :: #run to_string(*convert_utf32_to_utf8(0x2022));
-XMARK_ICON          :: #run to_string(*convert_utf32_to_utf8(0xf057));
-
-font_main:             *Simp.Dynamic_Font;
-font_ui:               *Simp.Dynamic_Font;
-font_ui_bold:          *Simp.Dynamic_Font;
-font_ui_bold_italic:   *Simp.Dynamic_Font;
-font_ui_big:           *Simp.Dynamic_Font;
-font_ui_small:         *Simp.Dynamic_Font;
-font_ui_very_small:    *Simp.Dynamic_Font;
-font_ui_medium:        *Simp.Dynamic_Font;
-font_icons:            *Simp.Dynamic_Font;
-font_icons_small:      *Simp.Dynamic_Font;
-font_icons_very_small: *Simp.Dynamic_Font;
-
-DEFAULT_FONT_MAIN_SIZE             :: 14;
-DEFAULT_FONT_UI_SIZE               :: 15;
-DEFAULT_FONT_UI_BIG_SIZE           :: 28;
-DEFAULT_FONT_UI_MEDIUM_SIZE        :: 18;
-DEFAULT_FONT_UI_SMALL_SIZE         :: 14;
-DEFAULT_FONT_UI_VERY_SMALL_SIZE    :: 12;
-DEFAULT_FONT_ICONS_SIZE            :: 16;
-DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
-DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
-
-MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 90;
-
-loaded_fonts: struct {
-    main:           Loaded_Font = FONT_MAIN;
-    ui:             Loaded_Font = FONT_UI;
-    ui_bold:        Loaded_Font = FONT_UI_BOLD;
-    ui_bold_italic: Loaded_Font = FONT_UI_BOLD_ITALIC;
-};
-
-// Tracks temporary zoom
-font_zoom_steps := 0;
-
 
 // Depend on font size
 char_size:                  float;
@@ -1088,8 +924,9 @@ focus_allocator: Allocator;
 #load "draw.jai";
 #load "pointer_image.jai";
 #load "files.jai";
-#load "workspace.jai";
 #load "file_watcher.jai";
+#load "fonts.jai";
+#load "workspace.jai";
 #load "config.jai";
 #load "config_parser.jai";
 #load "config_migrator.jai";
@@ -1220,47 +1057,11 @@ Input :: #import "Input";
 
 MAX_BUFFER_SIZE_FOR_HIGHLIGHTS :: 5 * 1024 * 1024;
 
-#scope_file
-
-MODS_NONE           :: #run Mods.{}.packed;
-MODS_CTRL           :: #run Mods.{ ctrl_pressed  = true }.packed;
-MODS_ALT            :: #run Mods.{ alt_pressed   = true }.packed;
-MODS_SHIFT          :: #run Mods.{ shift_pressed = true }.packed;
-MODS_ALT_SHIFT      :: #run Mods.{ alt_pressed  = true, shift_pressed = true }.packed;
-MODS_CTRL_SHIFT     :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
-MODS_CTRL_ALT       :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
-MODS_CTRL_ALT_SHIFT :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true, shift_pressed = true }.packed;
-
-
-#scope_export
-
 MIN_WINDOW_WIDTH  :: 100;
 MIN_WINDOW_HEIGHT :: 100;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
-
-// Embed default fonts
-FONT_MAIN           :: #run load_font("FiraCode-Retina.ttf");
-FONT_UI             :: #run load_font("OpenSans-Regular.ttf");
-FONT_UI_BOLD        :: #run load_font("OpenSans-SemiBold.ttf");
-FONT_UI_BOLD_ITALIC :: #run load_font("OpenSans-SemiBoldItalic.ttf");
-FONT_ICONS          :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
-
-#scope_file
-
-load_font :: (name: string) -> Loaded_Font {
-    path := tprint("fonts/%", name);
-    data, success := read_entire_file(path);
-    assert(success, "Couldn't load font '%'", path);
-
-    return Loaded_Font.{ name = name, data = data};
-}
-
-#scope_export
-
-DEBUG_MEMORY_LEAKS :: false;
-
 
 #if OS == .LINUX {
     /*
@@ -1282,3 +1083,18 @@ DEBUG_MEMORY_LEAKS :: false;
     #program_export
     __chkstk_darwin :: () #c_call {}
 }
+
+
+#scope_file
+
+MODS_NONE           :: #run Mods.{}.packed;
+MODS_CTRL           :: #run Mods.{ ctrl_pressed  = true }.packed;
+MODS_ALT            :: #run Mods.{ alt_pressed   = true }.packed;
+MODS_SHIFT          :: #run Mods.{ shift_pressed = true }.packed;
+MODS_ALT_SHIFT      :: #run Mods.{ alt_pressed  = true, shift_pressed = true }.packed;
+MODS_CTRL_SHIFT     :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
+MODS_CTRL_ALT       :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
+MODS_CTRL_ALT_SHIFT :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true, shift_pressed = true }.packed;
+
+
+DEBUG_MEMORY_LEAKS :: false;
