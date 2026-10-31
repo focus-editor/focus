@@ -399,10 +399,10 @@ Shift-Tab                   focus_previous_ui_element
 Ctrl-Backspace              delete_left_by_character_type_fast
 Ctrl-Delete                 delete_right_by_character_type_fast
 
-Ctrl-Plus                   increase_font_size
-Ctrl-Minus                  decrease_font_size
-Ctrl-0                      reset_font_size_to_default
-Ctrl-MouseMiddle            reset_font_size_to_default
+Ctrl-Plus                   zoom_in
+Ctrl-Minus                  zoom_out
+Ctrl-0                      reset_zoom
+Ctrl-MouseMiddle            reset_zoom
 
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_in_side_pane

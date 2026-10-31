@@ -4,7 +4,7 @@
 
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 25;
+CURRENT_CONFIG_VERSION :: 26;
 
 get_global_config_path :: inline () -> string /* temp */ {
     return tprint("%/global.focus-config", config_dir);
@@ -237,6 +237,9 @@ clamp_config_values :: (new_config: *Config) {
     if settings.window_height != -1    Clamp(*settings.window_height, 100, 3000);
     if settings.window_x      != -1000 Clamp(*settings.window_x,     -500, 10000);
     if settings.window_y      != -1000 Clamp(*settings.window_y,     -500, 3000);
+
+    Clamp(*new_config.style.font_size,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    Clamp(*new_config.style.font_ui_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
 }
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
@@ -627,16 +630,6 @@ apply_style :: (style: Style) {
     load_and_replace_font(*loaded_fonts.ui,             style.font_ui,             .ui);
     load_and_replace_font(*loaded_fonts.ui_bold,        style.font_ui_bold,        .ui_bold);
     load_and_replace_font(*loaded_fonts.ui_bold_italic, style.font_ui_bold_italic, .ui_bold_italic);
-
-    if default_font_main_size != style.font_size {
-        font_main_size = style.font_size;
-        default_font_main_size = style.font_size;
-    }
-
-    if default_font_ui_size != style.font_ui_size {
-        font_ui_size = style.font_ui_size;
-        default_font_ui_size = style.font_ui_size;
-    }
 
     platform_set_border_color();
 }

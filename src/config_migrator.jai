@@ -779,6 +779,10 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
     .{ 23, "common",    "build_panel_toggle",                       "toggle_build_panel"       },  // for consistency
     .{ 23, "common",    "build_panel_toggle_focus",                 "toggle_build_panel_focus" },  // for consistency
+
+    .{ 26, "common",    "reset_font_size_to_default",               "reset_zoom" },
+    .{ 26, "common",    "increase_font_size",                       "zoom_in"    },
+    .{ 26, "common",    "decrease_font_size",                       "zoom_out"   },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -791,7 +795,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "create_new_file",
         "create_new_file_on_the_side",
         "cut",
-        "decrease_font_size",
         "delete_left_char",
         "delete_right_char",
         "cut_to_end_of_line",
@@ -806,7 +809,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "duplicate_lines",
         "escape",
         "go_to_line",
-        "increase_font_size",
         "indent",
         "indent_or_go_to_next_tabstop",
         "join_lines",
@@ -842,7 +844,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "pop_directory",
         "quit",
         "redo",
-        "reset_font_size_to_default",
         "save",
         "save_as",
         "scroll_viewport_down",

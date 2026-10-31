@@ -320,9 +320,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .open_another_editor_instance;                     open_another_editor_instance();                     return true;
 
-        case .increase_font_size;                               increase_font_size();                               return true;
-        case .decrease_font_size;                               decrease_font_size();                               return true;
-        case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
+        case .zoom_in;                                          zoom_in();                                          return true;
+        case .zoom_out;                                         zoom_out();                                         return true;
+        case .reset_zoom;                                       reset_zoom();                                       return true;
 
         case .open_project;                                     print("UNIMPLEMENTED\n");  /* !!!!!!!!!!!! */       return true;
         case .switch_to_project;                                show_dialog(*switch_to_project_dialog);             return true;
@@ -577,18 +577,20 @@ init_fonts_and_dependent_things :: () {
 
     Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
 
-    font_main_size = clamp(font_main_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_size   = clamp(font_ui_size  , MIN_FONT_SIZE, MAX_FONT_SIZE);
+    style := context.config.style;
 
-    delta := font_ui_size - DEFAULT_FONT_UI_SIZE;
+    font_main_size := clamp(style.font_size    + font_zoom_steps, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_size   := clamp(style.font_ui_size + font_zoom_steps, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font_ui_big_size           = clamp(DEFAULT_FONT_UI_BIG_SIZE           + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_medium_size        = clamp(DEFAULT_FONT_UI_MEDIUM_SIZE        + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_small_size         = clamp(DEFAULT_FONT_UI_SMALL_SIZE         + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_very_small_size    = clamp(DEFAULT_FONT_UI_VERY_SMALL_SIZE    + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_size            = clamp(DEFAULT_FONT_ICONS_SIZE            + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_small_size      = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_very_small_size = clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    delta := style.font_ui_size - DEFAULT_FONT_UI_SIZE + font_zoom_steps;
+
+    font_ui_big_size           := clamp(DEFAULT_FONT_UI_BIG_SIZE           + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_medium_size        := clamp(DEFAULT_FONT_UI_MEDIUM_SIZE        + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_small_size         := clamp(DEFAULT_FONT_UI_SMALL_SIZE         + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_very_small_size    := clamp(DEFAULT_FONT_UI_VERY_SMALL_SIZE    + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_size            := clamp(DEFAULT_FONT_ICONS_SIZE            + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_small_size      := clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_very_small_size := clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
     font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale));
     assert(font_main != null, "Couldn't init main text font\n");
@@ -609,7 +611,7 @@ init_fonts_and_dependent_things :: () {
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
     font_ui_bold_italic = Simp.get_font_at_size(loaded_fonts.ui_bold_italic.name, loaded_fonts.ui_bold_italic.data, cast(int) (font_ui_size * dpi_scale));
-    assert(font_ui_bold != null, "Couldn't init bold italic ui font\n");
+    assert(font_ui_bold_italic != null, "Couldn't init bold italic ui font\n");
 
     font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
@@ -704,9 +706,9 @@ update_mouse_state :: () {
 
     if mouse.wheel_y_mode == .sizing_font {
         if Input.mouse_wheel_delta.vertical < 0 {
-            decrease_font_size();
+            zoom_out();
         } else if Input.mouse_wheel_delta.vertical > 0 {
-            increase_font_size();
+            zoom_in();
         }
     } else if mouse.wheel_y_mode == .scrolling {
         if shift_pressed() {
@@ -768,35 +770,27 @@ open_another_editor_instance :: () {
     create_process(*new_window_process, .. focus_executable_args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED, kill_process_if_parent_exits = kill_children);
 }
 
-increase_font_size :: () {
-    should_reinit_fonts: bool;
-    if (font_main_size + 1) <= MAX_FONT_SIZE {
-        font_main_size += 1;
-        should_reinit_fonts = true;
-    }
-    if (font_ui_size + 1) <= MAX_FONT_SIZE {
-        font_ui_size += 1;
-        should_reinit_fonts = true;
-    }
-    if should_reinit_fonts init_fonts_and_dependent_things();
+adjust_zoom :: (delta: int) {
+    min_zoom := MIN_FONT_SIZE - context.config.style.font_size;
+    max_zoom := MAX_FONT_SIZE - context.config.style.font_size;
+
+    new_zoom := clamp(font_zoom_steps + delta, min_zoom, max_zoom);
+    if new_zoom == font_zoom_steps return;
+
+    font_zoom_steps = new_zoom;
+    init_fonts_and_dependent_things();
 }
 
-decrease_font_size :: () {
-    should_reinit_fonts: bool;
-    if (font_main_size - 1) >= MIN_FONT_SIZE {
-        font_main_size -= 1;
-        should_reinit_fonts = true;
-    }
-    if (font_ui_size - 1) >= MIN_FONT_SIZE {
-        font_ui_size -= 1;
-        should_reinit_fonts = true;
-    }
-    if should_reinit_fonts init_fonts_and_dependent_things();
+zoom_in :: () {
+    adjust_zoom(1);
 }
 
-reset_font_size_to_default :: () {
-    font_main_size = default_font_main_size;
-    font_ui_size   = default_font_ui_size;
+zoom_out :: () {
+    adjust_zoom(-1);
+}
+
+reset_zoom :: () {
+    font_zoom_steps = 0;
     init_fonts_and_dependent_things();
 }
 
@@ -991,6 +985,9 @@ DEFAULT_FONT_ICONS_SIZE            :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
 DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
+MIN_FONT_SIZE :: 4;
+MAX_FONT_SIZE :: 90;
+
 loaded_fonts: struct {
     main:           Loaded_Font = FONT_MAIN;
     ui:             Loaded_Font = FONT_UI;
@@ -998,20 +995,9 @@ loaded_fonts: struct {
     ui_bold_italic: Loaded_Font = FONT_UI_BOLD_ITALIC;
 };
 
-// can be changed in the config file
-default_font_main_size  := DEFAULT_FONT_MAIN_SIZE;
-default_font_ui_size    := DEFAULT_FONT_UI_SIZE;
+// Tracks temporary zoom
+font_zoom_steps := 0;
 
-// when changing font size, we change font_main_size and font_ui_size and then derive the other ones from it
-font_main_size             := DEFAULT_FONT_MAIN_SIZE;
-font_ui_size               := DEFAULT_FONT_UI_SIZE;
-font_ui_big_size           := DEFAULT_FONT_UI_BIG_SIZE;
-font_ui_medium_size        := DEFAULT_FONT_UI_MEDIUM_SIZE;
-font_ui_small_size         := DEFAULT_FONT_UI_SMALL_SIZE;
-font_ui_very_small_size    := DEFAULT_FONT_UI_VERY_SMALL_SIZE;
-font_icons_size            := DEFAULT_FONT_ICONS_SIZE;
-font_icons_small_size      := DEFAULT_FONT_ICONS_SMALL_SIZE;
-font_icons_very_small_size := DEFAULT_FONT_ICONS_VERY_SMALL_SIZE;
 
 // Depend on font size
 char_size:                  float;
@@ -1272,9 +1258,6 @@ load_font :: (name: string) -> Loaded_Font {
 }
 
 #scope_export
-
-MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 90;
 
 DEBUG_MEMORY_LEAKS :: false;
 

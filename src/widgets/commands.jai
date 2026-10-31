@@ -284,6 +284,10 @@ base_commands := #run -> [] Command {
         cmd( "Go To Previous Build Error (In Side Pane)",       .go_to_previous_build_error_in_side_pane,   .None ),
         cmd( "Go To Next Build Error",                          .go_to_next_build_error,                    .None ),
         cmd( "Go To Next Build Error (In Side Pane)",           .go_to_next_build_error_in_side_pane,       .None ),
+
+        cmd( "Zoom In",                                         .zoom_in,                                   .None ),
+        cmd( "Zoom Out",                                        .zoom_out,                                  .None ),
+        cmd( "Reset Zoom",                                      .reset_zoom,                                .None ),
     ];
 
     linux_commands := Command.[

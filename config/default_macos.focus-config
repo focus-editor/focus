@@ -388,10 +388,10 @@ Shift-Tab                       focus_previous_ui_element
 {Shift}-Ctrl-Backspace          delete_left_through_word
 {Shift}-Ctrl-Delete             delete_right_through_word
 
-Cmd-Plus                        increase_font_size
-Cmd-Minus                       decrease_font_size
-Cmd-0                           reset_font_size_to_default
-Cmd-MouseMiddle                 reset_font_size_to_default
+Cmd-Plus                        zoom_in
+Cmd-Minus                       zoom_out
+Cmd-0                           reset_zoom
+Cmd-MouseMiddle                 reset_zoom
 
 F8                              go_to_next_build_error
 Cmd-F8                          go_to_next_build_error_in_side_pane

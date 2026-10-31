@@ -104,9 +104,9 @@ ACTIONS_COMMON :: string.[
     "delete_to_end_of_line",
     "cut_to_start_of_line",
     "cut_to_end_of_line",
-    "increase_font_size",
-    "decrease_font_size",
-    "reset_font_size_to_default",
+    "zoom_in",
+    "zoom_out",
+    "reset_zoom",
     "strip_trailing_whitespace",
 
     "close_editor",
