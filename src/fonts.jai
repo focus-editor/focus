@@ -68,9 +68,9 @@ refresh_fonts :: () {
     append(*common_icons, XMARK_ICON);
     icons_string := builder_to_string(*common_icons,, allocator = temp);
 
-    for description : FONT_ROLES {
+    for font_role : FONT_ROLES {
         source: Loaded_Font;
-        if #complete description.source == {
+        if #complete font_role.source == {
             case .main;           source = loaded_fonts.main;
             case .ui;             source = loaded_fonts.ui;
             case .ui_bold;        source = loaded_fonts.ui_bold;
@@ -78,14 +78,14 @@ refresh_fonts :: () {
             case .icons;          source = FONT_ICONS;
         }
 
-        base_size := ifx description.source == .main then style.font_size else style.font_ui_size;
-        pixel_size := font_pixel_size(base_size + description.size_offset + font_zoom_steps);
+        base_size := ifx font_role.source == .main then style.font_size else style.font_ui_size;
+        pixel_size := font_pixel_size(base_size + font_role.size_offset + font_zoom_steps);
         font := Simp.get_font_at_size(source.name, source.data, pixel_size);
-        assert(font != null, "Couldn't init font for role '%' at % pixels\n", description.role, pixel_size);
-        sized_fonts[xx description.role] = font;
+        assert(font != null);
+        sized_fonts[xx font_role.role] = font;
 
         // Warm every role's atlas to avoid repeated texture uploads during drawing.
-        Simp.prepare_text(font, ifx description.source == .icons then icons_string else COMMON_CHARS);
+        Simp.prepare_text(font, ifx font_role.source == .icons then icons_string else COMMON_CHARS);
     }
 
 }
@@ -203,14 +203,15 @@ loaded_fonts: struct {
 // Tracks temporary zoom
 font_zoom_steps := 0;
 
+
+#scope_file
+
 // Embed default fonts
 FONT_MAIN           :: #run load_font("FiraCode-Retina.ttf");
 FONT_UI             :: #run load_font("OpenSans-Regular.ttf");
 FONT_UI_BOLD        :: #run load_font("OpenSans-SemiBold.ttf");
 FONT_UI_BOLD_ITALIC :: #run load_font("OpenSans-SemiBoldItalic.ttf");
 FONT_ICONS          :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
-
-#scope_file
 
 Font_Kind :: enum {
     main;
@@ -222,7 +223,7 @@ Font_Kind :: enum {
 load_and_replace_font :: (dst: *Loaded_Font, name: string, kind: Font_Kind) {
     loaded_font, success, error_msg := load_font_by_name(name, kind);
     if !success {
-        add_user_error("%\nUsing the embedded default font for '%'.", error_msg, kind);
+        add_user_error("%\nUsing the default font for '%'.", error_msg, kind, tag = .config);
         loaded_font = load_font_by_name("default", kind);
     }
     dst.* = loaded_font;
@@ -249,10 +250,37 @@ load_font_by_name :: (name: string, kind: Font_Kind) -> Loaded_Font, success: bo
     font_data, success := read_entire_file(font_path);
     if !success return .{}, false, tprint("Couldn't read font '%' from '%'.", name, font_path);
 
+    // Check that the font can be rendered
+    default_size := DEFAULT_FONT_MAIN_SIZE;
+    if #complete kind == {
+        case .main;           default_size = DEFAULT_FONT_MAIN_SIZE;
+        case .ui;             default_size = DEFAULT_FONT_UI_SIZE;
+        case .ui_bold;        default_size = DEFAULT_FONT_UI_SIZE;
+        case .ui_bold_italic; default_size = DEFAULT_FONT_UI_SIZE;
+    }
+    font := Simp.get_font_at_size(font_path, font_data, default_size);
+    if font == null {
+        free(font_data);
+        return .{}, false, tprint("Couldn't initialize font '%' from '%'.", name, font_path);
+    }
+
     owned_path := copy_string(font_path);
     loaded_font := Loaded_Font.{ name = owned_path, data = font_data };
     table_set(*font_cache, owned_path, loaded_font);
     return loaded_font, true, "";
+}
+
+font_pixel_size :: (logical_size: int) -> int {
+    size := clamp(logical_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    return max(1, cast(int) (size * dpi_scale));
+}
+
+load_font :: (name: string) -> Loaded_Font {
+    path := tprint("fonts/%", name);
+    data, success := read_entire_file(path);
+    assert(success, "Couldn't load font '%'", path);
+
+    return Loaded_Font.{ name = sprint("builtin:%", name), data = data };
 }
 
 font_cache: Table(string, Loaded_Font);  // absolute path -> loaded font
@@ -290,18 +318,6 @@ NUM_FONT_ROLES :: #run enum_highest_value(Font_Role) + 1;
 
 sized_fonts: [NUM_FONT_ROLES] *Simp.Dynamic_Font;
 
-font_pixel_size :: (logical_size: int) -> int {
-    size := clamp(logical_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    return max(1, cast(int) (size * dpi_scale));
-}
-
 COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶•\t\n—–‘’“”«»";
 
-load_font :: (name: string) -> Loaded_Font {
-    path := tprint("fonts/%", name);
-    data, success := read_entire_file(path);
-    assert(success, "Couldn't load font '%'", path);
-
-    return Loaded_Font.{ name = sprint("builtin:%", name), data = data };
-}
 
