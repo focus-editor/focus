@@ -192,6 +192,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
 
             texture := *glyph.page.texture;
             if glyph.page.dirty {
+                immediate_flush();
                 glyph.page.dirty = false;
                 texture_load_from_bitmap(texture, glyph.page.bitmap_data);
             }
@@ -308,6 +309,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
 
         texture := *glyph.page.texture;
         if glyph.page.dirty {
+            immediate_flush();
             glyph.page.dirty = false;
             texture_load_from_bitmap(texture, glyph.page.bitmap_data);
         }

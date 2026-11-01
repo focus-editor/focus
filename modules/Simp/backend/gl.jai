@@ -669,6 +669,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color: u8) {
         map  := *page.texture;
 
         if page.dirty {
+            immediate_flush();
             page.dirty = false;
             texture_load_from_bitmap(map, page.bitmap_data);
         }
