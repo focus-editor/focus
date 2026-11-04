@@ -9,8 +9,8 @@ color_picker_dialog : struct {
     color_change_callback: #type (rgba: Vector4, hsl: Vector3, finalize: bool);
     color_change_callback_data: *void;
 
-    drag_editor_id: s64 = -1;
-    drag_buffer_id: s64 = -1;
+    drag_editor_id: Editor_Id = -1;
+    drag_buffer_id: Buffer_Id = -1;
     drag_undo_count: s64;
     drag_old_bytes: *u8;  // the pending replacement owns the bytes
 }
@@ -166,7 +166,7 @@ color_picker_set_color :: (color: Vector4, finalize := false, notify := true) {
 }
 
 
-color_picker_get_drag_edit :: (editor_id: s64, editor: *Editor, buffer: *Buffer) -> *Buffer.Edit {
+color_picker_get_drag_edit :: (editor_id: Editor_Id, editor: *Editor, buffer: *Buffer) -> *Buffer.Edit {
     using color_picker_dialog;
     if drag_editor_id == editor_id && drag_buffer_id == editor.buffer_id &&
        drag_old_bytes && buffer.edits.count == 1 && buffer.undos.count == drag_undo_count {
@@ -177,12 +177,12 @@ color_picker_get_drag_edit :: (editor_id: s64, editor: *Editor, buffer: *Buffer)
     return null;
 }
 
-color_picker_finish_drag :: (editor_id: s64, editor: *Editor, buffer: *Buffer) {
+color_picker_finish_drag :: (editor_id: Editor_Id, editor: *Editor, buffer: *Buffer) {
     if color_picker_get_drag_edit(editor_id, editor, buffer) then new_edit_group(buffer, editor);
     color_picker_dialog.drag_old_bytes = null;
 }
 
-color_picker_replace_color :: (editor_id: s64, editor: *Editor, buffer: *Buffer, range: Offset_Range, str: string) {
+color_picker_replace_color :: (editor_id: Editor_Id, editor: *Editor, buffer: *Buffer, range: Offset_Range, str: string) {
     using color_picker_dialog;
     old_str := get_range_as_string(buffer, range);
     if old_str == str return;
@@ -220,7 +220,7 @@ color_picker_replace_color :: (editor_id: s64, editor: *Editor, buffer: *Buffer,
 }
 
 Color_Change_Buffer_Info :: struct {
-    editor_id: s64;
+    editor_id: Editor_Id;
     editor: *Editor;
     buffer: *Buffer;
     range: Offset_Range;

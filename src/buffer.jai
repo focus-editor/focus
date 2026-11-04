@@ -1,6 +1,6 @@
 refresh_open_buffers :: () {
     for * editor : open_editors {
-        buffer := *open_buffers[editor.buffer_id];
+        buffer := get_buffer(editor.buffer_id);
 
         if editor.line_wrap == {
             case .to_disable;   reset_keeping_memory(*editor.wrapped_line_starts); editor.line_wrap = .off;
@@ -180,25 +180,25 @@ offset_to_real_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     return search_line_num_by_offset(to_view(line_starts), offset);
 }
 
-Editor_Cursor_Position :: struct { editor_id: s64; cursor_id: s64; coords: Cursor_Coords; }
+Editor_Cursor_Position :: struct { editor_id: Editor_Id; cursor_id: s64; coords: Cursor_Coords; }
 
-remember_cursor_positions :: (buffer_id: s64, in: enum { all_editors; active_editor; }) -> [] Editor_Cursor_Position /* temp */ {
-    buffer := *open_buffers[buffer_id];
+remember_cursor_positions :: (buffer_id: Buffer_Id, in: enum { all_editors; active_editor; }) -> [] Editor_Cursor_Position /* temp */ {
+    buffer := get_buffer(buffer_id);
 
     cursor_positions: [..] Editor_Cursor_Position;
     cursor_positions.allocator = temp;
 
     active_editor_id := get_active_editor_id();
 
-    for * editor, editor_id : open_editors {
+    for * editor : open_editors {
         if editor.buffer_id != buffer_id continue;
-        if in == .active_editor && editor_id != active_editor_id continue;
+        if in == .active_editor && editor.id != active_editor_id continue;
         editor.refresh_selection = true;
 
         new_edit_group(buffer, editor);
 
         for cursor, cursor_id : editor.cursors {
-            array_add(*cursor_positions, Editor_Cursor_Position.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });
+            array_add(*cursor_positions, Editor_Cursor_Position.{ editor.id, cursor_id, get_real_cursor_coords(buffer, cursor) });
         }
     }
 
@@ -224,8 +224,8 @@ remember_cursor_positions :: (buffer_id: s64, in: enum { all_editors; active_edi
     return cursor_positions;
 }
 
-restore_cursor_positions :: (buffer_id: s64, cursor_positions: [] Editor_Cursor_Position) {
-    buffer := *open_buffers[buffer_id];
+restore_cursor_positions :: (buffer_id: Buffer_Id, cursor_positions: [] Editor_Cursor_Position) {
+    buffer := get_buffer(buffer_id);
     if buffer.dirty then rescan_for_lines(buffer);
 
     tab_size := get_buffer_tab_size(buffer);
@@ -233,7 +233,7 @@ restore_cursor_positions :: (buffer_id: s64, cursor_positions: [] Editor_Cursor_
     max_line := cast(s32) buffer.line_starts.count - 2;
     for position : cursor_positions {
         using position;
-        editor := *open_editors[editor_id];
+        editor := get_editor(editor_id);
 
         pos, sel := coords.pos, coords.sel;
         pos.line = clamp(pos.line, 0, max_line);
@@ -769,7 +769,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
                 // Mark the old buffer as deleted and use the new one
                 removed := table_remove(*buffers_table, file_path);
                 assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
-                existing_buffer := *open_buffers[existing_buffer_id];
+                existing_buffer := get_buffer(existing_buffer_id);
                 existing_buffer.deleted  = true;
                 existing_buffer.modified = false;
                 existing_buffer.modified_on_disk = false;
@@ -799,15 +799,15 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         if new_id < 0 return;  // logged elsewhere
 
         reroute_editors_to_new_buffer(buffer.id, new_id);
-        update_window_title(open_editors[get_active_editor_id()].buffer_id);
+        update_window_title(get_editor(get_active_editor_id()).buffer_id);
         update_most_recent_buffers(new_id);
     }
 
     start_watching_file_if_not_already(file_path);
 }
 
-save :: (buffer_id: s64) {
-    buffer := *open_buffers[buffer_id];
+save :: (buffer_id: Buffer_Id) {
+    buffer := get_buffer(buffer_id);
     if buffer.readonly || buffer.internal return;
 
     if buffer.modified_on_disk {
@@ -849,8 +849,9 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     }
 
     remember_last_mod_info(buffer);
-    active_editor_id := get_active_editor_id();
-    if active_editor_id >= 0 && active_editor_id < open_editors.count then update_window_title(open_editors[active_editor_id].buffer_id);
+
+    _, active_buffer := get_active_editor_and_buffer();
+    if active_buffer then update_window_title(active_buffer.id);
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up
@@ -861,9 +862,9 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     return !error_when_saving;
 }
 
-reroute_editors_to_new_buffer :: (old_buffer_id: s64, new_buffer_id: s64) {
-    old_buffer := *open_buffers[old_buffer_id];
-    new_buffer := *open_buffers[new_buffer_id];
+reroute_editors_to_new_buffer :: (old_buffer_id: Buffer_Id, new_buffer_id: Buffer_Id) {
+    old_buffer := get_buffer(old_buffer_id);
+    new_buffer := get_buffer(new_buffer_id);
 
     for * editor : open_editors {
         if editor.buffer_id != old_buffer_id  continue;
@@ -1191,14 +1192,10 @@ get_buffer_contents_for_writing :: (buffer: Buffer) -> string /* temp */, is_crl
     return buffer_contents, is_crlf;
 }
 
-create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
-    // Create a new buffer
+create_an_empty_buffer :: () -> buffer_id: Buffer_Id, created: bool {
     lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
-    buffer_id := open_buffers.count;
-    buffer := bucket_array_add(*open_buffers);
-    init_buffer(buffer, buffer_id);
+    buffer_id, buffer := register_new_buffer_locked();
+    unlock(*open_buffers_lock);
 
     if context.config.settings.line_endings == .crlf {
         buffer.crlf = true;
@@ -1214,7 +1211,7 @@ create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     return buffer_id, true;
 }
 
-find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
+find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
     #if OS == .WINDOWS {
         if path.count > 248 return -1, false;  // Windows bad
     }
@@ -1224,9 +1221,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer: *Buffer = ---;
 
     if !found_buffer {
-        buffer_id = open_buffers.count;
-        buffer = bucket_array_add(*open_buffers);
-        init_buffer(buffer, buffer_id);
+        buffer_id, buffer = register_new_buffer_locked();
         table_add(*buffers_table, copy_string(path), buffer_id);  // It should be ok to leak some memory here when we no longer need a buffer
     }
 
@@ -1280,16 +1275,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer.indentation.size = 0;
 
     return buffer_id, true;
-}
-
-find_buffer_id_by_path :: (path: string) -> buffer_id: s64 {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
-    found_buffer, buffer_id := table_find(*buffers_table, path);
-    if found_buffer return buffer_id;
-
-    return -1;
 }
 
 get_buffer_name :: (buffer: Buffer) -> string {
@@ -1455,7 +1440,8 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         lock(*open_buffers_lock);
         found_buffer, buffer_id := table_find(*buffers_table, path);
         if found_buffer {
-            open_buffers[buffer_id].deleted = true;
+            buffer := get_buffer(buffer_id);
+            buffer.deleted = true;
             finder.need_to_refresh_results = true;
             open_file_dialog.should_refresh_entries = true;
         }
@@ -1473,7 +1459,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         return;
     }
 
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
 
     // If we got to this point, the file definitely exists. Mark it as not deleted.
     // This will "undelete" previously deleted files, which is helpful when e.g. a user
@@ -1491,11 +1477,11 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     finder.need_to_refresh_results = true;
 }
 
-reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false) -> success: bool {
+reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages := false) -> success: bool {
     context.current_buffer_id = buffer_id;
     defer context.current_buffer_id = -1;
 
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
     assert(buffer.has_file && buffer.file.full_path);
 
     path := buffer.file.full_path;
@@ -1549,8 +1535,8 @@ maybe_mark_buffer_as_deleted :: (path: string) {
     maybe_mark_buffer_as_deleted(buffer_id);
 }
 
-maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
-    buffer := *open_buffers[buffer_id];
+maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
+    buffer := get_buffer(buffer_id);
     if !buffer.has_file return;
     if file_exists(buffer.file.full_path) return;  // no need to mark as deleted
 
@@ -1614,18 +1600,12 @@ get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     return result;
 }
 
-init_buffer :: (buffer: *Buffer, buffer_id: s64) {
-    init(*buffer.content_lock);
-    init(*buffer.settings_lock);
-    buffer.id = buffer_id;
-}
-
-get_unsaved_buffer_ids :: () -> [] s64 /* temp */ {
-    result: [..] s64;
+get_unsaved_buffer_ids :: () -> [] Buffer_Id /* temp */ {
+    result: [..] Buffer_Id;
     result.allocator = temp;
 
-    for buffer, buffer_id : open_buffers {
-        if is_unsaved(buffer) array_add(*result, buffer_id);
+    for buffer : open_buffers {
+        if is_unsaved(buffer) array_add(*result, buffer.id);
     }
 
     return result;
@@ -1643,13 +1623,6 @@ unsaved_buffers_exist :: () -> bool {
 
 is_unsaved :: (buffer: Buffer) -> bool {
     return buffer.modified && !buffer.readonly && !buffer.internal;
-}
-
-remove_all_buffers :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
-    deinit(*buffers_table);
-    for * open_buffers free_buffer(it);
-    bucket_array_reset(*open_buffers);
 }
 
 manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
@@ -1719,9 +1692,9 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
     editor_id := context.current_editor_id;
     buffer_id := context.current_buffer_id;
 
-    if editor_id >= 0 {
-        editor := *open_editors[editor_id];
-        if buffer != *open_buffers[editor.buffer_id] || (buffer_id >= 0 && editor.buffer_id != buffer_id) {
+    if exists(editor_id) {
+        editor := get_editor(editor_id);
+        if buffer.id != editor.buffer_id || (exists(buffer_id) && editor.buffer_id != buffer_id) {
             log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
             return;
         }
@@ -1729,8 +1702,8 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
     }
 
     notification := Buffer.Edit_Notification.{
-        buffer_id = cast(s32) buffer_id,
-        editor_id = cast(s32) editor_id,
+        buffer_id = buffer_id,
+        editor_id = editor_id,
         offset    = cast(s32) (offset + min(old_count, new_count)),
         delta     = cast(s32) (new_count - old_count),
     };
@@ -1811,7 +1784,7 @@ buffer_edit_notifications: Array(Buffer.Edit_Notification);
 
 
 Buffer :: struct {
-    id: s64 = -1;
+    id: Buffer_Id = -1;
 
     bytes:       Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
@@ -1914,8 +1887,8 @@ Buffer :: struct {
     // This is used to notify other editors for a buffer about edits.
     // This field set represents inserts, replaces and deletes in a uniform way
     Edit_Notification :: struct {
-        buffer_id: s32;
-        editor_id: s32;
+        buffer_id: Buffer_Id;
+        editor_id: Editor_Id;
         offset:    s32;
         delta:     s32;
     }

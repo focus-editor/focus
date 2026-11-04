@@ -10,7 +10,7 @@ Unsaved_Buffers_Dialog :: struct {
 
 #scope_file
 
-Dialog_Details :: struct { buffer_ids: [] s64; }
+Dialog_Details :: struct { buffer_ids: [] Buffer_Id; }
 
 dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
    // Doing some copypasta to return constants so that we don't have to allocate

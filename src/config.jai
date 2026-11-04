@@ -282,7 +282,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
     if diff.tab_size_changed {
         // Refresh all editors which have line wrap on
         for * editor : open_editors {
-            buffer := *open_buffers[editor.buffer_id];
+            buffer := get_buffer(editor.buffer_id);
             if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
         }
     }
@@ -295,7 +295,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
 
         // In case indentation rules changed, refresh them for all open editors
         for editor : open_editors {
-            buffer := *open_buffers[editor.buffer_id];
+            buffer := get_buffer(editor.buffer_id);
 
             maybe_detect_and_set_indentation(buffer);
         }
@@ -325,7 +325,7 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
         editor_id := get_active_editor_id();
         if editor_id < 0 then editor_id = get_visible_editor_id(editors.active_pane);
 
-        buffer_id := ifx editor_id >= 0 then open_editors[editor_id].buffer_id else -1;
+        buffer_id := ifx editor_id >= 0 then get_editor(editor_id).buffer_id else -1;
         update_window_title(buffer_id);
     }
 
@@ -1131,7 +1131,7 @@ operator== :: (a: File_Specific_Settings, b: File_Specific_Settings) -> bool {
 // Based on our settings usage patterns it should be okay. Trying to do all this work
 // upfront and share between threads would result in more complexity.
 Buffer_Settings_Cache :: struct {
-    table: Table(s64, Entry);
+    table: Table(Buffer_Id, Entry);
     memory_pool: Flat_Pool;
 
     Entry :: struct {
@@ -1143,7 +1143,7 @@ Buffer_Settings_Cache :: struct {
 // NOTE: pointers returned by this function will live until this thread's settings cache is cleared or destroyed.
 // Do not store them anywhere.
 get_settings :: (buffer: Buffer) -> *Settings {
-    original := *open_buffers[buffer.id];  // use the original buffer's mutex and metadata, not the copy
+    original := get_buffer(buffer.id);  // use the original buffer's mutex and metadata, not the copy
     lock(*original.settings_lock);
     defer unlock(*original.settings_lock);
 

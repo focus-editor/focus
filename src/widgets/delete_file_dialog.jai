@@ -9,7 +9,7 @@ Delete_File_Dialog :: struct {
 
 #scope_file
 
-Delete_File_Details :: struct { buffer_id: s64; }
+Delete_File_Details :: struct { buffer_id: Buffer_Id; }
 
 dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
     return .[

@@ -86,7 +86,7 @@ apply_selected_theme :: (_: Editor_Placement) {
     config_to_change := get_last_config_with_style();
 
     buffer_id := find_or_create_buffer(config_to_change.path);
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
     if buffer.dirty rescan_for_lines(buffer);
     if buffer.readonly {
         add_user_error("Can't modify config '%' because it's read-only", config_to_change.path);

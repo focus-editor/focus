@@ -124,7 +124,7 @@ maybe_load_previous_session :: () -> Session {
     //         // // Process the file
     //         // buffer_id := find_or_create_buffer(buf.file.full_path);
     //         //
-    //         // // recover_editor :: (buffer_id: s64, )
+    //         // // recover_editor :: (buffer_id: Buffer_Id, )
     //         //
     //         // if !buf.unsaved {
     //         //     using session.editors;
@@ -234,7 +234,7 @@ deinit_logger :: () {
     context.logger = runtime_support_default_logger;
 }
 
-session_notify_modified_buffer :: (buffer_id: s64) {
+session_notify_modified_buffer :: (buffer_id: Buffer_Id) {
     // session.last_modified_time = current_time_monotonic();
     // array_add_if_unique(*session.modified_buffers, buffer_id);
 }
@@ -254,7 +254,7 @@ maybe_save_editor_state_into_session :: () {
     if to_milliseconds(current_time_monotonic() - session.last_modified_time) < TIMEOUT_MS return;
 
     if !queue_initted {
-        queue = File_Async.initialize_queue(s64);
+        queue = File_Async.initialize_queue(Buffer_Id);
         queue_initted = true;
     }
 
@@ -377,8 +377,8 @@ save_editor_state_into_file :: () {
     if !success then log_error("Couldn't save editor state into file '%'", state_file_path);
 }
 
-dump_buffer_state :: (buffer_id: s64) -> [] u8 {
-    buffer := *open_buffers[buffer_id];
+dump_buffer_state :: (buffer_id: Buffer_Id) -> [] u8 {
+    buffer := get_buffer(buffer_id);
 
     // Build buffer state for saving into file
     state: Buffer_State;
@@ -491,7 +491,7 @@ Session :: struct {
     editors: Editor_State;
     last_edit: Apollo_Time;
 
-    modified_buffers: [..] s64;
+    modified_buffers: [..] Buffer_Id;
     last_modified_time: Apollo_Time;
 }
 
@@ -503,7 +503,7 @@ Session_Dir :: struct {
 Buffer_State :: struct {
     version: s64;
 
-    buffer_id: s64;
+    buffer_id: Buffer_Id;
 
     file: File_Info;
     has_file: bool;
@@ -531,11 +531,11 @@ Buffer_State :: struct {
 }
 
 Async_Buffer_Save :: struct {
-    buffer_id: s64;
+    buffer_id: Buffer_Id;
     data: [] u8;
 }
 
-queue: File_Async.Queue(s64);
+queue: File_Async.Queue(Buffer_Id);
 queue_initted := false;
 
 saves_in_flight: [..] Async_Buffer_Save;

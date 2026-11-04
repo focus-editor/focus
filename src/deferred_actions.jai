@@ -68,22 +68,22 @@ defer_action_build_command :: (command_id: s64) {
     ]);
 }
 
-defer_action_save_as :: (buffer_id: s64) {
+defer_action_save_as :: (buffer_id: Buffer_Id) {
     push_action(.save_as, .{ type = .save_as, save_as = .{ buffer_id = buffer_id } });
 }
 
-defer_action_overwrite_buffer :: (buffer_id: s64) {
+defer_action_overwrite_buffer :: (buffer_id: Buffer_Id) {
     clear_action_queue();
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
     assert(buffer.has_file && buffer.file.full_path != "");
     push_action(.confirm_overwrite, .{ type = .confirm_overwrite, confirm_overwrite = .{ buffer_id = buffer_id, is_move = false, file_path = copy_string(buffer.file.full_path) } });
 }
 
-defer_action_move :: (buffer_id: s64) {
+defer_action_move :: (buffer_id: Buffer_Id) {
     push_action(.save_as, .{ type = .save_as, save_as = .{ buffer_id = buffer_id, is_move = true } });
 }
 
-defer_action_delete :: (buffer_id: s64) {
+defer_action_delete :: (buffer_id: Buffer_Id) {
     push_action(.delete, .{ type = .delete, delete = .{ buffer_id = buffer_id } });
 }
 
@@ -92,13 +92,13 @@ defer_action_close_pane :: (pane: *Editor_Pane) {
     push_action(.close_pane, .{ type = .close_pane, close_pane = .{ pane = pane } });
 }
 
-defer_action_close_editor :: (editor_id: s64) {
+defer_action_close_editor :: (editor_id: Editor_Id) {
     push_action(.close_editor, .{ type = .close_editor, close_editor = .{ editor_id = editor_id } });
     editor, buffer := get_editor_and_buffer(editor_id);
     if is_unsaved(buffer) && num_editors_for_buffer_in_the_tree(editor.buffer_id) <= 1 then defer_action_save_buffers(.[editor.buffer_id]);
 }
 
-defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: s64 = -1, notify := false) {
+defer_action_close_editors_for_pane :: (pane: *Editor_Pane, except: Editor_Id = -1, notify := false) {
     if !pane return;
     push_action(.close_editors_for_pane, .{ type = .close_editors_for_pane, close_editors_for_pane = .{ pane = pane, except = except, notify = notify } });
 }
@@ -116,7 +116,7 @@ defer_action_save_all_buffers :: () {
     push_action(.save_buffers, .{ type = .save_buffers, save_buffers = .{ buffer_ids = array_copy(unsaved_buffer_ids) } });
 }
 
-defer_action_save_buffers :: (buffer_ids: [] s64) {
+defer_action_save_buffers :: (buffer_ids: [] Buffer_Id) {
     push_action(.save_buffers, .{ type = .save_buffers, save_buffers = .{ buffer_ids = array_copy(buffer_ids) } });
 }
 
@@ -250,16 +250,16 @@ Deferred_Action :: struct {
     }
 
     Details :: union type: Details_Type {
-        .save_as                ,, save_as:                 struct { buffer_id: s64; is_move: bool; }
-        .save_buffers           ,, save_buffers:            struct { buffer_ids: [] s64; }
-        .confirm_overwrite      ,, confirm_overwrite:       struct { buffer_id: s64; is_move: bool; file_path: string; }
-        .delete                 ,, delete:                  struct { buffer_id: s64; }
+        .save_as                ,, save_as:                 struct { buffer_id: Buffer_Id; is_move: bool; }
+        .save_buffers           ,, save_buffers:            struct { buffer_ids: [] Buffer_Id; }
+        .confirm_overwrite      ,, confirm_overwrite:       struct { buffer_id: Buffer_Id; is_move: bool; file_path: string; }
+        .delete                 ,, delete:                  struct { buffer_id: Buffer_Id; }
         .load_project_config    ,, load_project_config:     struct { path: string; }
         .reload_workspace       ,, reload_workspace:        struct { automatic: bool; }
         .refresh_config_or_theme,, refresh_config_or_theme: struct { path: string; }
         .build_command          ,, build_command:           struct { command_id: s64; }
-        .close_editor           ,, close_editor:            struct { editor_id: s64; }
-        .close_editors_for_pane ,, close_editors_for_pane:  struct { pane: *Editor_Pane; except: s64; notify: bool; }
+        .close_editor           ,, close_editor:            struct { editor_id: Editor_Id; }
+        .close_editors_for_pane ,, close_editors_for_pane:  struct { pane: *Editor_Pane; except: Editor_Id; notify: bool; }
         .close_pane             ,, close_pane:              struct { pane: *Editor_Pane; }
     }
 
@@ -314,7 +314,7 @@ execute_save_buffers :: (action: Deferred_Action) -> Action_Result {
     if #complete result == {
         case .UNINITTED;
             for buffer_ids {
-                buffer := *open_buffers[it];
+                buffer := get_buffer(it);
                 if !is_unsaved(buffer) remove it;
             }
             if buffer_ids {
@@ -339,7 +339,7 @@ execute_save_buffers :: (action: Deferred_Action) -> Action_Result {
 execute_save_as :: (action: Deferred_Action) -> Action_Result {
     using action.details.save_as;
 
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
     if is_move && !buffer.has_file then is_move = false;  // if we attempt to move a buffer without a file, save as instead
 
     _save_to_file_path :: (buffer: *Buffer, file_path: string, is_move: bool) -> Action_Result {
@@ -394,16 +394,16 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
 execute_delete :: (action: Deferred_Action) -> Action_Result {
     using action.details.delete;
 
-    _close_editors_for_buffer :: (buffer_id: s64) {
-        for editor, editor_id : open_editors {
+    _close_editors_for_buffer :: (buffer_id: Buffer_Id) {
+        for editor : open_editors {
             if editor.buffer_id == buffer_id {
-                pane := close_editor_by_id(editor_id);
+                pane := close_editor_by_id(editor.id);
                 if context.config.settings.closing_last_editor_in_pane_should_close_pane && pane && !pane.editor_ids then close_pane(pane);
             }
         }
     }
 
-    buffer := *open_buffers[buffer_id];
+    buffer := get_buffer(buffer_id);
     if buffer.readonly  { add_user_warning("Can't delete a readonly buffer"); return .CANCEL; }
     if !buffer.has_file { _close_editors_for_buffer(buffer_id); return .DONE; }  // no one cares it doesn't have a file, they just want it gone
 
@@ -442,7 +442,7 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
         case .OK_TO_ALL; #through;
         case .OK;        #through;
         case .NO_TO_ALL;  // there's no button "No" in the dialog, just listing here because of the #complete
-            buffer := *open_buffers[buffer_id];
+            buffer := get_buffer(buffer_id);
 
             if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
                 // The user selected the same file as a target. Just save.
@@ -570,7 +570,7 @@ execute_close_editors_for_pane :: (action: Deferred_Action) -> Action_Result {
 
     num_closed := 0;
     {
-        editors_to_close: [..] s64;
+        editors_to_close: [..] Editor_Id;
         editors_to_close.allocator = temp;
         for pane.editor_ids {
             if it == except continue;

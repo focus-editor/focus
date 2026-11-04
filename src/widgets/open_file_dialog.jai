@@ -81,7 +81,7 @@ open_file_dialog_maybe_refresh_entries :: inline () {
     open_file_dialog.should_refresh_entries = false;
 }
 
-show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, triggered_by: Deferred_Action_Id = -1, from_root := false) {
+show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: Buffer_Id = -1, triggered_by: Deferred_Action_Id = -1, from_root := false) {
     if !from_root {
         // Derive the path chunks from the current open file
         editor, buffer := get_visible_editor_and_buffer();
@@ -257,9 +257,9 @@ maybe_close_file_under_cursor :: () {
 
     buffer_id  := entries.filtered[entries.selected].buffer_id;
 
-    for editor, editor_id : open_editors {
+    for editor : open_editors {
         if editor.buffer_id != buffer_id continue;
-        defer_action_close_editor(editor_id);
+        defer_action_close_editor(editor.id);
     }
 
     refresh_entries(clear_input = false);
@@ -476,7 +476,7 @@ refresh_entries :: (clear_input := true) {
                     // If we have a buffer for this file we want to show if it's modified or modified on disk
                     buffer_id := find_buffer_id_by_path(entry.full_path);
                     if buffer_id >= 0 {
-                        buffer := *open_buffers[buffer_id];
+                        buffer := get_buffer(buffer_id);
                         if buffer.modified         then entry.flags |= .MODIFIED;
                         if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
                     }
@@ -495,7 +495,7 @@ refresh_entries :: (clear_input := true) {
 
         case .open_editors;
             for buffer_id : most_recent_buffers {
-                buffer := *open_buffers[buffer_id];
+                buffer := get_buffer(buffer_id);
                 maybe_add_a_buffer_entry(buffer);
             }
     }
@@ -626,7 +626,7 @@ Open_File_Dialog :: struct {
     root_dir: string;
     current_files: [..] Entry;  // files in the current folder (used in .navigate mode only)
 
-    buffer_id_to_save: s64;  // used when `mode` is `.save`
+    buffer_id_to_save: Buffer_Id;  // used when `mode` is `.save`
 
     entries: struct {
         filtered: [..] Entry;
@@ -660,7 +660,7 @@ Open_File_Dialog :: struct {
 }
 
 Entry :: struct {
-    buffer_id := -1;  // not all entries have buffers
+    buffer_id: Buffer_Id = -1;  // not all entries have buffers
     using file: File_Info;
     flags: enum_flags u8 {  // TODO: remove and just use the buffer pointer, now it should be safe
         MODIFIED;

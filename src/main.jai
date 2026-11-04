@@ -62,7 +62,8 @@ main :: () {
 
     {
         editor_id := get_visible_editor_id(editors.active_pane);
-        buffer_id := ifx editor_id >= 0 then open_editors[editor_id].buffer_id else -1;
+        found, editor := find_editor(editor_id);
+        buffer_id := ifx found then editor.buffer_id else -1;
         update_window_title(buffer_id);
     }
 
@@ -942,6 +943,7 @@ focus_allocator: Allocator;
 #load "user_messages.jai";
 #load "deferred_actions.jai";
 #load "history.jai";
+#load "registry.jai";
 
 #load "utils/array.jai";
 #load "utils/aho_corasick.jai";

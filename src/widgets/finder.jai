@@ -386,12 +386,12 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         if trimmed then array_add(*excludes, trimmed);
     }
 
-    for buffer_id : buffer_start_index .. buffer_end_index {
+    for index : buffer_start_index .. buffer_end_index {
         if task.request_id < finder.request.id  break;  // exit early if a newer request exists
 
         // Search in buffer
-        buffer := *open_buffers[buffer_id];
-        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
+        buffer := get_buffer_by_index(index);
+        if buffer == null || (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
         if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Make sure the buffer contents doesn't change while we're scanning it
@@ -400,7 +400,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
-        buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
+        buffer_id_part: u64 = (cast,trunc(u64) index)                            << 32;
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
         buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
@@ -606,7 +606,7 @@ Finder :: struct {
 Search_Result :: struct {
     // Line numbers and boundaries will be calculated at draw time only for the visible entries
     // as they require doing an additional search in buffer.
-    buffer_id:    s32;
+    buffer_id:    Buffer_Id;
     match_offset: s32;
     match_count:  s32;
     sort_key:     u64;

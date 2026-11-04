@@ -33,7 +33,7 @@ init_build_system :: () {
 
     build_buffer_id = create_an_empty_buffer();
     build_editor_id = find_or_create_editor(build_buffer_id);
-    editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
+    editor, buffer := get_editor(build_editor_id), get_buffer(build_buffer_id);
     buffer.readonly = true;
     buffer.internal = true;
     set_buffer_language(buffer, .Focus_Build_Panel);
@@ -163,7 +163,7 @@ build_kill_running_command :: () {
 build_system_update :: () {
     assert(build_buffer_id >= 0 && build_editor_id >= 0, "Build system is not initialized");
 
-    buffer := *open_buffers[build_buffer_id];
+    buffer := get_buffer(build_buffer_id);
     // Print to build output panel, if we have anything to print
     {
         lock(*build_mutex);
@@ -287,7 +287,7 @@ hide_build_panel :: () {
     build_panel_is_shown = false;
 }
 
-is_build_panel :: inline (editor_id: s64) -> bool {
+is_build_panel :: inline (editor_id: Editor_Id) -> bool {
     return editor_id == build_editor_id;
 }
 
@@ -367,14 +367,14 @@ get_error_id_under_cursor :: (cursor: Cursor) -> error_id: s64 {
     return -1;
 }
 
-build_panel_get_editor_id :: inline () -> s64 {
+build_panel_get_editor_id :: inline () -> Editor_Id {
     assert(build_editor_id >= 0);
     return build_editor_id;
 }
 
 build_panel_set_line_wrap :: (enable: bool) {
-    if build_editor_id < 0 return;
-    editor := *open_editors[build_editor_id];
+    found, editor := find_editor(build_editor_id);
+    if !found return;
     if  enable && editor.line_wrap == .off then editor.line_wrap = .to_enable;
     if !enable && editor.line_wrap == .on  then editor.line_wrap = .to_disable;
 }
@@ -407,8 +407,8 @@ build_panel_height_anim: Tween_Animation(float);
 get_build_editor_and_buffer :: () -> *Editor, *Buffer {
     assert(build_buffer_id >= 0 && build_editor_id >= 0);
 
-    buffer := *open_buffers[build_buffer_id];
-    editor := *open_editors[build_editor_id];
+    editor := get_editor(build_editor_id);
+    buffer := get_buffer(build_buffer_id);
 
     return editor, buffer;
 }
@@ -820,8 +820,8 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
 
 thread_group: Thread_Group;
 
-build_buffer_id := -1;
-build_editor_id := -1;
+build_buffer_id: Buffer_Id = -1;
+build_editor_id: Editor_Id = -1;
 
 build_panel_is_expanded := false;
 

@@ -13,7 +13,7 @@ maybe_save_cursor_history :: () {
     defer apply_edit_notifications();
 
     editor_id := get_visible_editor_id(editors.active_pane);
-    editor := ifx editor_id >= 0 then *open_editors[editor_id] else null;
+    _, editor := find_editor(editor_id);
     cursor := ifx editor then get_main_cursor(editor) else NO_CURSOR;
 
     editor_changed := editor_id  != last_seen_cursor.editor_id;
@@ -49,7 +49,7 @@ maybe_save_cursor_history :: () {
     if saved then array_reset_keeping_memory(*forward_history);
 }
 
-move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor := Cursor.{} {
+move_back_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
     if !global_history return false;
 
     // Save current cursor position in the forward history
@@ -89,13 +89,13 @@ move_back_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor :=
     return true, last_global_frame.editor_id, prev_cursor;
 }
 
-move_forward_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor := Cursor.{} {
+move_forward_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
     if !forward_history return false;
 
     // Save current cursor position in the history
     editor_id := get_visible_editor_id(editors.active_pane);
-    if editor_id {
-        editor := *open_editors[editor_id];
+    found, editor := find_editor(editor_id);
+    if found {
         cursor := get_main_cursor(editor);
         maybe_save_cursor_position(editor_id, cursor);
     }
@@ -107,7 +107,7 @@ move_forward_in_cursor_history :: () -> moved: bool, editor_id: s64 = -1, cursor
 }
 
 
-history_reopen_editor_and_set_cursor :: (editor_id: s64, new_cursor: Cursor) {
+history_reopen_editor_and_set_cursor :: (editor_id: Editor_Id, new_cursor: Cursor) {
     editor, buffer := reopen_editor_by_id(editor_id);
 
     make_editor_active(editor_id);
@@ -130,9 +130,9 @@ history_reset_last_seen_cursor :: () {
     // or stripping whitespace. In this case the cursor position might change, but we don't want to
     // remember the previous one in that case because the perceived cursor position hasn't changed
     editor_id := get_visible_editor_id(editors.active_pane);
-    if editor_id < 0 return;
+    found, editor := find_editor(editor_id);
+    if !found return;
 
-    editor := *open_editors[editor_id];
     cursor := get_main_cursor(editor);
 
     last_seen_cursor.editor_id = editor_id;
@@ -142,7 +142,7 @@ history_reset_last_seen_cursor :: () {
 
 #scope_file
 
-maybe_save_cursor_position :: (editor_id: s64, cursor: Cursor, force := false) -> saved: bool {
+maybe_save_cursor_position :: (editor_id: Editor_Id, cursor: Cursor, force := false) -> saved: bool {
     if editor_id < 0 return false;
 
     editor, buffer := get_editor_and_buffer(editor_id);
@@ -175,9 +175,9 @@ apply_edit_notifications :: () {
     while edit_notifications {
         buffer_id := edit_notifications[0].buffer_id;
 
-        for * editor, editor_id : open_editors {
+        for * editor : open_editors {
             if editor.buffer_id != buffer_id continue;
-            editor_history := table_find_pointer(*editor_history_table, editor_id);
+            editor_history := table_find_pointer(*editor_history_table, editor.id);
             if !editor_history continue;
 
             for edit_notifications {
@@ -207,14 +207,14 @@ EDITOR_HISTORY_SIZE :: 64;  // per editor
 
 Editor_History :: Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE);
 
-editor_history_table: Table(s64, Editor_History);
+editor_history_table: Table(Editor_Id, Editor_History);
 global_history:  [..] Global_History_Frame;
 forward_history: [..] Forward_History_Frame;
 
 edit_notifications: [..] Buffer.Edit_Notification;
 
 last_seen_cursor: struct {
-    editor_id: s64 = -1;
+    editor_id: Editor_Id = -1;
     using cursor: Cursor;
     moved_at: float64;
 };
@@ -226,12 +226,12 @@ Editor_History_Frame :: struct {
 }
 
 Global_History_Frame :: struct {
-    editor_id:   s64;
+    editor_id:   Editor_Id;
     start_index: s64;  // index within the editor history
 }
 
 Forward_History_Frame :: struct {
-    editor_id: s64;
+    editor_id: Editor_Id;
     using frame: Editor_History_Frame;
 }
 

@@ -407,7 +407,7 @@ draw_key_sequence_in_progress :: (active_editor_rect: Rect) {
     }
 }
 
-should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
+should_draw_color_preview_panel :: (active_editor_id: Editor_Id) -> bool {
     active_editor, active_buffer := get_visible_editor_and_buffer();
     if !active_editor return false;
     if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(active_editor_id) return false;
@@ -637,7 +637,7 @@ maybe_draw_color_preview_panel :: (active_editor_rect: Rect) -> (drawn: bool = f
     return is_color_preview_panel(active_editor_id), editor_rect;
 }
 
-draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range) {
+draw_color_picker :: (editor_id: Editor_Id, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range) {
     if !is_valid(picker_rect)  return;
 
     color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
@@ -842,7 +842,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     return is_active, build_output_rect;
 }
 
-get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
+get_editor_subrects :: (editor_id: Editor_Id, main_area: Rect, has_status_bar: bool) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
     editor, buffer := get_editor_and_buffer(editor_id);
@@ -890,11 +890,11 @@ coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
     return .{ line = xx (mouse_pos.y / get_line_height()), col = xx ((mouse_pos.x / get_char_x_advance()) + 0.5) };
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true) {
+draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Editor_Pane = null, has_status_bar := true) {
     as_build_panel := is_build_panel(editor_id);
 
-    using editor := *open_editors[editor_id];
-    buffer := *open_buffers[buffer_id];
+    using editor := get_editor(editor_id);
+    buffer := get_buffer(editor.buffer_id);
 
     buffer_settings := get_settings(buffer);
 
@@ -2560,7 +2560,7 @@ draw_open_file_dialog :: () {
                 case .navigate;
                     label = ifx !path_chunks then " Navigate to file" else "";
                 case .save;
-                    label = tprint(" Choose where to save '%'", get_buffer_name(open_buffers[buffer_id_to_save]));
+                    label = tprint(" Choose where to save '%'", get_buffer_name(get_buffer(buffer_id_to_save)));
                 case .move;
                     label = " Move to";
             }
@@ -2985,7 +2985,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
 
 draw_delete_file_dialog :: () {
     draw_extra_file_info :: (extra_rect: Rect, margin: float, padding: float) {
-        buffer := *open_buffers[delete_file_dialog.buffer_id];
+        buffer := get_buffer(delete_file_dialog.buffer_id);
 
         push_scissor(extra_rect);
         defer pop_scissor();
@@ -3048,7 +3048,7 @@ draw_unsaved_buffers_dialog :: () {
 
         for 0..num_entries_to_draw - 1 {
             buffer_id := unsaved_buffers_dialog.buffer_ids[it];
-            buffer := *open_buffers[buffer_id];
+            buffer := get_buffer(buffer_id);
             {
                 push_scissor(entry_rect);
                 defer pop_scissor();
@@ -3446,7 +3446,7 @@ draw_finder :: () {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            buffer := *open_buffers[entry.buffer_id];
+            buffer := get_buffer(entry.buffer_id);
             tab_size := get_buffer_tab_size(buffer);
 
             // Highlight the entry into the scope color the match is in

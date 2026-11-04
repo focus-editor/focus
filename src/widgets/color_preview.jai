@@ -3,7 +3,7 @@ init_color_preview :: () {
     assert(panel_buffer_id < 0, "Code helper panel already has a buffer. This is a bug");
     panel_buffer_id = create_an_empty_buffer();
     panel_editor_id = find_or_create_editor(panel_buffer_id);
-    buffer := *open_buffers[panel_buffer_id];
+    buffer := get_buffer(panel_buffer_id);
     buffer.internal = true;
 
     // Collect stats on most used languages in the workspace
@@ -66,7 +66,7 @@ hide_color_preview :: () {
     color_preview_is_shown = false;
 }
 
-is_color_preview_panel :: inline (editor_id: s64) -> bool {
+is_color_preview_panel :: inline (editor_id: Editor_Id) -> bool {
     return editor_id == panel_editor_id;
 }
 
@@ -89,21 +89,21 @@ color_preview_invalidate_theme :: (path: string) {
     }
 }
 
-color_preview_begin_draw :: (editor_id: s64) {
+color_preview_begin_draw :: (editor_id: Editor_Id) {
     Simp.immediate_flush();
     previous_color_map = COLOR_MAP;
 
     color_preview_warning = "";  // reset warning
 
     if !is_color_preview_panel(editor_id) {  // we could be focusing on the widget itself
-        target_editor := *open_editors[editor_id];
+        target_editor := get_editor(editor_id);
         target_editor_id = editor_id;
         target_buffer_id = target_editor.buffer_id;  // remember the buffer we're targeting
     } else {
         if target_buffer_id < 0 return;  // shouldn't happen
     }
 
-    buffer := *open_buffers[target_buffer_id];
+    buffer := get_buffer(target_buffer_id);
     if !buffer.has_file || buffer.readonly return;
 
     config_extra := cast(*Focus_Config_Extra) buffer.extra;
@@ -163,7 +163,7 @@ color_preview_end_draw :: () {
 color_preview_set_language :: (lang_id: int) {
     selected_language_id = lang_id;
 
-    editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
+    editor, buffer := get_editor(panel_editor_id), get_buffer(panel_buffer_id);
     set_buffer_language(buffer, languages[lang_id].lang);
 
     close_search_bar(editor);
@@ -198,7 +198,7 @@ color_preview_get_warning :: () -> string {
     return color_preview_warning;
 }
 
-color_preview_get_editor_id :: inline () -> s64 {
+color_preview_get_editor_id :: inline () -> Editor_Id {
     if panel_editor_id < 0 then init_color_preview();
     return panel_editor_id;
 }
@@ -206,8 +206,8 @@ color_preview_get_editor_id :: inline () -> s64 {
 color_preview_draw_color_picker :: (rect: Rect) {
     if target_editor_id < 0 || target_buffer_id < 0 return;
 
-    editor := *open_editors[target_editor_id];
-    buffer := *open_buffers[target_buffer_id];
+    editor := get_editor(target_editor_id);
+    buffer := get_buffer(target_buffer_id);
     assert(buffer.lang == .Focus_Config || buffer.lang == .Focus_Theme);
 
     offset := editor.cursors[editor.main_cursor].pos;
@@ -262,8 +262,8 @@ color_preview_draw_color_picker :: (rect: Rect) {
 
 color_preview_jump_to_color_name :: (color_name: string) {
     assert(target_editor_id >= 0 && target_buffer_id >= 0);
-    editor := *open_editors[target_editor_id];
-    buffer := *open_buffers[target_buffer_id];
+    editor := get_editor(target_editor_id);
+    buffer := get_buffer(target_buffer_id);
     assert(buffer.lang == .Focus_Config || buffer.lang == .Focus_Theme);
 
     offset := parse_config_and_get_offset_of_color_value(buffer, color_name);
@@ -407,8 +407,8 @@ parse_config_and_get_offset_of_color_value :: (buffer: Buffer, color_name: strin
 }
 
 // The ids of the editor and buffer with the color section which triggered the widget
-target_editor_id := -1;
-target_buffer_id := -1;
+target_editor_id: Editor_Id = -1;
+target_buffer_id: Buffer_Id = -1;
 selected_language_id := 0;
 
 NUM_LANGUAGES :: #run enum_highest_value(Buffer.Lang) + 1;
@@ -420,8 +420,8 @@ Color_Preview_Language :: struct {
     name: string;
 }
 
-panel_buffer_id := -1;
-panel_editor_id := -1;
+panel_buffer_id: Buffer_Id = -1;
+panel_editor_id: Editor_Id = -1;
 
 color_preview_warning: string;
 
