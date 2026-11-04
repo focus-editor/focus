@@ -221,6 +221,8 @@ abort_workspace_scanning_and_shut_down_threads :: () {
 }
 
 reload_workspace :: (automatic := false) {
+    should_reload_workspace = false;
+
     abort_workspace_scanning_and_shut_down_threads();
 
     // Deinit things
