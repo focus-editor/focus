@@ -1,3 +1,33 @@
+Build_Variable :: enum {
+    FILE;
+    FILE_DIR;
+    FILE_NAME;
+    FILE_NAME_NO_EXTENSION;
+    FILE_LINE;
+    FILE_COLUMN;
+
+    PROJECT_CONFIG_DIR;
+
+    // Resolve these after the file and project variables in the working directories.
+    BUILD_WORKING_DIR;
+    RUN_WORKING_DIR;
+}
+
+BUILD_VARIABLE_NAMES :: #run -> [] string {
+    names: [..] string;
+
+    for type_info(Build_Variable).names {
+        array_add(*names, join("%", it, "%"));
+    }
+
+    return names;
+}
+
+build_variable_is_command_only :: inline (variable: Build_Variable) -> bool {
+    // Working directory references in paths could introduce circular dependencies.
+    return variable == .BUILD_WORKING_DIR || variable == .RUN_WORKING_DIR;
+}
+
 init_build_system :: () {
     assert(build_buffer_id < 0 && build_editor_id < 0, "Build system already initialised");
 
@@ -501,69 +531,56 @@ substitute_variables :: (using work: *Build_Thread_Work) {
         cursor_coords = offset_to_real_coords(buffer, main_cursor.pos);
     }
 
-    file_vars_are_used := false;
-    file_vars := string.["%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%", "%FILE_LINE%", "%FILE_COLUMN%"];
-    for file_vars {
-        if contains(build_command, it) || contains(run_command, it) || contains(build_working_dir, it) || contains(run_working_dir, it) {
-            file_vars_are_used = true;
-            break;
+    file_dir, file_name_no_extension, _, file_name := path_decomp(file);
+    file_dir = trim_right(file_dir, "/");
+    file_line := sprint("%", cursor_coords.line + 1);
+    file_column := sprint("%", cursor_coords.col + 1);
+
+    warned_about_file := false;
+
+    for name, index: BUILD_VARIABLE_NAMES {
+        variable := cast(Build_Variable) index;
+        command_only := build_variable_is_command_only(variable);
+
+        used := contains(build_command, name) || contains(run_command, name);
+        if !command_only {
+            used = used || contains(build_working_dir, name) || contains(run_working_dir, name);
         }
-    }
-    if file_vars_are_used {
-        if !file then add_user_warning("Couldn't determine the current file, but variables like \%FILE\% are used in the command", dismiss_in_seconds = 10);
+        if !used continue;
 
-        file_dir, file_name_no_extension, _, file_name := path_decomp(file);
-        file_dir = trim_right(file_dir, "/");
-        file_line := sprint("%", cursor_coords.line + 1);
-        file_column := sprint("%", cursor_coords.col + 1);
-
-        build_working_dir = replace(build_working_dir, "%FILE%",                   file);
-        build_working_dir = replace(build_working_dir, "%FILE_DIR%",               file_dir);
-        build_working_dir = replace(build_working_dir, "%FILE_NAME%",              file_name);
-        build_working_dir = replace(build_working_dir, "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
-        build_working_dir = replace(build_working_dir, "%FILE_LINE%",              file_line);
-        build_working_dir = replace(build_working_dir, "%FILE_COLUMN%",            file_column);
-
-        run_working_dir   = replace(run_working_dir,   "%FILE%",                   file);
-        run_working_dir   = replace(run_working_dir,   "%FILE_DIR%",               file_dir);
-        run_working_dir   = replace(run_working_dir,   "%FILE_NAME%",              file_name);
-        run_working_dir   = replace(run_working_dir,   "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
-        run_working_dir   = replace(run_working_dir,   "%FILE_LINE%",              file_line);
-        run_working_dir   = replace(run_working_dir,   "%FILE_COLUMN%",            file_column);
-
-        build_command     = replace(build_command,     "%FILE%",                   file);
-        build_command     = replace(build_command,     "%FILE_DIR%",               file_dir);
-        build_command     = replace(build_command,     "%FILE_NAME%",              file_name);
-        build_command     = replace(build_command,     "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
-        build_command     = replace(build_command,     "%FILE_LINE%",              file_line);
-        build_command     = replace(build_command,     "%FILE_COLUMN%",            file_column);
-
-        run_command       = replace(run_command,       "%FILE%",                   file);
-        run_command       = replace(run_command,       "%FILE_DIR%",               file_dir);
-        run_command       = replace(run_command,       "%FILE_NAME%",              file_name);
-        run_command       = replace(run_command,       "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
-        run_command       = replace(run_command,       "%FILE_LINE%",              file_line);
-        run_command       = replace(run_command,       "%FILE_COLUMN%",            file_column);
-    }
-
-    // Replace %PROJECT_CONFIG_DIR% if used
-    if contains(build_command, "%PROJECT_CONFIG_DIR%") || contains(run_command, "%PROJECT_CONFIG_DIR%") || contains(build_working_dir, "%PROJECT_CONFIG_DIR%") || contains(run_working_dir, "%PROJECT_CONFIG_DIR%") {
-        project_dir := get_current_project_dir();
-        if project_dir {
-            build_working_dir = replace(build_working_dir, "%PROJECT_CONFIG_DIR%", project_dir);
-            run_working_dir   = replace(run_working_dir,   "%PROJECT_CONFIG_DIR%", project_dir);
-            build_command     = replace(build_command,     "%PROJECT_CONFIG_DIR%", project_dir);
-            run_command       = replace(run_command,       "%PROJECT_CONFIG_DIR%", project_dir);
-        } else {
-            add_user_warning("Variable '%PROJECT_CONFIG_DIR%' is used in the build command, but there is no active project", dismiss_in_seconds = 10);
+        if !file && !warned_about_file && !command_only && variable != .PROJECT_CONFIG_DIR {
+            add_user_warning("Couldn't determine the current file, but variables like \%FILE\% are used in the command", dismiss_in_seconds = 10);
+            warned_about_file = true;
         }
+
+        value: string;
+        if #complete variable == {
+            case .FILE;                   value = file;
+            case .FILE_DIR;               value = file_dir;
+            case .FILE_NAME;              value = file_name;
+            case .FILE_NAME_NO_EXTENSION; value = file_name_no_extension;
+            case .FILE_LINE;              value = file_line;
+            case .FILE_COLUMN;            value = file_column;
+
+            case .PROJECT_CONFIG_DIR;
+                value = get_current_project_dir();
+                if !value {
+                    add_user_warning("Variable '%PROJECT_CONFIG_DIR%' is used in the build command, but there is no active project", dismiss_in_seconds = 10);
+                    continue;
+                }
+
+            case .BUILD_WORKING_DIR; value = build_working_dir;
+            case .RUN_WORKING_DIR;   value = run_working_dir;
+        }
+
+        if !command_only {
+            build_working_dir = replace(build_working_dir, name, value);
+            run_working_dir   = replace(run_working_dir,   name, value);
+        }
+
+        build_command = replace(build_command, name, value);
+        run_command   = replace(run_command,   name, value);
     }
-
-    build_command = replace(build_command, "%BUILD_WORKING_DIR%", build_working_dir);
-    build_command = replace(build_command, "%RUN_WORKING_DIR%",   run_working_dir);
-
-    run_command   = replace(run_command,   "%BUILD_WORKING_DIR%", build_working_dir);
-    run_command   = replace(run_command,   "%RUN_WORKING_DIR%",   run_working_dir);
 }
 
 is_common_windows_shell_command :: (command: string) -> bool {

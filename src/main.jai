@@ -1038,6 +1038,7 @@ using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Sort";
 #import "Simple_Bucket_Array";
 #import "Thread";
+#import "Text_File_Handler";
 #import "Unicode";
 #import "Window_Creation";
 #import "Hash_Table";
