@@ -1677,6 +1677,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Toml;                 return tokenize_toml;
         case .Lua;                  return tokenize_lua;
         case .Luau;                 return tokenize_luau;
+        case .Matlab;               return tokenize_matlab;
         case .Odin;                 return tokenize_odin;
         case .Powershell;           return tokenize_powershell;
         case .Python;               return tokenize_python;
@@ -1939,6 +1940,7 @@ Buffer :: struct {
         Toml;
         Lua;
         Luau;
+        Matlab;
         Odin;
         Powershell;
         Python;
