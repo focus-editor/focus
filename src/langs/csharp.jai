@@ -1,4 +1,4 @@
-tokenize_csharp :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_csharp :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_csharp_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -19,7 +19,7 @@ tokenize_csharp :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [
     return .[];
 }
 
-tokenize_csharp_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_csharp_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -59,7 +59,7 @@ tokenize_csharp_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* t
 
 #scope_file
 
-get_csharp_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> CSharp_Tokenizer {
+get_csharp_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> CSharp_Tokenizer {
     tokenizer := CSharp_Tokenizer.{
         buf = to_string(bytes),
         max_t = bytes.data + bytes.count,

@@ -1,4 +1,4 @@
-get_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Tokenizer {
+get_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Tokenizer {
     tokenizer: Tokenizer;
 
     tokenizer.buf   = to_string(bytes);
@@ -138,7 +138,7 @@ at_string :: (using tokenizer: *Tokenizer, a: string, $case_sensitive := true) -
     else                return equal_nocase(a, b);
 }
 
-tokenize_c_like_lang_for_indentation :: (buffer: Buffer, $get_next_token: (*Tokenizer) -> $Token) -> [] Indentation_Token /* temp */ {
+tokenize_c_like_lang_for_indentation :: (buffer: Buffer_Data, $get_next_token: (*Tokenizer) -> $Token) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -264,7 +264,7 @@ parse_number_c_like :: (using tokenizer: *Tokenizer, token: *$Token) {
     }
 }
 
-highlight_token :: (using buffer: *Buffer, token: Base_Token) {
+highlight_token :: (using buffer: *Buffer_Data, token: Base_Token) {
     memset(tokens.data + token.start, xx token.type, token.len);
 
     // Maybe highlight words in comments

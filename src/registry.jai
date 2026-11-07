@@ -8,9 +8,6 @@ get_buffer :: inline (id: Buffer_Id) -> *Buffer {  // guarantees the buffer exis
 }
 
 find_buffer :: (id: Buffer_Id) -> found: bool, *Buffer {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
     found, location := table_find(*buffer_locations, id);
     if !found return false, null;
 
@@ -26,7 +23,7 @@ next_unique_buffer_id :: () -> Buffer_Id {
     return last_buffer_id;
 }
 
-register_new_buffer_locked :: () -> Buffer_Id, buffer: *Buffer {
+register_new_buffer :: () -> Buffer_Id, buffer: *Buffer {
     buffer_id := next_unique_buffer_id();
     buffer, location := find_and_occupy_empty_slot(*open_buffers);
     table_set(*buffer_locations, buffer_id, location);
@@ -41,9 +38,6 @@ register_new_buffer_locked :: () -> Buffer_Id, buffer: *Buffer {
 }
 
 find_buffer_id_by_path :: (path: string) -> Buffer_Id {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
     found_buffer, buffer_id := table_find(*buffers_table, path);
     if found_buffer return buffer_id;
 
@@ -87,9 +81,6 @@ get_editor_and_buffer :: inline (editor_id: Editor_Id) -> *Editor, *Buffer {
 
 // Build an array of stable buffer pointers which threads can use
 get_immutable_buffer_ptrs_snapshot :: () -> [] *Buffer {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
     // First see if we have it in cache
     for buffer_ptr_snapshots {
         if it.revision == buffer_registry_revision return it.buffer_ptrs;
@@ -130,9 +121,6 @@ reset_registry :: () {
     table_reset(*buffer_locations);
     table_reset(*editor_locations);
 }
-
-// TODO: get rid of this when only the main thread can register buffers
-open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 // TODO: make these private too
 open_buffers: Bucket_Array(Buffer, items_per_bucket = 1024);

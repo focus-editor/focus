@@ -2265,7 +2265,6 @@ init_buffers :: () {
     // 3000 * 70% = 2100 is a reasonable number of text files in a workspace, which
     // most codebases will hopefully not exceed (so that we don't have to grow the hash table)
     table_resize(*buffers_table, 3000);
-    init(*open_buffers_lock);
 
     global_config_buffer_id = -1;
     global_troubleshooting_buffer_id = -1;
@@ -2278,113 +2277,6 @@ deinit_buffers :: () {
     deinit(*buffers_table);
     array_reset_keeping_memory(*most_recent_buffers);
     buffer_settings_cache_clear();
-}
-
-get_lang_from_path :: (full_path: string, config: *Config = null) -> Buffer.Lang {
-    lang: Buffer.Lang = .Plain_Text;
-
-    path_, basename, extension, basename_with_extension := path_decomp(full_path);
-
-    // Try to get lang from the user-provided mapping first
-    active_config := ifx config then config else context.config;
-    for active_config.workspace.file_associations {
-        if path_wildcard_match(basename_with_extension, it.wildcard) return it.lang;
-    }
-
-    // Get lang from the builtin mapping
-    lowercase_extension := to_lower_copy(extension,, temp);
-    if lowercase_extension == {
-        case "jai";             lang = .Jai;
-        case "cs";              lang = .CSharp;
-        case "d";               lang = .D;
-        case "dart";            lang = .Dart;
-        case "focus-config";    lang = .Focus_Config;
-        case "focus-theme";     lang = .Focus_Theme;
-        case "go";              lang = .Golang;
-        case "lua";             lang = .Lua;
-        case "luau";            lang = .Luau;
-        case "java";            lang = .Java;
-        case "odin";            lang = .Odin;
-        case "ps1";             lang = .Powershell;
-        case "py";              lang = .Python;
-        case "rpy";             lang = .RenPy;
-        case "rs";              lang = .Rust;
-        case "json";            lang = .Json;
-        case "toml";            lang = .Toml;
-        case "yang";            lang = .Yang;
-        case "zig";             lang = .Zig;
-        case "tal";             lang = .Uxntal;
-        case "md";              lang = .Markdown;
-        case "bat";             lang = .Batch;
-        case "cmd";             lang = .Batch;
-        case "swift";           lang = .Swift;
-
-        case "ts";              lang = .Js;
-        case "tsx";             lang = .Js;
-        case "jsx";             lang = .Js;
-        case "js";              lang = .Js;
-
-        case "vert";            lang = .Glsl;
-        case "frag";            lang = .Glsl;
-        case "geom";            lang = .Glsl;
-        case "tese";            lang = .Glsl;
-        case "tesc";            lang = .Glsl;
-        case "glsl";            lang = .Glsl;
-        case "comp";            lang = .Glsl;
-
-        case "hlsl";            lang = .Hlsl;
-        case "hlsli";           lang = .Hlsl;
-        case "fx";              lang = .Hlsl;
-        case "fxh";             lang = .Hlsl;
-
-        case "c";               lang = .C;
-        case "h";               lang = .C;
-        case "inl";             lang = .Cpp;
-        case "cpp";             lang = .Cpp;
-        case "cxx";             lang = .Cpp;
-        case "c++";             lang = .Cpp;
-        case "hpp";             lang = .Cpp;
-        case "ipp";             lang = .Cpp;
-        case "cc";              lang = .Cpp;
-        case "hh";              lang = .Cpp;
-        case "m";               lang = .Cpp;
-        case "mm";              lang = .Cpp;
-        case "tpp";             lang = .Cpp;
-
-        case "html";            lang = .Html;
-        case "htm";             lang = .Html;
-        case "xhtml";           lang = .Html;
-        case "vue";             lang = .Vue;
-        case "css";             lang = .Css;
-        case "scss";            lang = .Css;
-
-        case "xml";             lang = .Xml;
-        case "xsd";             lang = .Xml;
-        case "dtd";             lang = .Xml;
-        case "xaml";            lang = .Xml;
-        case "svg";             lang = .Xml;
-        case "vcproj";          lang = .Xml;
-        case "vcxproj";         lang = .Xml;
-        case "csproj";          lang = .Xml;
-
-        case "sh";              lang = .Shell;
-        case "shlib";           lang = .Shell;
-        case "bash";            lang = .Shell;
-        case "zsh";             lang = .Shell;
-
-        case "ini";             lang = .Ini;
-
-        case "diff";            lang = .Diff;
-        case "patch";           lang = .Diff;
-
-        case;
-            // Files named `.focus_config` are assumed to have no extension
-            if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
-    }
-
-    if equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") then lang = .Todo;
-
-    return lang;
 }
 
 select_lines :: (editor: *Editor, buffer: Buffer) {

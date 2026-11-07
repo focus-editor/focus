@@ -1,4 +1,4 @@
-tokenize_zig :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_zig :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_tokenizer(buffer, start_offset, count);
 
     // Allocate temporary space for tracking one previous token

@@ -1,4 +1,4 @@
-tokenize_focus_config :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_focus_config :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     memset(tokens.data, xx Token_Type.comment, tokens.count);
 
     // Allocate some extra memory for metadata if not already

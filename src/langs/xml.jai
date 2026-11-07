@@ -1,4 +1,4 @@
-tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_xml :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_xml_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -10,7 +10,7 @@ tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
     return tokenizer.regions;
 }
 
-tokenize_xml_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_xml_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -71,7 +71,7 @@ tokenize_xml_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp
 
 #scope_file
 
-get_xml_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Xml_Tokenizer {
+get_xml_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Xml_Tokenizer {
     tokenizer: Xml_Tokenizer;
 
     tokenizer.buf       = to_string(bytes);

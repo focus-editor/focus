@@ -401,10 +401,13 @@ remove_crlf_in_place :: inline (str: *string) -> bytes_removed: s64 {
     return remove_crlf_in_place(cast(*[] u8) str);
 }
 
-rescan_for_lines :: (using buffer: *Buffer) {
+rescan_for_lines :: (buffer: *Buffer) {
     lock(*buffer.content_lock);
-    defer unlock(*buffer.content_lock);
+    rescan_for_lines_no_lock(*buffer.data);
+    unlock(*buffer.content_lock);
+}
 
+rescan_for_lines_no_lock :: (using buffer_data: *Buffer_Data) {
     if dirty {
         was_dirty_during_frame = true;
         dirty = false;
@@ -507,10 +510,14 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
 }
 
+
 retokenize :: (buffer: *Buffer) {
     lock(*buffer.content_lock);
-    defer unlock(*buffer.content_lock);
+    retokenize_no_lock(*buffer.data);
+    unlock(*buffer.content_lock);
+}
 
+retokenize_no_lock :: (buffer: *Buffer_Data) {
     assert(!buffer.dirty);
     buffer.needs_tokenizing = false;
 
@@ -547,13 +554,13 @@ retokenize :: (buffer: *Buffer) {
     }
 }
 
-buffer_needs_tokenizing :: (buffer: Buffer) -> bool {
+buffer_needs_tokenizing :: (buffer: Buffer_Data) -> bool {
     return
         (buffer.needs_tokenizing || buffer.tokens.count != buffer.bytes.count) &&
         (get_tokenize_function(buffer.lang) != null || buffer.tokens.count > 0);
 }
 
-tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_for_indentation :: (buffer: *Buffer_Data) -> [] Indentation_Token /* temp */ {
     // NOTE: all tokenizers here must return temporary storage!
     if buffer.lang == {
         case .Jai;          return tokenize_jai_for_indentation(buffer);
@@ -760,26 +767,22 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         unlock(*buffer.settings_lock);
         buffer.needs_tokenizing = true;
 
-        lock(*open_buffers_lock);
-        {
-            found_existing, existing_buffer_id := table_find(*buffers_table, file_path);
-            if found_existing {
-                assert(buffer.id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
-                // The user chose to save the buffer into an existing file. OK.
-                // Mark the old buffer as deleted and use the new one
-                removed := table_remove(*buffers_table, file_path);
-                assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
-                existing_buffer := get_buffer(existing_buffer_id);
-                existing_buffer.deleted  = true;
-                existing_buffer.modified = false;
-                existing_buffer.modified_on_disk = false;
+        found_existing, existing_buffer_id := table_find(*buffers_table, file_path);
+        if found_existing {
+            assert(buffer.id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
+            // The user chose to save the buffer into an existing file. OK.
+            // Mark the old buffer as deleted and use the new one
+            removed := table_remove(*buffers_table, file_path);
+            assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+            existing_buffer := get_buffer(existing_buffer_id);
+            existing_buffer.deleted  = true;
+            existing_buffer.modified = false;
+            existing_buffer.modified_on_disk = false;
 
-                reroute_editors_to_new_buffer(existing_buffer_id, buffer.id);
-            }
-
-            table_add(*buffers_table, copy_string(file_path), buffer.id);
+            reroute_editors_to_new_buffer(existing_buffer_id, buffer.id);
         }
-        unlock(*open_buffers_lock);
+
+        table_add(*buffers_table, copy_string(file_path), buffer.id);
 
         save_buffer(buffer);
     } else {
@@ -1107,7 +1110,7 @@ insert_final_newline :: (using buffer: *Buffer) {
     rescan_for_lines(buffer);
 }
 
-remember_last_mod_info :: (using buffer: *Buffer) {
+remember_last_mod_info :: (using buffer: *Buffer_Data) {
     assert(has_file, "Trying to remember last modtime and size of a buffer with no file. This is a bug");
 
     modtime_apollo, size, success := file_modtime_and_size(file.full_path);
@@ -1136,7 +1139,7 @@ is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
     return is_all_whitespace(s);
 }
 
-get_real_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
+get_real_line_as_string :: (buffer: Buffer_Data, line_num: s32) -> string {
     assert(!buffer.dirty);
     return _get_line_as_string(buffer, to_view(buffer.line_starts), line_num);
 }
@@ -1146,7 +1149,7 @@ get_line_as_string :: (editor: Editor, buffer: Buffer, line_num: s32) -> string 
     return _get_line_as_string(buffer, get_line_starts(editor, buffer), line_num);
 }
 
-_get_line_as_string :: (buffer: Buffer, line_starts: [] s32, line_num: s32) -> string {
+_get_line_as_string :: (buffer: Buffer_Data, line_starts: [] s32, line_num: s32) -> string {
     if line_num < 0 || line_num >= line_starts.count - 1 return "";
 
     start := line_starts[line_num];
@@ -1193,9 +1196,7 @@ get_buffer_contents_for_writing :: (buffer: Buffer) -> string /* temp */, is_crl
 }
 
 create_an_empty_buffer :: () -> buffer_id: Buffer_Id, created: bool {
-    lock(*open_buffers_lock);
-    buffer_id, buffer := register_new_buffer_locked();
-    unlock(*open_buffers_lock);
+    buffer_id, buffer := register_new_buffer();
 
     if context.config.settings.line_endings == .crlf {
         buffer.crlf = true;
@@ -1211,27 +1212,14 @@ create_an_empty_buffer :: () -> buffer_id: Buffer_Id, created: bool {
     return buffer_id, true;
 }
 
-// TODO: refactor this
-find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
+load_buffer_data_from_file :: (path: string) -> success: bool, Buffer_Data {
     #if OS == .WINDOWS {
-        if path.count > 248 return -1, false;  // Windows bad
+        if path.count > 248  return false, .{};  // Windows doesn't handle long paths by default. We can handle them someday.
     }
-    lock(*open_buffers_lock);
+    buffer_data: Buffer_Data;
 
-    found_buffer, buffer_id := table_find(*buffers_table, path);
-    buffer: *Buffer = ---;
-
-    if !found_buffer {
-        buffer_id, buffer = register_new_buffer_locked();
-        table_add(*buffers_table, copy_string(path), buffer_id);  // It should be ok to leak some memory here when we no longer need a buffer
-    }
-
-    unlock(*open_buffers_lock);  // only hold the lock when it's critical
-
-    if found_buffer return buffer_id, false;
-
-    // Create and load file
     file_data, success := read_entire_file(path);
+
     load_error := "";
     if !success {
         load_error = sprint("Couldn't load file '%'", path);
@@ -1239,57 +1227,178 @@ find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
         load_error = sprint("Couldn't load file '%' because it exceeds the maximum buffer size of 2,147,483,647 bytes", path);
     } else if is_file_binary(file_data) {
         load_error = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
-        buffer.binary = true;
+        buffer_data.binary = true;
     }
 
-    lock(*buffer.settings_lock);
     if load_error {
         free(file_data);
         file_data = load_error;
-        buffer.readonly = true;
-        buffer.lang = .Plain_Text;
+        buffer_data.readonly = true;
+        buffer_data.lang = .Plain_Text;
     } else {
-        buffer.lang = get_lang_from_path(path);
+        buffer_data.lang = get_lang_from_path(path);
     }
 
-    // Fill in buffer data
-    buffer.file = get_file_info_from_full_path(path);
-    buffer.has_file = true;
-    buffer.settings_revision += 1;
-    unlock(*buffer.settings_lock);
-    remember_last_mod_info(buffer);
+    buffer_data.file = get_file_info_from_full_path(path);
+    buffer_data.has_file = true;
 
-    lock(*buffer.content_lock);
-    buffer.bytes = from_view(to_bytes(file_data));
-    bytes_removed := remove_crlf_in_place(*buffer.bytes);
-    unlock(*buffer.content_lock);
+    remember_last_mod_info(*buffer_data);
 
-    buffer.crlf = bytes_removed > 0;
-    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer_data.bytes = from_view(to_bytes(file_data));
+    bytes_removed := remove_crlf_in_place(*buffer_data.bytes);
+    buffer_data.crlf = bytes_removed > 0;
+    buffer_data.meow_hash = calculate_hash(to_view(buffer_data.bytes));
 
-    rescan_for_lines(buffer);
-    retokenize(buffer);
+    rescan_for_lines_no_lock(*buffer_data);
+    retokenize_no_lock(*buffer_data);
+
+    return true, buffer_data;
+}
+
+publish_prepared_buffer :: (buffer_data: *Buffer_Data) -> Buffer_Id {
+    buffer_id, buffer := register_new_buffer();
+    table_add(*buffers_table, copy_string(buffer_data.file.full_path), buffer_id);
+    buffer.data = buffer_data;
+    buffer_data.* = .{};
 
     // These values will be overwritten later if `detect_intentation` is true
     buffer_settings := get_settings(buffer);
     buffer.indentation.type = buffer_settings.indent_using;
     buffer.indentation.size = 0;
 
+    return buffer.id;
+}
+
+find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
+    found_buffer, buffer_id := table_find(*buffers_table, path);
+    if found_buffer return buffer_id, false;
+
+    loaded, buffer_data := load_buffer_data_from_file(path);
+    if !loaded return -1, false;
+
+    buffer_id = publish_prepared_buffer(*buffer_data);
+
     return buffer_id, true;
 }
 
-get_buffer_name :: (buffer: Buffer) -> string {
+get_lang_from_path :: (full_path: string, config: *Config = null) -> Buffer.Lang {
+    lang: Buffer.Lang = .Plain_Text;
+
+    path_, basename, extension, basename_with_extension := path_decomp(full_path);
+
+    // Try to get lang from the user-provided mapping first. TODO: cleanup, unused
+    active_config := ifx config then config else context.config;
+    for active_config.workspace.file_associations {
+        if path_wildcard_match(basename_with_extension, it.wildcard) return it.lang;
+    }
+
+    // Get lang from the builtin mapping
+    lowercase_extension := to_lower_copy(extension,, temp);
+    if lowercase_extension == {
+        case "jai";             lang = .Jai;
+        case "cs";              lang = .CSharp;
+        case "d";               lang = .D;
+        case "dart";            lang = .Dart;
+        case "focus-config";    lang = .Focus_Config;
+        case "focus-theme";     lang = .Focus_Theme;
+        case "go";              lang = .Golang;
+        case "lua";             lang = .Lua;
+        case "luau";            lang = .Luau;
+        case "java";            lang = .Java;
+        case "odin";            lang = .Odin;
+        case "ps1";             lang = .Powershell;
+        case "py";              lang = .Python;
+        case "rpy";             lang = .RenPy;
+        case "rs";              lang = .Rust;
+        case "json";            lang = .Json;
+        case "toml";            lang = .Toml;
+        case "yang";            lang = .Yang;
+        case "zig";             lang = .Zig;
+        case "tal";             lang = .Uxntal;
+        case "md";              lang = .Markdown;
+        case "bat";             lang = .Batch;
+        case "cmd";             lang = .Batch;
+        case "swift";           lang = .Swift;
+
+        case "ts";              lang = .Js;
+        case "tsx";             lang = .Js;
+        case "jsx";             lang = .Js;
+        case "js";              lang = .Js;
+
+        case "vert";            lang = .Glsl;
+        case "frag";            lang = .Glsl;
+        case "geom";            lang = .Glsl;
+        case "tese";            lang = .Glsl;
+        case "tesc";            lang = .Glsl;
+        case "glsl";            lang = .Glsl;
+        case "comp";            lang = .Glsl;
+
+        case "hlsl";            lang = .Hlsl;
+        case "hlsli";           lang = .Hlsl;
+        case "fx";              lang = .Hlsl;
+        case "fxh";             lang = .Hlsl;
+
+        case "c";               lang = .C;
+        case "h";               lang = .C;
+        case "inl";             lang = .Cpp;
+        case "cpp";             lang = .Cpp;
+        case "cxx";             lang = .Cpp;
+        case "c++";             lang = .Cpp;
+        case "hpp";             lang = .Cpp;
+        case "ipp";             lang = .Cpp;
+        case "cc";              lang = .Cpp;
+        case "hh";              lang = .Cpp;
+        case "m";               lang = .Cpp;
+        case "mm";              lang = .Cpp;
+        case "tpp";             lang = .Cpp;
+
+        case "html";            lang = .Html;
+        case "htm";             lang = .Html;
+        case "xhtml";           lang = .Html;
+        case "vue";             lang = .Vue;
+        case "css";             lang = .Css;
+        case "scss";            lang = .Css;
+
+        case "xml";             lang = .Xml;
+        case "xsd";             lang = .Xml;
+        case "dtd";             lang = .Xml;
+        case "xaml";            lang = .Xml;
+        case "svg";             lang = .Xml;
+        case "vcproj";          lang = .Xml;
+        case "vcxproj";         lang = .Xml;
+        case "csproj";          lang = .Xml;
+
+        case "sh";              lang = .Shell;
+        case "shlib";           lang = .Shell;
+        case "bash";            lang = .Shell;
+        case "zsh";             lang = .Shell;
+
+        case "ini";             lang = .Ini;
+
+        case "diff";            lang = .Diff;
+        case "patch";           lang = .Diff;
+
+        case;
+            // Files named `.focus_config` are assumed to have no extension
+            if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
+    }
+
+    if equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") then lang = .Todo;
+
+    return lang;
+}
+
+get_buffer_name :: (buffer: Buffer_Data) -> string {
+    // TODO: cleanup
     // NOTE: After deleting using "Delete Current File", `has_file` could be false while buffer.file still exists (because we don't override it).
     //       So if we fail the `has_file` check, check the `file.full_path` as well to see if there is still a valid name that the buffer can draw.
     if buffer.has_file || buffer.file.full_path || buffer.readonly return buffer.file.name;
-
-    tab_size := get_buffer_tab_size(buffer);
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
         name := copy_temporary_string(line);
         replace_chars(name, "\t", xx #char " ");  // remove tabs from the middle
-        if name return take_first_n_chars(name, min(50, name.count), tab_size);
+        if name return take_first_n_chars(name, min(50, name.count));
     }
 
     return "<new file>";
@@ -1438,7 +1547,6 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         // Either this is a dir, or a deleted dir, or a deleted file.
 
         // Find if there's an existing buffer already and mark it as deleted
-        lock(*open_buffers_lock);
         found_buffer, buffer_id := table_find(*buffers_table, path);
         if found_buffer {
             buffer := get_buffer(buffer_id);
@@ -1446,7 +1554,6 @@ refresh_buffer_from_disk_by_path :: (path: string) {
             finder.need_to_refresh_results = true;
             open_file_dialog.should_refresh_entries = true;
         }
-        unlock(*open_buffers_lock);
 
         return;
     }
@@ -1528,9 +1635,6 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
     found_buffer, buffer_id := table_find(*buffers_table, path);
     if !found_buffer return;  // no buffer for this path
     maybe_mark_buffer_as_deleted(buffer_id);
@@ -1547,10 +1651,9 @@ maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
 }
 
 free_buffer :: (using buffer: *Buffer) {
-    // We don't do it often so it's ok to be slow here
-    free(bytes);
-    free(line_starts);
-    free(tokens);
+    // TODO: use heaps instead
+
+    free(*buffer.data);
 
     for * undos deinit(it);
     for * redos deinit(it);
@@ -1559,10 +1662,21 @@ free_buffer :: (using buffer: *Buffer) {
     free(edits);
     free(cursors);
 
+    extra = null;
+}
+
+free :: (using buffer_data: *Buffer_Data) {
+    free(bytes);
+    free(line_starts);
+    free(tokens);
+    for regions free(it.note);
+    free(regions);
+
     if has_file && file.full_path then free(file.full_path);
 
     free_buffer_extra(extra);
-    extra = null;
+
+    buffer_data.* = .{};
 }
 
 free_buffer_extra :: (extra: *Buffer.Extra) {
@@ -1687,7 +1801,7 @@ get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at
 
 #scope_file
 
-Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
+Tokenize_Function :: #type (buffer: *Buffer_Data, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
 add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     editor_id := context.current_editor_id;
@@ -1784,13 +1898,50 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 buffer_edit_notifications: Array(Buffer.Edit_Notification);
 
 
+Buffer_Data :: struct {
+    bytes:       Array(u8);
+    line_starts: Array(s32);            // real offsets of newlines in the bytes array
+    tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
+    regions:     Array(Buffer_Region);  // for highlighting parts of buffer
+
+    file: File_Info;
+
+    meow_hash: u64;
+    last_edit_time: float64;  // for creating new edit groups
+
+    mod_info: Buffer.Mod_Info;  // for detecting whether a file has changed
+
+    // TODO: put into enum_flags
+    has_file               := false;  // a buffer might not have a corresponding file
+    dirty                  := false;
+    was_dirty_during_frame := false;
+    modified               := false;
+    modified_on_disk       := false;
+    deleted                := false;
+    internal               := false;  // e.g. build panel, default config etc.
+    needs_tokenizing       := false;
+    readonly               := false;
+    binary                 := false;
+    error_when_saving      := false;
+    crlf                   := false;
+
+    lang: Buffer.Lang = .Plain_Text;
+
+    indentation: struct {
+        type: Indentation = .spaces;
+        size: u8 = 0;  // 0 means not initted, use global config values
+        was_manually_set := false;
+    }
+
+    // A pointer to arbitrary buffer information.
+    // Would be nice to be able to avoid using it if another way of attaching info to buffers is better. We'll see what the use patterns are.
+    extra: *Buffer.Extra = null;
+}
+
 Buffer :: struct {
     id: Buffer_Id = -1;
 
-    bytes:       Array(u8);
-    line_starts: Array(s32);       // real offsets of newlines in the bytes array
-    tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
-    regions:     Array(Buffer_Region); // for highlighting parts of buffer
+    using #as data: Buffer_Data;
 
     // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
     // Eventually we'll want to revisit all this and make it not allocate as much.
@@ -1807,41 +1958,8 @@ Buffer :: struct {
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
-    file: File_Info;
-
-    meow_hash: u64;
-    last_edit_time: float64;  // for creating new edit groups
-
-    mod_info: Mod_Info;  // for detecting whether a file has changed
-
-    // TODO: put into enum_flags
-    has_file               := false;  // a buffer might not have a corresponding file
-    dirty                  := false;
-    was_dirty_during_frame := false;
-    modified               := false;
-    modified_on_disk       := false;
-    deleted                := false;
-    internal               := false;  // e.g. build panel, default config etc.
-    needs_tokenizing       := false;
-    readonly               := false;
-    binary                 := false;
-    error_when_saving      := false;
-    crlf                   := false;
-
-    lang: Lang = .Plain_Text;
-
-    indentation: struct {
-        type: Indentation = .spaces;
-        size: u8 = 0;  // 0 means not initted, use global config values
-        was_manually_set := false;
-    }
-
     num_times_opened: u8;
     num_editors_open: u8;
-
-    // A pointer to arbitrary buffer information.
-    // Would be nice to be able to avoid using it if another way of attaching info to buffers is better. We'll see what the use patterns are.
-    extra: *Extra = null;
 
     Extra :: struct {
         type: Extra_Type;

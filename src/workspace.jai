@@ -131,6 +131,14 @@ start_workspace_scan :: () {
 }
 
 complete_workspace_scan :: () {
+    // Make sure we don't leak any scan job data if it's aborted prematurely
+    for job : scan_jobs {
+        for * buffer_data : job.results {
+            free(buffer_data);
+        }
+    }
+    scan_jobs = .[];
+
     workspace_scan_complete = true;
     reset(*scan_memory_pool);
     release_config_snapshot(scan_config_snapshot);
@@ -167,18 +175,20 @@ workspace_update :: () {
 
                 files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
                 num_ranges  := (files_to_scan.count / files_per_thread) + 1;
-                file_ranges := NewArray(num_ranges, [] string,, allocator = allocator_of(*scan_memory_pool));
+
+                scan_jobs = NewArray(num_ranges, Workspace_Scan_Job,, allocator_of(*scan_memory_pool));  // to avoid individual allocations
 
                 for 0..num_ranges-1 {
-                    file_range := *file_ranges[it];
                     start := it * files_per_thread;
                     count := min(files_per_thread, files_to_scan.count - start);
                     if count <= 0 break;
-                    file_range.* = array_view(files_to_scan, start, count);
 
-                    logging_name := sprint("Scan [%:%]", start, start + count);
-                    this_allocation_is_not_a_leak(logging_name.data);  // this is actually a leak, but Thread_Group won't free it and we can't seem to be able to either
-                    add_work(*scanner_thread_group, file_range, logging_name);
+                    job := *scan_jobs[it];
+                    job.paths = array_view(files_to_scan, start, count);
+                    array_reserve(*job.results, count,, allocator_of(*scan_memory_pool));  // NOTE: we do this so that threads don't have to grow the arrays concurrently, which is not safe
+
+                    logging_name := sprint("Scan [%:%]", start, start + count,, allocator_of(*scan_memory_pool));
+                    add_work(*scanner_thread_group, job, logging_name);
 
                     num_jobs_to_complete += 1;
                 }
@@ -189,6 +199,18 @@ workspace_update :: () {
         }
 
         results := get_completed_work(*scanner_thread_group);
+
+        for results {
+            job := cast(*Workspace_Scan_Job) it;
+
+            for * buffer_data : job.results {
+                if find_buffer_id_by_path(buffer_data.file.full_path) >= 0 {
+                    free(buffer_data);
+                } else {
+                    publish_prepared_buffer(buffer_data);
+                }
+            }
+        }
 
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
@@ -421,30 +443,30 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
     context_set_config_snapshot(scan_config_snapshot);
     defer buffer_settings_cache_destroy();
 
-    file_range := cast(*[] string) work;
+    job := cast(*Workspace_Scan_Job) work;
 
-    for path : file_range.* {
+    for path : job.paths {
         auto_release_temp();
-        if !should_ignore_file(path) {
-            buffer_id, created := find_or_create_buffer(path);
-            if buffer_id < 0 {
-                log_error("Couldn't open file because path is too long for %: \"%\"\n", OS, path);
-                continue;
-            }
-            if !created then reload_from_disk(buffer_id, force = true);  // when refreshing workspace we want up to date data from disk
-        }
+        if should_ignore_file(path) continue;
+
+        success, buffer_data := load_buffer_data_from_file(path);
+        if success  array_add(*job.results, buffer_data);
     }
 
     return .CONTINUE;
 }
 
-
-#scope_file
+Workspace_Scan_Job :: struct {
+    paths: [] string;
+    results: [..] Buffer_Data;
+}
 
 file_list_thread_group:     Thread_Group;
 scanner_thread_group:       Thread_Group;
 
 scan_config_snapshot: *Config_Snapshot;
+
+scan_jobs: [] Workspace_Scan_Job;
 
 scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
@@ -461,5 +483,5 @@ MAX_FILES_PER_JOB :: 50;   // we don't want to give huge jobs to threads because
 
 #scope_export
 
-// Other modules might want to know whether the scan is complete
+// TODO: get rid of this flag if possible, or make it private
 workspace_scan_complete := true;

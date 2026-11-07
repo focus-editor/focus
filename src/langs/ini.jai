@@ -1,4 +1,4 @@
-tokenize_ini :: (buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_ini :: (buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_ini_tokenizer(buffer, start_offset, count);
     while tokenizer.s_it < tokenizer.s_end {
         range := eat_line_white_space(*tokenizer);
@@ -40,7 +40,7 @@ Ini_Range :: struct {
     type: []Token_Type;
 }
 
-get_ini_tokenizer :: (buffer: *Buffer, start_offset := -1, count := -1) -> Ini_Tokenizer {
+get_ini_tokenizer :: (buffer: *Buffer_Data, start_offset := -1, count := -1) -> Ini_Tokenizer {
     ret: Ini_Tokenizer;
 
     idx_start := 0;

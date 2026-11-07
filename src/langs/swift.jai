@@ -1,4 +1,4 @@
-tokenize_swift :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_swift :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_swift_tokenizer(buffer, start_offset, count);
 
     last_token: Token; // to retroactively highlight functions
@@ -24,7 +24,7 @@ tokenize_swift :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
     return tokenizer.regions;
 }
 
-tokenize_swift_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_swift_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -69,7 +69,7 @@ tokenize_swift_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* te
 
 #scope_file
 
-get_swift_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Swift_Tokenizer {
+get_swift_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Swift_Tokenizer {
     tokenizer: Swift_Tokenizer;
 
     tokenizer.buf   = to_string(bytes);

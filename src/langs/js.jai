@@ -1,4 +1,4 @@
-tokenize_js :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_js :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_js_tokenizer(buffer, start_offset, count);
 
     last_token: Token;  // to retroactively highlight functions
@@ -24,7 +24,7 @@ tokenize_js :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Bu
     return tokenizer.regions;
 }
 
-tokenize_js_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_js_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -69,7 +69,7 @@ tokenize_js_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp 
 
 #scope_file
 
-get_js_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Js_Tokenizer {
+get_js_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Js_Tokenizer {
     tokenizer: Js_Tokenizer;
 
     tokenizer.buf   = to_string(bytes);

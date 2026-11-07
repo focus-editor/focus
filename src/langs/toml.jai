@@ -1,4 +1,4 @@
-tokenize_toml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_toml :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_toml_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -23,7 +23,7 @@ Toml_Tokenizer :: struct {
     brace_count   := 0;
 }
 
-get_toml_tokenizer :: (buffer: *Buffer, start_offset := -1, count := -1) -> Toml_Tokenizer {
+get_toml_tokenizer :: (buffer: *Buffer_Data, start_offset := -1, count := -1) -> Toml_Tokenizer {
     tokenizer: Toml_Tokenizer;
     tokenizer.base = get_tokenizer(buffer, start_offset, count);
     return tokenizer;

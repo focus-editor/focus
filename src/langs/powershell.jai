@@ -1,4 +1,4 @@
-tokenize_powershell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_powershell :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_powershell_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -18,7 +18,7 @@ tokenize_powershell :: (using buffer: *Buffer, start_offset := -1, count := -1) 
 }
 
 
-tokenize_powershell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_powershell_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -53,7 +53,7 @@ tokenize_powershell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token 
 
 #scope_file
 
-get_powershell_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> PowerShell_Tokenizer {
+get_powershell_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> PowerShell_Tokenizer {
     tokenizer := PowerShell_Tokenizer.{
         buf   = to_string(bytes),
         max_t = bytes.data + bytes.count,

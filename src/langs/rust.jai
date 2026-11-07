@@ -1,4 +1,4 @@
-tokenize_rust :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_rust :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_rust_tokenizer(buffer, start_offset, count);
 
     start_scope(*tokenizer, tokenizer.t - tokenizer.buf.data, .scope_export);
@@ -28,7 +28,7 @@ tokenize_rust :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return tokenizer.regions;
 }
 
-tokenize_rust_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_rust_for_indentation :: (buffer: *Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -76,7 +76,7 @@ tokenize_rust_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* te
 
 // We're using a separate tokenizer here because we have to keep track of last 2 tokens in many places
 // and we can't use a global variable for that because of threading
-get_rust_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Rust_Tokenizer {
+get_rust_tokenizer :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> Rust_Tokenizer {
     tokenizer: Rust_Tokenizer;
 
     tokenizer.buf    = to_string(bytes);

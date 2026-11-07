@@ -1,4 +1,4 @@
-tokenize_luau :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_luau :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     auto_release_temp();
 
     tokenizer := get_luau_tokenizer(buffer, start_offset, count);
@@ -32,7 +32,7 @@ tokenize_luau :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return .[];
 }
 
-tokenize_luau_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_luau_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -89,7 +89,7 @@ tokenize_luau_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* tem
 }
 
 #scope_file
-get_luau_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Luau_Tokenizer {
+get_luau_tokenizer :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> Luau_Tokenizer {
     tokenizer: Luau_Tokenizer;
 
     tokenizer.buf    = to_string(bytes);
@@ -467,7 +467,7 @@ parse_long_literal :: (using tokenizer: *Luau_Tokenizer) {
 Luau_Tokenizer :: struct {
     using #as base: Tokenizer;
     last_token: Token;
-    buffer:     *Buffer;
+    buffer:     *Buffer_Data;
 
     interpolation_stack: [..] struct { start_offset: s64; count: s64; };
     interpolation_stack.allocator = temp;

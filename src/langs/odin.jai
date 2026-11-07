@@ -1,4 +1,4 @@
-tokenize_odin :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_odin :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_odin_tokenizer(buffer, start_offset, count);
     inside_attribute := false;
 
@@ -94,7 +94,7 @@ tokenize_odin :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return .[];
 }
 
-tokenize_odin_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_odin_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -141,7 +141,7 @@ tokenize_odin_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* tem
 #scope_file
 
 // A separate tokenizer for the same reasons as with Jai
-get_odin_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Odin_Tokenizer {
+get_odin_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Odin_Tokenizer {
     tokenizer: Odin_Tokenizer;
 
     tokenizer.buf   = to_string(bytes);

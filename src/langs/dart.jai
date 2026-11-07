@@ -1,4 +1,4 @@
-tokenize_dart :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_dart :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_dart_tokenizer(buffer, start_offset, count);
 
     // Allocate temporary space for tracking one previous token
@@ -28,7 +28,7 @@ tokenize_dart :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return .[];
 }
 
-tokenize_dart_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_dart_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -73,7 +73,7 @@ tokenize_dart_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* tem
 
 #scope_file
 
-get_dart_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Dart_Tokenizer {
+get_dart_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Dart_Tokenizer {
     tokenizer := Dart_Tokenizer.{
         buf = to_string(bytes),
         max_t = bytes.data + bytes.count,

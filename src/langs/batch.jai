@@ -1,4 +1,4 @@
-tokenize_batch :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_batch :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_batch_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -10,7 +10,7 @@ tokenize_batch :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
     return .[];
 }
 
-tokenize_batch_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_batch_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -48,7 +48,7 @@ tokenize_batch_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* te
 
 #scope_file
 
-get_batch_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Batch_Tokenizer {
+get_batch_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Batch_Tokenizer {
     tokenizer: Batch_Tokenizer;
 
     tokenizer.buf       = to_string(bytes);

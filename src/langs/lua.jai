@@ -1,6 +1,6 @@
 // Based on https://www.lua.org/manual/5.4/manual.html#3
 
-tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_lua :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_lua_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -25,7 +25,7 @@ tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
     return .[];
 }
 
-tokenize_lua_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_lua_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -82,7 +82,7 @@ tokenize_lua_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp
 }
 
 #scope_file
-get_lua_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Lua_Tokenizer {
+get_lua_tokenizer :: (using buffer: Buffer_Data, start_offset := -1, count := -1) -> Lua_Tokenizer {
     tokenizer: Lua_Tokenizer;
 
     tokenizer.buf   = to_string(bytes);

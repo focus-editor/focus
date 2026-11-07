@@ -1,4 +1,4 @@
-tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_jai :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_jai_tokenizer(buffer, start_offset, count);
 
     start_scope(*tokenizer, tokenizer.t - tokenizer.buf.data, .scope_export);
@@ -83,7 +83,7 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
     return tokenizer.regions;
 }
 
-tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_jai_for_indentation :: (buffer: *Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -181,7 +181,7 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
 
 // We're using a separate tokenizer here because we have to keep track of last 2 tokens in many places
 // and we can't use a global variable for that because of threading
-get_jai_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Jai_Tokenizer {
+get_jai_tokenizer :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> Jai_Tokenizer {
     tokenizer: Jai_Tokenizer;
 
     tokenizer.buf    = to_string(bytes);
@@ -202,7 +202,7 @@ set_token_len :: (using tokenizer: *Jai_Tokenizer, token: *Token) #expand {
     token.len = cast(s32) (t - start_t);
 }
 
-highlight :: (tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) #expand {
+highlight :: (tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer_Data) #expand {
     tokenizer.last_token = token.*;
     memset(buffer.tokens.data + token.start, xx token.type, token.len);
 }
@@ -228,7 +228,7 @@ maybe_mark_as_keyword :: inline (token: *Token, identifier_str: string) -> is_ke
     return false;
 }
 
-parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
+parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer_Data) {
     token.type = .identifier;
 
     identifier_str := read_jai_identifier_string(tokenizer);
@@ -280,7 +280,7 @@ parse_identifier_or_keyword :: (using tokenizer: *Jai_Tokenizer, token: *Token, 
     }
 }
 
-parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer) {
+parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer_Data) {
     parse_identifier_or_keyword(tokenizer, token, buffer);
     defer highlight(tokenizer, token, buffer);
 
@@ -348,7 +348,7 @@ parse_identifier_keyword_or_function :: (using tokenizer: *Jai_Tokenizer, token:
     }
 }
 
-parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer, $do_highlighting := true) {
+parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer_Data, $do_highlighting := true) {
     token.type = .number;
 
     if t >= max_t {
@@ -414,7 +414,7 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer
     set_token_len(tokenizer, token);
 }
 
-parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer, $do_highlighting := true) {
+parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token, buffer: *Buffer_Data, $do_highlighting := true) {
     token.type = .identifier;
 
     {

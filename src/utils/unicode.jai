@@ -58,9 +58,24 @@ advance_by_chars :: (s: string, num_chars: s64, tab_size: s32) -> string, remain
     return result, col - num_chars;
 }
 
-take_first_n_chars :: (s: string, num_chars: s64, tab_size: s32) -> string {
+advance_by_chars_no_tabs :: (s: string, num_chars: s64) -> string, remainder: s64 {
     result := s;
-    result.count -= advance_by_chars(result, num_chars, tab_size).count;
+    col := 0;
+    while result && col < num_chars {
+        byte := result[0];
+        safe_advance(*result, 1 + trailingBytesForUTF8[byte]);
+        col += 1;
+    }
+    return result, col - num_chars;
+}
+
+take_first_n_chars :: (s: string, num_chars: s64, tab_size: s32 = 0) -> string {
+    result := s;
+    if tab_size > 0 {
+        result.count -= advance_by_chars(result, num_chars, tab_size).count;
+    } else {
+        result.count -= advance_by_chars_no_tabs(result, num_chars).count;
+    }
     return result;
 }
 

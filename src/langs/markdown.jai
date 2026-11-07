@@ -1,7 +1,7 @@
 // This has been contributed by a user,
 // however it's still incomplete and should be simplified when we get to it
 
-tokenize_markdown ::  (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_markdown ::  (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_markdown_tokenizer(buffer, start_offset, count);
 
     while true {
@@ -15,7 +15,7 @@ tokenize_markdown ::  (using buffer: *Buffer, start_offset := -1, count := -1) -
 }
 
 #scope_file
-get_markdown_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Markdown_Tokenizer {
+get_markdown_tokenizer :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> Markdown_Tokenizer {
     tokenizer: Markdown_Tokenizer;
 
     tokenizer.buf   = to_string(bytes);

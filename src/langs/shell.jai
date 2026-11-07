@@ -1,4 +1,4 @@
-tokenize_shell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_shell :: (using buffer: *Buffer_Data, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_tokenizer(buffer, start_offset, count);
     tokenizer.prev_tokens[0] = New(Token,, temp);
     tokenizer.prev_tokens[1] = New(Token,, temp);
@@ -165,7 +165,7 @@ tokenize_shell :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
     return .[];
 }
 
-tokenize_shell_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_shell_for_indentation :: (buffer: Buffer_Data) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
