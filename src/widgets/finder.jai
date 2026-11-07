@@ -198,6 +198,10 @@ finder_update :: () {
         }
     }
 
+    if outstanding_tasks.count == 0 {
+        reclaim_unused_buffer_ptrs_snapshots();
+    }
+
     if request.in_progress then redraw_requested = true;
 }
 
@@ -329,18 +333,21 @@ start_new_search :: (force := false) {
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
 
-    buffers_per_task := open_buffers.count / num_threads + 1;
+    buffer_ptrs_snapshot := get_immutable_buffer_ptrs_snapshot();
+
+    buffers_per_task := buffer_ptrs_snapshot.count / num_threads + 1;
     buffer_start_index := 0;
 
-    while buffer_start_index < open_buffers.count {
+    while buffer_start_index < buffer_ptrs_snapshot.count {
         task := New(Search_Task);
         task.request_id = request.id;
         task.needle  = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
         task.include = copy_string(request.include);
         task.exclude = copy_string(request.exclude);
         task.skip_table = array_copy(request.skip_table);
-        task.buffer_start_index = cast(s32) buffer_start_index;
-        task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_task - 1, open_buffers.count - 1);
+        task.buffer_ptrs_snapshot = buffer_ptrs_snapshot;
+        task.buffer_start_index = buffer_start_index;
+        task.buffer_end_index   = min(buffer_start_index + buffers_per_task - 1, buffer_ptrs_snapshot.count - 1);
         task.case_sensitive = request.case_sensitive;
         task.whole_word = request.whole_word;
         task.regex_search = request.regex_search;
@@ -386,12 +393,11 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         if trimmed then array_add(*excludes, trimmed);
     }
 
-    for index : buffer_start_index .. buffer_end_index {
+    for buffer : array_view(buffer_ptrs_snapshot, buffer_start_index, buffer_end_index - buffer_start_index + 1) {
         if task.request_id < finder.request.id  break;  // exit early if a newer request exists
 
         // Search in buffer
-        buffer := get_buffer_by_index(index);
-        if buffer == null || (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
+        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
         if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Make sure the buffer contents doesn't change while we're scanning it
@@ -400,7 +406,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
-        buffer_id_part: u64 = (cast,trunc(u64) index)                            << 32;
+        buffer_id_part: u64 = (cast,trunc(u64) (buffer_start_index + it_index))  << 32;
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
         buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
@@ -640,8 +646,9 @@ Search_Task :: struct {
     regex_search: bool;
 
     // Will search in these buffers
-    buffer_start_index: s32;
-    buffer_end_index:   s32;
+    buffer_ptrs_snapshot: [] *Buffer;
+    buffer_start_index: s64;
+    buffer_end_index:   s64;
 
     // To be filled by the worker thread
     num_results: s64;

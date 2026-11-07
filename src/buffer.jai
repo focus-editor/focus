@@ -1211,6 +1211,7 @@ create_an_empty_buffer :: () -> buffer_id: Buffer_Id, created: bool {
     return buffer_id, true;
 }
 
+// TODO: refactor this
 find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
     #if OS == .WINDOWS {
         if path.count > 248 return -1, false;  // Windows bad

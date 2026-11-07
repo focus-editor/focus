@@ -11,11 +11,10 @@ find_buffer :: (id: Buffer_Id) -> found: bool, *Buffer {
     lock(*open_buffers_lock);
     defer unlock(*open_buffers_lock);
 
-    found, index := table_find(*buffer_indices, id);
+    found, location := table_find(*buffer_locations, id);
     if !found return false, null;
 
-    buffer := *open_buffers[index];
-    return true, buffer;
+    return true, bucket_array_find_pointer(*open_buffers, location);
 }
 
 exists :: inline (buffer_id: Buffer_Id) -> bool {
@@ -27,22 +26,16 @@ next_unique_buffer_id :: () -> Buffer_Id {
     return last_buffer_id;
 }
 
-get_buffer_by_index :: (index: s64) -> *Buffer {
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
-    if index < 0 || index >= open_buffers.count return null;
-    return *open_buffers[index];
-}
-
 register_new_buffer_locked :: () -> Buffer_Id, buffer: *Buffer {
     buffer_id := next_unique_buffer_id();
-    buffer, buffer_index := bucket_array_add(*open_buffers);
-    table_set(*buffer_indices, buffer_id, buffer_index);
+    buffer, location := find_and_occupy_empty_slot(*open_buffers);
+    table_set(*buffer_locations, buffer_id, location);
 
     init(*buffer.content_lock);
     init(*buffer.settings_lock);
     buffer.id = buffer_id;
+
+    buffer_registry_revision += 1;
 
     return buffer_id, buffer;
 }
@@ -64,9 +57,9 @@ get_editor :: (id: Editor_Id) -> *Editor {  // guarantees the editor exists
 }
 
 find_editor :: (id: Editor_Id) -> found: bool, *Editor {
-    found, index := table_find(*editor_indices, id);
+    found, location := table_find(*editor_locations, id);
     if !found return false, null;
-    return true, *open_editors[index];
+    return true, bucket_array_find_pointer(*open_editors, location);
 }
 
 exists :: inline (editor_id: Editor_Id) -> bool {
@@ -80,10 +73,9 @@ next_unique_editor_id :: () -> Editor_Id {
 
 register_new_editor :: () -> Editor_Id, editor: *Editor {
     editor_id := next_unique_editor_id();
-    array_index := open_editors.count;
-    editor := array_add(*open_editors);
+    editor, location := find_and_occupy_empty_slot(*open_editors);
     editor.id = editor_id;
-    table_set(*editor_indices, editor_id, array_index);
+    table_set(*editor_locations, editor_id, location);
     return editor_id, editor;
 }
 
@@ -93,24 +85,58 @@ get_editor_and_buffer :: inline (editor_id: Editor_Id) -> *Editor, *Buffer {
     return editor, buffer;
 }
 
+// Build an array of stable buffer pointers which threads can use
+get_immutable_buffer_ptrs_snapshot :: () -> [] *Buffer {
+    lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);
+
+    // First see if we have it in cache
+    for buffer_ptr_snapshots {
+        if it.revision == buffer_registry_revision return it.buffer_ptrs;
+    }
+
+    // Build a new snapshot
+    buffer_ptrs := NewArray(open_buffers.count, *Buffer, initialized = false);
+    for * open_buffers {
+        buffer_ptrs[it_index] = it;
+    }
+    array_add(*buffer_ptr_snapshots, .{ buffer_registry_revision, buffer_ptrs });
+
+    return buffer_ptrs;
+}
+
+// To be called only when no outstanding snapshot user threads exist
+reclaim_unused_buffer_ptrs_snapshots :: () {
+    for buffer_ptr_snapshots {
+        if it.revision != buffer_registry_revision {
+            array_free(it.buffer_ptrs);
+            remove it;
+        }
+    }
+}
+
+// Temporary
 reset_registry :: () {
-    for * open_editors free_editor(it);
-    array_reset(*open_editors);
-    for * open_buffers free_buffer(it);
+    for * open_editors  free_editor(it);
+    bucket_array_reset(*open_editors);
+    for * open_buffers  free_buffer(it);
     bucket_array_reset(*open_buffers);
     array_reset(*most_recent_buffers);
     array_reset(*recently_closed_editors);
 
-    table_reset(*buffer_indices);
-    table_reset(*editor_indices);
+    for * buffer_ptr_snapshots  array_free(it.buffer_ptrs);
+    array_reset(*buffer_ptr_snapshots);
+
+    table_reset(*buffer_locations);
+    table_reset(*editor_locations);
 }
 
 // TODO: get rid of this when only the main thread can register buffers
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 // TODO: make these private too
-open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
-open_editors: [..] Editor;
+open_buffers: Bucket_Array(Buffer, items_per_bucket = 1024);
+open_editors: Bucket_Array(Editor, items_per_bucket = 128);
 
 // A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, Buffer_Id,
@@ -122,6 +148,14 @@ buffers_table: Table(string, Buffer_Id,
 last_buffer_id: Buffer_Id = -1;
 last_editor_id: Editor_Id = -1;
 
-buffer_indices: Table(Buffer_Id, int);
-editor_indices: Table(Editor_Id, int);
+buffer_locations: Table(Buffer_Id, Bucket_Locator);
+editor_locations: Table(Editor_Id, Bucket_Locator);
+
+buffer_registry_revision: u64;
+buffer_ptr_snapshots: [..] Buffer_Ptr_Snapshot;
+
+Buffer_Ptr_Snapshot :: struct {
+    revision: u64;
+    buffer_ptrs: [] *Buffer;
+}
 

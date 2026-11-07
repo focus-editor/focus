@@ -1026,6 +1026,7 @@ focus_allocator: Allocator;
 
 using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Atomics";
+#import "Bucket_Array";
 #import "Compiler";
 #import "File";
 #import "File_Utilities";
@@ -1038,7 +1039,6 @@ using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "System";
 #import "String";
 #import "Sort";
-#import "Simple_Bucket_Array";
 #import "Thread";
 #import "Text_File_Handler";
 #import "Unicode";
