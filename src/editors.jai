@@ -177,7 +177,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
-        resize(*buffer.cursors, editor.cursors.count);
+        resize(*buffer.cursors, editor.cursors.count, buffer.allocator);
         for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
@@ -406,7 +406,7 @@ active_editor_type_char :: (char: u32) {
 
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
-        resize(*buffer.cursors, editor.cursors.count);
+        resize(*buffer.cursors, editor.cursors.count, buffer.allocator);
         for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
@@ -1272,8 +1272,13 @@ reset_all_editors_for_buffer :: (buffer_id: Buffer_Id) {
 
         editor_id := editor.id;
         free_editor(editor);
-        editor.* = Editor.{ id = editor_id, buffer_id = buffer_id };
-        add(*editor.cursors, Cursor.{});
+        editor.* = Editor.{
+            id = editor_id,
+            buffer_id = buffer_id,
+            allocator = create_owned_heap(),
+        };
+        editor.search_bar.input.allocator = editor.allocator;
+        add(*editor.cursors, Cursor.{}, editor.allocator);
     }
 }
 
@@ -1531,7 +1536,7 @@ action_escape :: (editor: *Editor) {
     }
 
     if !is_empty(editor.search_bar.results) {
-        reset_search_results(*editor.search_bar);
+        reset_search_results(editor);
         editor.refresh_selection = true;
         return;
     }
@@ -1557,7 +1562,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
     }
 
     if !context.config.settings.persist_local_search_results {
-        reset_search_results(*editor.search_bar);
+        reset_search_results(editor);
         editor.refresh_selection = true;
     }
 }
@@ -1691,7 +1696,7 @@ jump_to_search_result :: (result: Text_Highlight) {
 #scope_export
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
-    reset_search_results(*search_bar);
+    reset_search_results(editor);
 
     needle := to_string(search_bar.input.text);
     if !needle return;
@@ -1703,9 +1708,9 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     assert(buffer.bytes.count < S32_MAX && needle.count < S32_MAX);
 
     if search_bar.regex_search {
-        find_all_using_regex(*search_bar, needle, buffer);
+        find_all_using_regex(editor, needle, buffer);
     } else {
-        find_all(*search_bar, needle, buffer);
+        find_all(editor, needle, buffer);
     }
 
     if search_bar.selected_result < 0 && search_bar.results.count > 0 then search_bar.selected_result = search_bar.results.count - 1;  // all results are before cursor, select the closest one
@@ -1713,10 +1718,8 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 }
 
 free_editor :: (using editor: *Editor) {
-    reset(*cursors);
-    reset(*highlights);
-    reset(*search_bar.results);
-    reset(*wrapped_line_starts);
+    destroy_owned_heap(editor.allocator);
+    editor.* = .{};
 }
 
 action_move_editor :: (placement: Editor_Placement) {
@@ -1860,8 +1863,8 @@ action_duplicate_editor :: (placement: Editor_Placement) {
     current_editor    := get_editor(active_editor_id);  // get the pointer again because it could've become invalid
 
     // Duplicate cursors
-    if !is_empty(duplicated_editor.cursors) then reset(*duplicated_editor.cursors);
-    for current_editor.cursors { add(*duplicated_editor.cursors, it); }
+    if !is_empty(duplicated_editor.cursors) then reset(*duplicated_editor.cursors, duplicated_editor.allocator);
+    for current_editor.cursors { add(*duplicated_editor.cursors, it, duplicated_editor.allocator); }
     duplicated_editor.main_cursor     = current_editor.main_cursor;
     duplicated_editor.original_cursor = current_editor.original_cursor;
 
@@ -2054,7 +2057,9 @@ activate_show_pane_editors_action :: (modifier_keys: Mods, pane: *Editor_Pane) {
     activate_lingering_action(action);
 }
 
-find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
+find_all_using_regex :: (editor: *Editor, needle: string, buffer: Buffer) {
+    using editor.search_bar;
+
     re_text := ifx whole_word then tprint("\\w%\\w", needle) else needle;
     flags := BASE_REGEX_FLAGS;
     if !case_sensitive then flags |= .FoldCase;
@@ -2085,7 +2090,7 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-        result := add(*results);
+        result := add(*results, editor.allocator);
         result.offset = cast(s32) offset;
         result.count  = cast(s32) count;
         result.line   = offset_to_real_line(buffer, offset);
@@ -2094,7 +2099,9 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
     }
 }
 
-find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
+find_all :: (editor: *Editor, needle: string, buffer: Buffer) {
+    using editor.search_bar;
+
     buffer_str := to_string(buffer.bytes);
 
     offset := 0;
@@ -2112,7 +2119,7 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-        result := add(*results);
+        result := add(*results, editor.allocator);
         result.offset = cast(s32) offset;
         result.count  = cast(s32) needle.count;
         result.line   = offset_to_real_line(buffer, offset);
@@ -2231,9 +2238,9 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
     cursors_start_blinking();
 }
 
-reset_search_results :: (using search_bar: *Search_Bar) {
-    reset(*results);
-    selected_result = -1;
+reset_search_results :: (editor: *Editor) {
+    reset(*editor.search_bar.results, editor.allocator);
+    editor.search_bar.selected_result = -1;
 }
 
 editors_get_layout :: () -> Editor_State.Layout {
@@ -2435,7 +2442,7 @@ find_or_create_editor :: (buffer_id: Buffer_Id, unwanted_existing_editors: [] Ed
 
     editor_id, editor := register_new_editor();
     editor.buffer_id = buffer_id;
-    add(*editor.cursors, Cursor.{});
+    add(*editor.cursors, Cursor.{}, editor.allocator);
 
     buffer := get_buffer(buffer_id);
 
@@ -2455,13 +2462,13 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     // Sometimes edits can leave cursors in an inconsistent state, which would prevent undos if we tried to save them in the undo group later
     organise_cursors(editor);
 
-    new_group := add(*buffer.undos);
-    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
-    new_group.cursors_before = to_owned_array(*buffer.cursors);
-    new_group.cursors_after  = to_view(copy(editor.cursors));
+    new_group := add(*buffer.undos, buffer.allocator);
+    new_group.edits = to_owned_array(*buffer.edits, buffer.allocator);  // @Speed: could group all char inserts into one if needed
+    new_group.cursors_before = to_owned_array(*buffer.cursors, buffer.allocator);
+    new_group.cursors_after  = to_view(copy(editor.cursors, buffer.allocator));
 
     // Remember cursor state
-    resize(*buffer.cursors, editor.cursors.count);
+    resize(*buffer.cursors, editor.cursors.count, buffer.allocator);
     for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
 }
 
@@ -2511,7 +2518,7 @@ action_create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { ab
         original_pos_coords := offset_to_coords(editor, buffer, original.pos);
         original_sel_coords := offset_to_coords(editor, buffer, original.sel);
 
-        add(*cursors, edge_cursor);
+        add(*cursors, edge_cursor, editor.allocator);
         cursor := *cursors[cursors.count-1];
 
         pos_coords := offset_to_coords(editor, buffer, cursor.pos);
@@ -2574,7 +2581,7 @@ create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
                     if end > start  break;  // (c)
                 }
 
-                cursor := add(*cursors);
+                cursor := add(*cursors, editor.allocator);
                 cursor.* = from_cursor;
                 cursor.pos = coords_to_offset(editor, buffer, position);
                 cursor.col_wanted = from_pos_coords.col;
@@ -2604,7 +2611,7 @@ create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
 restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
     if cursor_state.count == 0 return;
 
-    resize(*cursors, cursor_state.count);
+    resize(*cursors, cursor_state.count, editor.allocator);
     for * cursor, i : cursors {
         cursor.* = cursor_state[i];
         cursor.col_wanted = -1;
@@ -2736,7 +2743,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             return editor.search_whole_words;  // found no matches
         }
 
-        new_cursor := add(*cursors);
+        new_cursor := add(*cursors, editor.allocator);
         new_cursor.sel = cast(s32) found_offset;
         new_cursor.pos = cast(s32) (found_offset + selected_text.count);
 
@@ -2854,7 +2861,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
             if !wrapped { offset = 0; wrapped = true; continue; } else break;
         }
 
-        new_cursor := add(*cursors);
+        new_cursor := add(*cursors, editor.allocator);
         new_cursor.sel = cast(s32) offset;
         new_cursor.pos = cast(s32) (offset + selected_text.count);
 
@@ -3024,7 +3031,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     }
 
     pop(*buffer.undos);
-    add(*buffer.redos, edit_group);  // push onto the redo stack
+    add(*buffer.redos, edit_group, buffer.allocator);  // push onto the redo stack
     restore_cursor_state(editor, edit_group.cursors_before);
 
     editor.cursor_moved = true;
@@ -3052,7 +3059,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     }
 
     pop(*buffer.redos);
-    add(*buffer.undos, edit_group);  // push onto the undo stack
+    add(*buffer.undos, edit_group, buffer.allocator);  // push onto the undo stack
     restore_cursor_state(editor, edit_group.cursors_after);
 
     editor.cursor_moved = true;
@@ -3858,12 +3865,12 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
         while true {
             pos = buffer.line_starts[line_num];
             if pos >= line_range.end break;
-            add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+            add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 }, editor.allocator);
             line_num += 1;
         }
     }
 
-    if !cursors then add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+    if !cursors then add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 }, editor.allocator);
 
     main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
     original_cursor = clamp(original_cursor, 0, cursors.count - 1);
@@ -4870,6 +4877,8 @@ action_copy_current_file_path :: (buffer_id: Buffer_Id) {
 Editor :: struct {
     id: Editor_Id = -1;
     buffer_id: Buffer_Id = -1;
+
+    allocator: Allocator;
 
     viewport:   Viewport;
     search_bar: Search_Bar;

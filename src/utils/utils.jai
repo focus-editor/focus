@@ -1,3 +1,15 @@
+create_owned_heap :: () -> Allocator {
+    return create_heap(Default_Allocator.allocator);
+}
+
+destroy_owned_heap :: (heap: Allocator) {
+    if !heap.data return;
+
+    assert(heap.proc == Default_Allocator.allocator.proc);
+    Default_Allocator.heap_free_all(xx heap.data);
+    destroy_heap(heap);
+}
+
 array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
     assert(offset >= 0 && offset <= array.count);
     if !bytes return;

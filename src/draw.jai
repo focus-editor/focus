@@ -954,7 +954,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
 
             if !deleted_cursor {
                 // Create new cursor
-                new_cursor := add(*cursors);
+                new_cursor := add(*cursors, editor.allocator);
                 new_cursor.pos = click_offset;
                 new_cursor.sel = new_cursor.pos;
 
@@ -1082,7 +1082,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                 // If there is no line to select we add a cursor at the end of each line
                 for min_line_number..max_line_number {
                     if it == mouse_coords.line continue;
-                    cursor := add(*editor.cursors);
+                    cursor := add(*editor.cursors, editor.allocator);
                     cursor.pos = get_line_end_offset(editor, buffer, it);
                     cursor.sel = cursor.pos;
                 }
@@ -1103,7 +1103,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                         // and we can use it to set its new position.
                         main_cursor.* = cursor;
                     } else {
-                        add(*editor.cursors, cursor);
+                        add(*editor.cursors, cursor, editor.allocator);
                     }
                 }
 
@@ -1258,7 +1258,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                         if offset < 0 break;
 
                         if !array_find(cursor_offsets, cast(s32) offset) {  // @Speed: slow when many cursors
-                            highlight := add(*editor.highlights);
+                            highlight := add(*editor.highlights, editor.allocator);
                             highlight.offset = cast(s32) offset;
                             highlight.count  = cast(s32) selected_text.count;
                             highlight.line   = offset_to_real_line(buffer, offset);
@@ -1289,7 +1289,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                         count  = 1,
                         line   = offset_to_real_line(buffer, offset),
                         type   = .bracket,
-                    });
+                    }, editor.allocator);
 
                     // Highlight the bracket we're standing on
                     add(*editor.highlights, .{
@@ -1297,7 +1297,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                         count  = 1,
                         line   = offset_to_real_line(buffer, pos),
                         type   = .bracket,
-                    });
+                    }, editor.allocator);
                 }
             }
 
