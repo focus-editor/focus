@@ -167,7 +167,7 @@ color_preview_set_language :: (lang_id: int) {
     set_buffer_language(buffer, languages[lang_id].lang);
 
     close_search_bar(editor);
-    reset_search_results(editor);
+    reset_search_results(*editor.search_bar);
     reset_keeping_memory(*buffer.undos);
     reset_keeping_memory(*buffer.redos);
     reset_keeping_memory(*editor.highlights);

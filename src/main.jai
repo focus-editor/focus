@@ -1,4 +1,9 @@
 main :: () {
+    #if DEBUG && OS != .LINUX {
+        UA :: #import "Unmapping_Allocator";
+        context.allocator = UA.get_unmapping_allocator();
+    }
+
     focus_allocator = context.allocator;  // to be used as a default allocator where we need it
 
     #if CPU == .X64 {
@@ -1019,9 +1024,7 @@ focus_allocator: Allocator;
     #import "Machine_X64";
 }
 
-Default_Allocator :: #import "Default_Allocator";
-
-using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG_MEMORY_LEAKS);
+using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Atomics";
 #import "Bucket_Array";
 #import "Compiler";

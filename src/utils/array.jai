@@ -3,6 +3,8 @@
 // We are not targeting the use case of files over 2Gb in size to keep things small.
 // We use lots of arrays, so any memory saving here is valuable.
 
+// IMPORTANT: All allocations use focus_allocator. If you need an array which uses another allocator, use [..]
+
 Array :: struct(T: Type) {
     count: s32;
     allocated: s32;
@@ -90,14 +92,14 @@ to_view :: inline (array: Array($T), offset: s64, count: s64) -> [] T {
     return result;
 }
 
-add :: (array: *Array($T), item: T, allocator: Allocator) {
-    maybe_grow(array, allocator);
+add :: (array: *Array($T), item: T) {
+    maybe_grow(array);
     array.data[array.count] = item;
     array.count += 1;
 }
 
-add :: (array: *Array($T), allocator: Allocator) -> *T {
-    maybe_grow(array, allocator);
+add :: (array: *Array($T)) -> *T {
+    maybe_grow(array);
     result := *array.data[array.count];
 
     ini :: initializer_of(T);
@@ -111,12 +113,12 @@ add :: (array: *Array($T), allocator: Allocator) -> *T {
     return result;
 }
 
-insert_at :: (array: *Array($T), offset: s32, src_array: [] T, allocator: Allocator) {
+insert_at :: (array: *Array($T), offset: s32, src_array: [] T) {
     assert(offset >= 0 && offset <= array.count);
     if !src_array return;
 
     new_count := array.count + cast(s32) src_array.count;
-    reserve(array, new_count, allocator);
+    reserve(array, new_count);
 
     src := array.data + offset;
     dst := src + src_array.count;
@@ -141,8 +143,8 @@ peek_pointer :: inline (array: Array($T)) -> *T {
     return *array[array.count-1];
 }
 
-free :: inline (array: Array($T), allocator: Allocator) {
-    free(array.data,, allocator);
+free :: inline (array: Array($T)) {
+    free(array.data);
 }
 
 delete_range :: (array: *Array($T), offset: s32, count: s32) {
@@ -170,14 +172,14 @@ ordered_remove_by_index :: inline (array: *Array($T), index: s32) {
     array.count -= 1;
 }
 
-copy :: (array: Array($T), allocator: Allocator) -> Array(T) {
-    dest := NewArray(array.count, T, initialized=false,, allocator);
+copy :: (array: Array($T)) -> Array(T) {
+    dest := NewArray(array.count, T, initialized=false);
     memcpy(dest.data, array.data, array.count * size_of(T));
     return from_view(dest);
 }
 
-reset :: (array: *Array($T), allocator: Allocator) {
-    free(array.data,, allocator);
+reset :: (array: *Array($T)) {
+    free(array.data,, focus_allocator);
 
     array.data      = null;
     array.allocated = 0;
@@ -188,31 +190,31 @@ reset_keeping_memory :: inline (array: *Array($T)) {
     array.count = 0;
 }
 
-reserve :: inline (array: *Array($T), desired_items: s32, allocator: Allocator) {
-    reserve_(xx array, desired_items, size_of(T), allocator);
+reserve :: inline (array: *Array($T), desired_items: s32) {
+    reserve_(xx array, desired_items, size_of(T));
 }
 
-resize :: (array: *Array($T), new_count: s64, allocator: Allocator, $initialize:=true) {
+resize :: (array: *Array($T), new_count: s64, $initialize:=true) {
     old_count := array.count;
-    reserve_(xx array, cast(s32) new_count, size_of(T), allocator);
+    reserve_(xx array, cast(s32) new_count, size_of(T));
     array.count = cast(s32) new_count;
 
     #if initialize  init_range(array.data, old_count, new_count);
 }
 
-maybe_grow :: inline (array: *Array($T), allocator: Allocator) {
+maybe_grow :: inline (array: *Array($T)) {
     if array.count >= array.allocated {
         reserve := 2 * array.allocated;
         if reserve < 8  reserve = 8;
 
-        reserve_(xx array, reserve, size_of(T), allocator);
+        reserve_(xx array, reserve, size_of(T));
     }
 }
 
-to_owned_array :: (array: *Array($T), allocator: Allocator, $free_memory := false) -> [] T {
-    new_array := copy(array, allocator);
+to_owned_array :: (array: *Array($T), $free_memory := false) -> [] T {
+    new_array := copy(array);
     #if free_memory {
-        reset(array, allocator);
+        reset(array);
     } else {
         reset_keeping_memory(array);
     }
@@ -235,10 +237,10 @@ init_range :: (ptr: *$T, begin: s64, end: s64) {
     }
 }
 
-reserve_ :: (array: *Array(void), desired_items: s32, element_size: s32, allocator: Allocator) {
+reserve_ :: (array: *Array(void), desired_items: s32, element_size: s32) {
     if desired_items <= array.allocated return;
 
-    array.data = realloc(array.data, desired_items * element_size, array.allocated * element_size,, allocator);
+    array.data = realloc(array.data, desired_items * element_size, array.allocated * element_size,, focus_allocator);
     assert(array.data != null);
 
     array.allocated = desired_items;

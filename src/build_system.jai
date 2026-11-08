@@ -141,7 +141,7 @@ build_clear_output :: () {
 
     lock(*buffer.content_lock);
     reset_keeping_memory(*buffer.regions);
-    resize(*buffer.tokens, buffer.bytes.count, buffer.allocator);
+    resize(*buffer.tokens, buffer.bytes.count);
     memset(buffer.tokens.data, 0, buffer.tokens.count);
     unlock(*buffer.content_lock);
 }
@@ -489,7 +489,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     editor.scroll_to_cursor = .yes;
 
     if mark_as != .none {
-        add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as }, buffer.allocator);
+        add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
     }
 
     // Maybe forget some bytes at the beginning
@@ -499,7 +499,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         assert(bytes_to_forget >= 0, "Error when trying to forget bytes in the build output. This is a bug.");
 
         lock(*buffer.content_lock);
-        resize(*buffer.tokens, buffer.bytes.count, buffer.allocator);  // resize first before we delete
+        resize(*buffer.tokens, buffer.bytes.count);  // resize first before we delete
         delete_range_raw(buffer, 0, bytes_to_forget);
         delete_range(*buffer.tokens, 0, bytes_to_forget);
         unlock(*buffer.content_lock);

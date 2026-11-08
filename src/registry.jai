@@ -68,11 +68,7 @@ next_unique_editor_id :: () -> Editor_Id {
 register_new_editor :: () -> Editor_Id, editor: *Editor {
     editor_id := next_unique_editor_id();
     editor, location := find_and_occupy_empty_slot(*open_editors);
-
     editor.id = editor_id;
-    editor.allocator = create_owned_heap();
-    editor.search_bar.input.allocator = editor.allocator;
-
     table_set(*editor_locations, editor_id, location);
     return editor_id, editor;
 }

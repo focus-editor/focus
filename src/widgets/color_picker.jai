@@ -194,12 +194,12 @@ color_picker_replace_color :: (editor_id: Editor_Id, editor: *Editor, buffer: *B
     add_paste_animation(editor_id, range);
     if edit {
         // Keep the original source text, but make redo reproduce the latest preview.
-        free(edit.replace.new_bytes,, buffer.allocator);
-        edit.replace.new_bytes = copy_string(str,, buffer.allocator);
+        free(edit.replace.new_bytes);
+        edit.replace.new_bytes = copy_string(str);
         replace_range_raw(buffer, range.start, range.end, str);
     } else {
         new_edit_group(buffer, editor);
-        resize(*buffer.cursors, editor.cursors.count, buffer.allocator);
+        resize(*buffer.cursors, editor.cursors.count);
         for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
         replace_range(buffer, range, str);
         edit = *buffer.edits[0];
@@ -212,8 +212,8 @@ color_picker_replace_color :: (editor_id: Editor_Id, editor: *Editor, buffer: *B
     if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
 
     if edit.replace.old_bytes == edit.replace.new_bytes {
-        free(edit.replace.old_bytes,, buffer.allocator);
-        free(edit.replace.new_bytes,, buffer.allocator);
+        free(edit.replace.old_bytes);
+        free(edit.replace.new_bytes);
         reset_keeping_memory(*buffer.edits);
         drag_old_bytes = null;
     }
