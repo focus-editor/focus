@@ -80,7 +80,7 @@ insert_string_raw :: (buffer: *Buffer, offset: s32, str: string, $notify := true
     bytes.count = str.count;
 
     lock(*buffer.content_lock);
-    insert_at(*buffer.bytes, offset, bytes);
+    insert_at(*buffer.bytes, offset, bytes, buffer.allocator);
     unlock(*buffer.content_lock);
 
     #if notify add_edit_notification(buffer, offset, 0, str.count);
@@ -217,7 +217,7 @@ remember_cursor_positions :: (buffer_id: Buffer_Id, in: enum { all_editors; acti
         }
     }
     if editor_cursors {
-        resize(*buffer.cursors, editor_cursors.count);
+        resize(*buffer.cursors, editor_cursors.count, buffer.allocator);
         for * cursor, i : buffer.cursors { cursor.* = editor_cursors[i]; }
     }
 
@@ -414,7 +414,7 @@ rescan_for_lines_no_lock :: (using buffer_data: *Buffer_Data) {
     }
 
     reset_keeping_memory(*line_starts);
-    add(*line_starts, 0);  // first line
+    add(*line_starts, 0, allocator);  // first line
 
     s := to_string(bytes);
 
@@ -444,7 +444,7 @@ rescan_for_lines_no_lock :: (using buffer_data: *Buffer_Data) {
                     }
                     mask >>= (bit_id + 1);
                     shift += bit_id + 1;
-                    add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
+                    add(*line_starts, cast,no_check(s32)(data - bytes.data + shift), allocator);
                 }
                 count -= 16;
                 data  += 16;
@@ -461,24 +461,24 @@ rescan_for_lines_no_lock :: (using buffer_data: *Buffer_Data) {
         index := inline find_index_from_left(s, 0xA, start_index);
         if index >= 0 {
             start_index = index + 1;
-            add(*line_starts, cast,no_check(s32) (processed_with_simd + start_index));
+            add(*line_starts, cast,no_check(s32) (processed_with_simd + start_index), allocator);
         } else {
             break;
         }
     }
 
-    add(*line_starts, cast(s32) bytes.count);  // last line
+    add(*line_starts, cast(s32) bytes.count, allocator);  // last line
 }
 
 rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     // Not locking here because rescanning for wrapped lines should only happen in the main thread
 
     reset_keeping_memory(*editor.wrapped_line_starts);
-    reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
+    reserve(*editor.wrapped_line_starts, buffer.line_starts.count, editor.allocator);  // can't be less than that
 
     tab_size := get_buffer_tab_size(buffer);
 
-    add(*editor.wrapped_line_starts, 0);  // first line
+    add(*editor.wrapped_line_starts, 0, editor.allocator);  // first line
 
     max_width_in_chars := ifx editor.last_width_in_chars > 0 then editor.last_width_in_chars else S32_MAX;
     current_line_width := 0;
@@ -499,15 +499,15 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
         }
 
         if current_line_width > max_width_in_chars {
-            add(*editor.wrapped_line_starts, this_char_index);
+            add(*editor.wrapped_line_starts, this_char_index, editor.allocator);
             current_line_width = 1;
         } else if byte == #char "\n" {
-            add(*editor.wrapped_line_starts, i);
+            add(*editor.wrapped_line_starts, i, editor.allocator);
             current_line_width = 0;
         }
     }
 
-    add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
+    add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count, editor.allocator);  // last line
 }
 
 
@@ -523,28 +523,28 @@ retokenize_no_lock :: (buffer: *Buffer_Data) {
 
     if buffer.lang == .Plain_Text {
         // We don't store tokens for plain text buffers
-        reset(*buffer.tokens);
-        for buffer.regions free(it.note);
-        reset(*buffer.regions);
+        reset(*buffer.tokens, buffer.allocator);
+        for buffer.regions free(it.note,, buffer.allocator);
+        reset(*buffer.regions, buffer.allocator);
         return;
     }
 
     tokenize_func := get_tokenize_function(buffer.lang);
 
     // Resize tokens if we ever changed the token array
-    if !is_empty(buffer.tokens) || tokenize_func != null then resize(*buffer.tokens, buffer.bytes.count, initialize = true);
+    if !is_empty(buffer.tokens) || tokenize_func != null then resize(*buffer.tokens, buffer.bytes.count, buffer.allocator, initialize = true);
     if !tokenize_func return;  // this could be the case for e.g. the build panel
 
     new_regions := tokenize_func(buffer);
 
     // Clear buffer regions
-    for buffer.regions free(it.note);
+    for buffer.regions free(it.note,, buffer.allocator);
     reset_keeping_memory(*buffer.regions);
 
     for * region : new_regions {
         // Add regions into buffer
-        if region.note then region.note = copy_string(region.note);
-        add(*buffer.regions, region.*);
+        if region.note then region.note = copy_string(region.note,, buffer.allocator);
+        add(*buffer.regions, region.*, buffer.allocator);
 
         // Maybe tokenize heredocs
         if region.kind == .heredoc {
@@ -761,7 +761,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         // We're saving a new buffer into a file (and the path has been chosen already)
         lock(*buffer.settings_lock);
         buffer.has_file = true;
-        buffer.file = get_file_info_from_full_path(file_path);
+        buffer.file = get_file_info_from_full_path(file_path,, buffer.allocator);
         buffer.lang = get_lang_from_path(file_path);
         buffer.settings_revision += 1;
         unlock(*buffer.settings_lock);
@@ -1103,7 +1103,7 @@ insert_final_newline :: (using buffer: *Buffer) {
     new_insert_edit(buffer, bytes.count, "\n");
 
     lock(*content_lock);
-    resize(*bytes, bytes.count + 1);
+    resize(*bytes, bytes.count + 1, buffer.allocator);
     bytes[bytes.count - 1] = cast(u8) #char "\n";
     unlock(*content_lock);
 
@@ -1197,6 +1197,7 @@ get_buffer_contents_for_writing :: (buffer: Buffer) -> string /* temp */, is_crl
 
 create_an_empty_buffer :: () -> buffer_id: Buffer_Id, created: bool {
     buffer_id, buffer := register_new_buffer();
+    buffer.allocator = create_owned_heap();
 
     if context.config.settings.line_endings == .crlf {
         buffer.crlf = true;
@@ -1217,6 +1218,9 @@ load_buffer_data_from_file :: (path: string) -> success: bool, Buffer_Data {
         if path.count > 248  return false, .{};  // Windows doesn't handle long paths by default. We can handle them someday.
     }
     buffer_data: Buffer_Data;
+    buffer_data.allocator = create_owned_heap();
+
+    push_allocator(buffer_data.allocator);
 
     file_data, success := read_entire_file(path);
 
@@ -1651,43 +1655,26 @@ maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
 }
 
 free_buffer :: (using buffer: *Buffer) {
-    // TODO: use heaps instead
-
-    free(*buffer.data);
-
-    for * undos deinit(it);
-    for * redos deinit(it);
-    free(undos);
-    free(redos);
-    free(edits);
-    free(cursors);
-
-    extra = null;
+    destroy(*buffer.content_lock);
+    destroy(*buffer.settings_lock);
+    destroy_owned_heap(buffer.allocator);
+    buffer.* = .{};
 }
 
-free :: (using buffer_data: *Buffer_Data) {
-    free(bytes);
-    free(line_starts);
-    free(tokens);
-    for regions free(it.note);
-    free(regions);
-
-    if has_file && file.full_path then free(file.full_path);
-
-    free_buffer_extra(extra);
-
+free_buffer_data :: (using buffer_data: *Buffer_Data) {
+    destroy_owned_heap(buffer_data.allocator);
     buffer_data.* = .{};
 }
 
-free_buffer_extra :: (extra: *Buffer.Extra) {
+free_buffer_extra :: (using buffer: *Buffer_Data) {
     if !extra return;
     if #complete extra.type == {
         case .focus_config;
             config_extra := cast(*Focus_Config_Extra) extra;
-            free(config_extra.active_theme);
-            array_free(config_extra.parsed_colors);
+            free(config_extra.active_theme,, buffer.allocator);
+            array_free(config_extra.parsed_colors,, buffer.allocator);
     }
-    free(extra);
+    free(extra,, buffer.allocator);
 }
 
 // NOTE: this works with absolute columns only, with no regard to line wrapping!
@@ -1742,7 +1729,7 @@ is_unsaved :: (buffer: Buffer) -> bool {
 
 manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
     assert(range.start >= 0 && range.end <= buffer.bytes.count);
-    resize(*buffer.tokens, buffer.bytes.count);
+    resize(*buffer.tokens, buffer.bytes.count, buffer.allocator);
     memset(buffer.tokens.data + range.start, xx color, range.end - range.start);
 }
 
@@ -1827,33 +1814,33 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
 
     if buffer.num_editors_open >= 2 {
         // Notify other editors
-        add(*buffer_edit_notifications, notification);
+        add(*buffer_edit_notifications, notification, focus_allocator);
     }
 }
 
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
-    edit := add(*buffer.edits);
+    edit := add(*buffer.edits, buffer.allocator);
     edit.type = .replace;
     using edit.replace;
     offset_range.start = start;
     offset_range.end   = end;
-    new_bytes = copy_string(new_str);
-    old_bytes = copy_string(old_str);
+    new_bytes = copy_string(new_str,, buffer.allocator);
+    old_bytes = copy_string(old_str,, buffer.allocator);
 
     clear_redos(buffer);
 }
 
 new_insert_edit :: (buffer: *Buffer, offset: s32, str: string) {
-    edit := add(*buffer.edits);
+    edit := add(*buffer.edits, buffer.allocator);
     edit.type = .insert;
     edit.insert.offset = offset;
-    edit.insert.new_bytes = copy_string(str);
+    edit.insert.new_bytes = copy_string(str,, buffer.allocator);
 
     clear_redos(buffer);
 }
 
 new_insert_char_edit :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
-    edit := add(*buffer.edits);
+    edit := add(*buffer.edits, buffer.allocator);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
     edit.insert_char.char = char;
@@ -1862,18 +1849,18 @@ new_insert_char_edit :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
 }
 
 new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
-    edit := add(*buffer.edits);
+    edit := add(*buffer.edits, buffer.allocator);
     edit.type = .delete;
     using edit.delete;
     offset_range.start = start;
     offset_range.end   = end;
-    old_bytes = copy_string(old_str);
+    old_bytes = copy_string(old_str,, buffer.allocator);
 
     clear_redos(buffer);
 }
 
 clear_redos :: (using buffer: *Buffer) {
-    for * redos  deinit(it);
+    for * redos  deinit(it,, buffer.allocator);
     reset_keeping_memory(*redos);
 }
 
@@ -1899,6 +1886,8 @@ buffer_edit_notifications: Array(Buffer.Edit_Notification);
 
 
 Buffer_Data :: struct {
+    allocator: Allocator;
+
     bytes:       Array(u8);
     line_starts: Array(s32);            // real offsets of newlines in the bytes array
     tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).

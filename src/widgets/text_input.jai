@@ -96,7 +96,7 @@ text_input_fully_clear :: (using input: *Text_Input) {
     new_edit_group(input);
     clear_undos(input);
     clear_redos(input);
-    reset(*text);
+    reset(*text, input.allocator);
     cursor.pos = 0;
     cursor.sel = 0;
 }
@@ -186,7 +186,7 @@ undo :: (using input: *Text_Input) {
         }
     }
     // Add a new redo group
-    redo := add(*redos);
+    redo := add(*redos, input.allocator);
     redo.edits = edit_group.edits;
     redo.cursor = cursor;
     cursor = edit_group.cursor;
@@ -206,7 +206,7 @@ redo :: (using input: *Text_Input) {
         }
     }
     // Add a new undo group
-    undo := add(*undos);
+    undo := add(*undos, input.allocator);
     undo.edits = edit_group.edits;
     undo.cursor = cursor;
     cursor = edit_group.cursor;
@@ -335,8 +335,8 @@ delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false
 new_edit_group :: (using input: *Text_Input) {
     if edits.count == 0 return;
 
-    new_group := add(*undos);
-    new_group.edits = to_owned_array(*edits);
+    new_group := add(*undos, input.allocator);
+    new_group.edits = to_owned_array(*edits, input.allocator);
     new_group.cursor = cursor_before_edits;
 
     cursor_before_edits = cursor;
@@ -372,7 +372,7 @@ insert_string_raw :: (input: *Text_Input, offset: s32, str: string) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
-    insert_at(*input.text, offset, bytes);
+    insert_at(*input.text, offset, bytes, input.allocator);
 }
 
 replace_range_raw :: (input: *Text_Input, start: s32, end: s32, str: string) {
@@ -381,28 +381,28 @@ replace_range_raw :: (input: *Text_Input, start: s32, end: s32, str: string) {
 }
 
 new_replace_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string, new_str: string) {
-    edit := add(*input.edits);
+    edit := add(*input.edits, input.allocator);
     edit.type = .replace;
     using edit.replace;
     offset_range.start = start;
     offset_range.end   = end;
-    new_bytes = copy_string(new_str);
-    old_bytes = copy_string(old_str);
+    new_bytes = copy_string(new_str,, input.allocator);
+    old_bytes = copy_string(old_str,, input.allocator);
 
     clear_redos(input);
 }
 
 new_insert_edit :: (input: *Text_Input, offset: s32, str: string) {
-    edit := add(*input.edits);
+    edit := add(*input.edits, input.allocator);
     edit.type = .insert;
     edit.insert.offset = offset;
-    edit.insert.new_bytes = copy_string(str);
+    edit.insert.new_bytes = copy_string(str,, input.allocator);
 
     clear_redos(input);
 }
 
 new_insert_char_edit :: (input: *Text_Input, offset: s32, char: Utf8_Char) {
-    edit := add(*input.edits);
+    edit := add(*input.edits, input.allocator);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
     edit.insert_char.char = char;
@@ -411,23 +411,23 @@ new_insert_char_edit :: (input: *Text_Input, offset: s32, char: Utf8_Char) {
 }
 
 new_delete_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string) {
-    edit := add(*input.edits);
+    edit := add(*input.edits, input.allocator);
     edit.type = .delete;
     using edit.delete;
     offset_range.start = start;
     offset_range.end   = end;
-    old_bytes = copy_string(old_str);
+    old_bytes = copy_string(old_str,, input.allocator);
 
     clear_redos(input);
 }
 
 clear_redos :: (using input: *Text_Input) {
-    for * redos deinit(it);
+    for * redos deinit(it,, input.allocator);
     reset_keeping_memory(*redos);
 }
 
 clear_undos :: (using input: *Text_Input) {
-    for * undos deinit(it);
+    for * undos deinit(it,, input.allocator);
     reset_keeping_memory(*undos);
 }
 
@@ -479,6 +479,8 @@ get_char_at_offset_as_string :: (using input: Text_Input, offset: s32) -> string
 #scope_export
 
 Text_Input :: struct {
+    allocator: Allocator = Default_Allocator.allocator;
+
     text:  Array(u8);
     undos: Array(Edit_Group);
     redos: Array(Edit_Group);
