@@ -147,6 +147,19 @@ replace_text :: (using input: *Text_Input, new_text: string) {
     replace_range(input, 0, text.count, new_text);
 }
 
+free_text_input :: (using input: *Text_Input) {
+    for *undos deinit(it);
+    for *redos deinit(it);
+    for *edits deinit(it);
+
+    free(text);
+    free(undos);
+    free(redos);
+    free(edits);
+
+    input.* = .{};
+}
+
 #scope_file
 
 copy :: (using input: Text_Input) {
@@ -432,17 +445,21 @@ clear_undos :: (using input: *Text_Input) {
 }
 
 deinit :: inline (using edit_group: *Text_Input.Edit_Group) {
-    for edit : edits {
-        using edit;
-        if #complete type == {
-            case .insert;  free(insert.new_bytes);
-            case .delete;  free(delete.old_bytes);
-            case .replace; free(replace.new_bytes);
-                           free(replace.old_bytes);
-            case .insert_char;  // nothing to free
-        }
-    }
+    for *edits deinit(it);
     array_free(edits);
+}
+
+deinit :: inline (using edit: *Text_Input.Edit) {
+    if #complete type == {
+        case .insert;
+            free(insert.new_bytes);
+        case .delete;
+            free(delete.old_bytes);
+        case .replace;
+            free(replace.new_bytes);
+            free(replace.old_bytes);
+        case .insert_char;
+    }
 }
 
 has_selection :: inline (using cursor: Text_Input.Cursor) -> bool {

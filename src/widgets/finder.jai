@@ -198,10 +198,6 @@ finder_update :: () {
         }
     }
 
-    if outstanding_tasks.count == 0 {
-        reclaim_unused_buffer_ptrs_snapshots();
-    }
-
     if request.in_progress then redraw_requested = true;
 }
 
@@ -353,6 +349,7 @@ start_new_search :: (force := false) {
         task.regex_search = request.regex_search;
         task.config_snapshot = acquire_current_config_snapshot();
 
+        begin_buffer_snapshot_use();
         array_add(*outstanding_tasks, task);
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
@@ -553,6 +550,7 @@ free_task :: (task: *Search_Task) {
     free(task.exclude);
     array_free(task.skip_table);
     release_config_snapshot(task.config_snapshot);
+    end_buffer_snapshot_use();
     free(task);
 }
 

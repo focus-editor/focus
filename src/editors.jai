@@ -1717,6 +1717,7 @@ free_editor :: (using editor: *Editor) {
     reset(*highlights);
     reset(*search_bar.results);
     reset(*wrapped_line_starts);
+    free_text_input(*search_bar.input);
 }
 
 action_move_editor :: (placement: Editor_Placement) {

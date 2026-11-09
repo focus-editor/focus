@@ -8,10 +8,10 @@ get_buffer :: inline (id: Buffer_Id) -> *Buffer {  // guarantees the buffer exis
 }
 
 find_buffer :: (id: Buffer_Id) -> found: bool, *Buffer {
-    found, location := table_find(*buffer_locations, id);
+    found, locator := table_find(*buffer_locators, id);
     if !found return false, null;
 
-    return true, bucket_array_find_pointer(*open_buffers, location);
+    return true, bucket_array_find_pointer(*open_buffers, locator);
 }
 
 exists :: inline (buffer_id: Buffer_Id) -> bool {
@@ -25,8 +25,8 @@ next_unique_buffer_id :: () -> Buffer_Id {
 
 register_new_buffer :: () -> Buffer_Id, buffer: *Buffer {
     buffer_id := next_unique_buffer_id();
-    buffer, location := find_and_occupy_empty_slot(*open_buffers);
-    table_set(*buffer_locations, buffer_id, location);
+    buffer, locator := find_and_occupy_empty_slot(*open_buffers);
+    table_set(*buffer_locators, buffer_id, locator);
 
     init(*buffer.content_lock);
     init(*buffer.settings_lock);
@@ -35,6 +35,21 @@ register_new_buffer :: () -> Buffer_Id, buffer: *Buffer {
     buffer_registry_revision += 1;
 
     return buffer_id, buffer;
+}
+
+remove_buffer :: (id: Buffer_Id) {
+    assert(buffer_snapshot_users == 0);
+    buffer := get_buffer(id);
+    for mapped_id, path : buffers_table {
+        if mapped_id != id continue;
+        remove mapped_id;
+        free(path);
+        break;
+    }
+    _, locator := table_remove(*buffer_locators, id);
+    free_buffer(buffer);
+    bucket_array_remove(*open_buffers, locator);
+    buffer_registry_revision += 1;
 }
 
 find_buffer_id_by_path :: (path: string) -> Buffer_Id {
@@ -51,9 +66,9 @@ get_editor :: (id: Editor_Id) -> *Editor {  // guarantees the editor exists
 }
 
 find_editor :: (id: Editor_Id) -> found: bool, *Editor {
-    found, location := table_find(*editor_locations, id);
+    found, locator := table_find(*editor_locators, id);
     if !found return false, null;
-    return true, bucket_array_find_pointer(*open_editors, location);
+    return true, bucket_array_find_pointer(*open_editors, locator);
 }
 
 exists :: inline (editor_id: Editor_Id) -> bool {
@@ -67,16 +82,36 @@ next_unique_editor_id :: () -> Editor_Id {
 
 register_new_editor :: () -> Editor_Id, editor: *Editor {
     editor_id := next_unique_editor_id();
-    editor, location := find_and_occupy_empty_slot(*open_editors);
+    editor, locator := find_and_occupy_empty_slot(*open_editors);
     editor.id = editor_id;
-    table_set(*editor_locations, editor_id, location);
+    table_set(*editor_locators, editor_id, locator);
     return editor_id, editor;
+}
+
+remove_editor :: (id: Editor_Id) {
+    editor := get_editor(id);
+    _, locator := table_remove(*editor_locators, id);
+    array_ordered_remove_by_value(*recently_closed_editors, id);
+    free_editor(editor);
+    bucket_array_remove(*open_editors, locator);
 }
 
 get_editor_and_buffer :: inline (editor_id: Editor_Id) -> *Editor, *Buffer {
     editor := get_editor(editor_id);
     buffer := get_buffer(editor.buffer_id);
     return editor, buffer;
+}
+
+do_registry_cleanup :: () {
+    if buffer_snapshot_users > 0 return;
+
+    // Reclaim unused buffer snapshots
+    for buffer_ptr_snapshots {
+        if it.revision != buffer_registry_revision {
+            array_free(it.buffer_ptrs);
+            remove it;
+        }
+    }
 }
 
 // Build an array of stable buffer pointers which threads can use
@@ -96,18 +131,18 @@ get_immutable_buffer_ptrs_snapshot :: () -> [] *Buffer {
     return buffer_ptrs;
 }
 
-// To be called only when no outstanding snapshot user threads exist
-reclaim_unused_buffer_ptrs_snapshots :: () {
-    for buffer_ptr_snapshots {
-        if it.revision != buffer_registry_revision {
-            array_free(it.buffer_ptrs);
-            remove it;
-        }
-    }
+begin_buffer_snapshot_use :: () {
+    buffer_snapshot_users += 1;
+}
+
+end_buffer_snapshot_use :: () {
+    assert(buffer_snapshot_users > 0);
+    buffer_snapshot_users -= 1;
 }
 
 // Temporary
 reset_registry :: () {
+    assert(buffer_snapshot_users == 0);
     for * open_editors  free_editor(it);
     bucket_array_reset(*open_editors);
     for * open_buffers  free_buffer(it);
@@ -118,8 +153,8 @@ reset_registry :: () {
     for * buffer_ptr_snapshots  array_free(it.buffer_ptrs);
     array_reset(*buffer_ptr_snapshots);
 
-    table_reset(*buffer_locations);
-    table_reset(*editor_locations);
+    table_reset(*buffer_locators);
+    table_reset(*editor_locators);
 }
 
 // TODO: make these private too
@@ -136,11 +171,12 @@ buffers_table: Table(string, Buffer_Id,
 last_buffer_id: Buffer_Id = -1;
 last_editor_id: Editor_Id = -1;
 
-buffer_locations: Table(Buffer_Id, Bucket_Locator);
-editor_locations: Table(Editor_Id, Bucket_Locator);
+buffer_locators: Table(Buffer_Id, Bucket_Locator);
+editor_locators: Table(Editor_Id, Bucket_Locator);
 
 buffer_registry_revision: u64;
 buffer_ptr_snapshots: [..] Buffer_Ptr_Snapshot;
+buffer_snapshot_users := 0;
 
 Buffer_Ptr_Snapshot :: struct {
     revision: u64;

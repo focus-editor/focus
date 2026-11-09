@@ -1651,21 +1651,23 @@ maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
 }
 
 free_buffer :: (using buffer: *Buffer) {
-    // TODO: use heaps instead
-
-    free(*buffer.data);
+    free_buffer_data(*buffer.data);
 
     for * undos deinit(it);
     for * redos deinit(it);
+    for * edits deinit(it);
     free(undos);
     free(redos);
     free(edits);
     free(cursors);
 
+    destroy(*content_lock);
+    destroy(*settings_lock);
+
     extra = null;
 }
 
-free :: (using buffer_data: *Buffer_Data) {
+free_buffer_data :: (using buffer_data: *Buffer_Data) {
     free(bytes);
     free(line_starts);
     free(tokens);
@@ -1878,19 +1880,20 @@ clear_redos :: (using buffer: *Buffer) {
 }
 
 deinit :: (using edit_group: *Buffer.Edit_Group) {
-    for edit : edits {
-        using edit;
-        if #complete type == {
-            case .insert;  free(insert.new_bytes);
-            case .delete;  free(delete.old_bytes);
-            case .replace; free(replace.new_bytes);
-                           free(replace.old_bytes);
-            case .insert_char;  // nothing to free
-        }
-    }
+    for * edits  deinit(it);
     array_free(edits);
     array_free(cursors_before);
     array_free(cursors_after);
+}
+
+deinit :: (using edit: *Buffer.Edit) {
+    if #complete type == {
+        case .insert;  free(insert.new_bytes);
+        case .delete;  free(delete.old_bytes);
+        case .replace; free(replace.new_bytes);
+                       free(replace.old_bytes);
+        case .insert_char;  // nothing to free
+    }
 }
 
 #scope_export

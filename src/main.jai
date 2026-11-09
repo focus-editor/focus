@@ -276,6 +276,7 @@ main :: () {
         maybe_revert_temporary_theme();
         adjust_viewports_for_line_height_change(*previous_line_height);
         refresh_open_buffers();
+        do_registry_cleanup();
 
         draw_frame();
 

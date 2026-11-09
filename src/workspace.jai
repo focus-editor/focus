@@ -134,7 +134,7 @@ complete_workspace_scan :: () {
     // Make sure we don't leak any scan job data if it's aborted prematurely
     for job : scan_jobs {
         for * buffer_data : job.results {
-            free(buffer_data);
+            free_buffer_data(buffer_data);
         }
     }
     scan_jobs = .[];
@@ -205,7 +205,7 @@ workspace_update :: () {
 
             for * buffer_data : job.results {
                 if find_buffer_id_by_path(buffer_data.file.full_path) >= 0 {
-                    free(buffer_data);
+                    free_buffer_data(buffer_data);
                 } else {
                     publish_prepared_buffer(buffer_data);
                 }
