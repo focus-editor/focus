@@ -736,9 +736,6 @@ editors_open_buffer :: (buffer_id: Buffer_Id, placement: Editor_Placement = .in_
 
     editors_open_buffer_in_pane(buffer_id, target_pane);
 
-    buffer := get_buffer(buffer_id);
-    if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
-
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
@@ -747,6 +744,9 @@ editors_open_buffer :: (buffer_id: Buffer_Id, placement: Editor_Placement = .in_
 editors_open_buffer_in_pane :: (buffer_id: Buffer_Id, target_pane: *Editor_Pane) -> editor_id: Editor_Id {
     assert(exists(buffer_id), "Attempt to create editor for nonexistent buffer");
     assert_leaf_pane(target_pane, "Can't open an editor in a non-leaf pane. This is a bug.");
+
+    buffer := get_buffer(buffer_id);
+    if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
     defer activate_pane(target_pane);
 
@@ -1796,6 +1796,18 @@ switch_to_pane_by_number :: (number: s64) {
     }
 }
 
+get_pane_by_editor_id :: (editor_id: Editor_Id) -> *Editor_Pane {
+    _find_pane :: (pane: *Editor_Pane, editor_id: Editor_Id) -> *Editor_Pane {
+        if !pane return null;
+        if pane.layout == .single && array_find(pane.editor_ids, editor_id) return pane;
+        result := _find_pane(pane.child1, editor_id);
+        if !result then result = _find_pane(pane.child2, editor_id);
+        return result;
+    }
+
+    return _find_pane(editors.root, editor_id);
+}
+
 action_keep_editor :: () {
     maybe_make_temporary_editor_permanent();
 }
@@ -2122,18 +2134,6 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
     }
 }
 
-get_pane_by_editor_id :: (editor_id: Editor_Id) -> *Editor_Pane {
-    _find_pane :: (pane: *Editor_Pane, editor_id: Editor_Id) -> *Editor_Pane {
-        if !pane return null;
-        if pane.layout == .single && array_find(pane.editor_ids, editor_id) return pane;
-        result := _find_pane(pane.child1, editor_id);
-        if !result then result = _find_pane(pane.child2, editor_id);
-        return result;
-    }
-
-    return _find_pane(editors.root, editor_id);
-}
-
 get_adjacent_editor_pane :: (pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
     assert(pane != null);
     if placement == .in_place return pane;
@@ -2256,12 +2256,6 @@ init_editors :: () {
     editors.active_pane = editors.root;
 }
 
-deinit_editors :: () {
-    _free_pane_tree(editors.root);
-    editors.root = null;
-    editors.active_pane = null;
-}
-
 init_buffers :: () {
     // 3000 * 70% = 2100 is a reasonable number of text files in a workspace, which
     // most codebases will hopefully not exceed (so that we don't have to grow the hash table)
@@ -2269,15 +2263,6 @@ init_buffers :: () {
 
     global_config_buffer_id = -1;
     global_troubleshooting_buffer_id = -1;
-}
-
-deinit_buffers :: () {
-    for buffer_id, buffer_path : buffers_table {
-        free(buffer_path);
-    }
-    deinit(*buffers_table);
-    array_reset_keeping_memory(*most_recent_buffers);
-    buffer_settings_cache_clear();
 }
 
 select_lines :: (editor: *Editor, buffer: Buffer) {
@@ -5056,15 +5041,13 @@ editor_smooth_scroll: struct {
 
 
 recently_closed_editors: [..] Editor_Id;
-
+global_config_buffer_id: Buffer_Id = -1;
+global_troubleshooting_buffer_id: Buffer_Id = -1;
 
 #scope_file
 
 cursor_blink_start: Apollo_Time;
 cursors_blinking := false;
-
-global_config_buffer_id: Buffer_Id = -1;
-global_troubleshooting_buffer_id: Buffer_Id = -1;
 
 CURSOR_BLINK_SPEED_MS   :: 500;
 

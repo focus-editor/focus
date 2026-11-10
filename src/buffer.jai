@@ -761,7 +761,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         // We're saving a new buffer into a file (and the path has been chosen already)
         lock(*buffer.settings_lock);
         buffer.has_file = true;
-        buffer.file = get_file_info_from_full_path(file_path);
+        buffer.file = get_file_info_from_full_path(copy_string(file_path));
         buffer.lang = get_lang_from_path(file_path);
         buffer.settings_revision += 1;
         unlock(*buffer.settings_lock);
@@ -1239,7 +1239,7 @@ load_buffer_data_from_file :: (path: string) -> success: bool, Buffer_Data {
         buffer_data.lang = get_lang_from_path(path);
     }
 
-    buffer_data.file = get_file_info_from_full_path(path);
+    buffer_data.file = get_file_info_from_full_path(copy_string(path));
     buffer_data.has_file = true;
 
     remember_last_mod_info(*buffer_data);
@@ -1281,14 +1281,12 @@ find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
     return buffer_id, true;
 }
 
-get_lang_from_path :: (full_path: string, config: *Config = null) -> Buffer.Lang {
+get_lang_from_path :: (full_path: string) -> Buffer.Lang {
     lang: Buffer.Lang = .Plain_Text;
 
     path_, basename, extension, basename_with_extension := path_decomp(full_path);
 
-    // Try to get lang from the user-provided mapping first. TODO: cleanup, unused
-    active_config := ifx config then config else context.config;
-    for active_config.workspace.file_associations {
+    for context.config.workspace.file_associations {
         if path_wildcard_match(basename_with_extension, it.wildcard) return it.lang;
     }
 

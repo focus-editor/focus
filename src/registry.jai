@@ -140,23 +140,6 @@ end_buffer_snapshot_use :: () {
     buffer_snapshot_users -= 1;
 }
 
-// Temporary
-reset_registry :: () {
-    assert(buffer_snapshot_users == 0);
-    for * open_editors  free_editor(it);
-    bucket_array_reset(*open_editors);
-    for * open_buffers  free_buffer(it);
-    bucket_array_reset(*open_buffers);
-    array_reset(*most_recent_buffers);
-    array_reset(*recently_closed_editors);
-
-    for * buffer_ptr_snapshots  array_free(it.buffer_ptrs);
-    array_reset(*buffer_ptr_snapshots);
-
-    table_reset(*buffer_locators);
-    table_reset(*editor_locators);
-}
-
 // TODO: make these private too
 open_buffers: Bucket_Array(Buffer, items_per_bucket = 1024);
 open_editors: Bucket_Array(Editor, items_per_bucket = 128);

@@ -53,6 +53,13 @@ start_file_watcher :: () {
     if global_config.loaded  then start_watching_file_if_not_already(global_config.path);
     if project_config.loaded then start_watching_file_if_not_already(project_config.path);
     start_watching_config_themes();
+
+    // Make sure all buffers in the current workspace are watched
+    // (this should cover workspace reloads)
+    for * buffer : open_buffers {
+        if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
+        start_watching_file_if_not_already(buffer.file.full_path);
+    }
 }
 
 file_watcher_process_changes :: () {

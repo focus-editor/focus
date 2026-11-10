@@ -220,6 +220,7 @@ workspace_update :: () {
             complete_workspace_scan();
 
             start_file_watcher();
+
             init_open_file_dialog();
             init_finder();
         }
@@ -255,8 +256,6 @@ reload_workspace :: (automatic := false) {
     deinit_open_file_dialog();
     deinit_file_watcher();
     deinit_cursor_history();
-    deinit_buffers();
-    deinit_editors();
     forget_ignore_table();
 
     // Reinit things
@@ -266,122 +265,65 @@ reload_workspace :: (automatic := false) {
     for project_files  free(it);
     array_reset_keeping_memory(*project_files);
     init_workspace();
-    init_editors();
-    init_buffers();
 
-    // // !!!!!!!! Get rid of this and instead preserve project editors
-    // // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
-    // new_open_editors: [..] Editor;
-    // new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
-    // new_most_recent_buffers: [..] Buffer_Id;
+    // Preserve open buffers and editors if they belong to the new workspace
+    buffers_to_remove: [..] Buffer_Id;
+    buffers_to_remove.allocator = temp;
 
-    // editor_id_map: Table(Editor_Id, Editor_Id);
-    // editor_id_map.allocator = temp;
+    for * buffer : open_buffers {
+        if should_keep_buffer_when_reloading_workspace(buffer, automatic) continue;
+        array_add(*buffers_to_remove, buffer.id);
+    }
 
-    // buffers_to_refresh_from_disk: [..] Buffer_Id;
-    // buffers_to_refresh_from_disk.allocator = temp;
+    editors_to_remove: [..] Editor_Id;
+    editors_to_remove.allocator = temp;
 
-    // for * buffer : open_buffers {
-    //     old_buffer_id := buffer.id;
-    //     if should_keep_buffer_when_reloading_workspace(buffer) {
-    //         new_buffer_id := next_unique_buffer_id();
+    for * editor : open_editors {
+        if !array_find(buffers_to_remove, editor.buffer_id) continue;
+        array_add(*editors_to_remove, editor.id);
+    }
 
-    //         if buffer.has_file {
-    //             table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
-    //             start_watching_file_if_not_already(buffer.file.full_path);
-    //             lock(*buffer.settings_lock);
-    //             buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
-    //             buffer.settings_revision += 1;
-    //             unlock(*buffer.settings_lock);
-    //             array_add(*buffers_to_refresh_from_disk, new_buffer_id);
-    //         }
+    for editor_id : editors_to_remove {
+        pane := get_pane_by_editor_id(editor_id);
+        if pane {
+            remove_editor_from_pane(pane, editor_id);
+            if !pane.editor_ids then close_pane(pane);
+        }
+        remove_editor(editor_id);
+    }
+    if array_find(editors_to_remove, editors.expanded_editor_id) then editors.expanded_editor_id = -1;
 
-    //         buffer.id = new_buffer_id;
+    for buffer_id : buffers_to_remove {
+        array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
+        remove_buffer(buffer_id);
+    }
 
-    //         destroy(*buffer.content_lock);
-    //         destroy(*buffer.settings_lock);
+    buffer_settings_cache_clear();
+    global_config_buffer_id = -1;
+    global_troubleshooting_buffer_id = -1;
+    array_reset(*editor_paste_animations);
 
-    //         buffer.content_lock = .{};
-    //         buffer.settings_lock = .{};
+    for buffer_edit_notifications {
+        if array_find(buffers_to_remove, it.buffer_id) remove it;
+    }
 
-    //         new_buffer := bucket_array_add(*new_open_buffers);
-    //         new_buffer.* = buffer.*;
+    // Refresh remaining file-backed buffer data
+    for * buffer : open_buffers {
+        if !buffer.has_file || !buffer.file.full_path continue;
 
-    //         init(*new_buffer.content_lock);
-    //         init(*new_buffer.settings_lock);
+        buffer.file = get_file_info_from_full_path(buffer.file.full_path);
+        buffer.settings_revision += 1;
+    }
 
-    //         if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
-    //             array_add(*new_most_recent_buffers, new_buffer_id);
-    //         }
-
-
-
-    //         // @speed: O(n*m) here. Hopefully OK because people don't create as many editors as there are buffers
-    //         for editor : open_editors {
-    //             if editor.buffer_id != old_buffer_id continue;
-
-    //             new_editor := editor;
-    //             new_editor.buffer_id = new_buffer_id;
-    //             old_editor_id := editor.id;
-
-    //             new_editor.id = next_unique_editor_id();
-    //             array_add(*new_open_editors, new_editor);
-
-    //             table_add(*editor_id_map, old_editor_id, new_editor.id);
-    //         }
-
-    //     } else {
-    //         free_buffer(buffer);
-    //     }
-    // }
-
-    reset_registry();
-
-
-    // open_buffers = new_open_buffers;
-
-    // !!!!!!!!!!!!!!!!!!
-    // // Reopen visible editors, if any of them are preserved
-    // if editors.layout != .None {
-    //     new_active, active_preserved := table_find(*editor_id_map, editors.active);
-    //     new_left,   left_preserved   := table_find(*editor_id_map, editors.left);
-    //     new_right,  right_preserved  := table_find(*editor_id_map, editors.right);
-
-    //     if active_preserved then editors.active = new_active;
-
-    //     if left_preserved && right_preserved {
-    //         // Keep the layout
-    //         editors.left  = new_left;
-    //         editors.right = new_right;
-    //     } else if left_preserved {
-    //         editors.layout = .Single;
-    //         editors.left   = new_left;
-    //         editors.right  = new_left;
-    //         editors.active = new_left;
-    //     } else if right_preserved {
-    //         editors.layout = .Single;
-    //         editors.left   = new_right;
-    //         editors.right  = new_right;
-    //         editors.active = new_right;
-    //     } else {
-    //         editors = Editor_State.{};  // reset everything
-    //     }
-    //     if editors.left == editors.right && editors.layout == .Double {
-    //         editors.active = editors.left;
-    //         editors.layout = .Single;
-    //     }
-    // }
+    // Update window title
+    activate_editors();
+    editor, buffer := get_visible_editor_and_buffer();
+    editors.last_active_editor_id = ifx editor then editor.id else -1;
+    update_window_title(ifx buffer then buffer.id else -1);
 
     if !automatic then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
-
-    if editors_get_layout() == .None {
-        update_window_title();
-    } else {
-        // TODO: when we're able to preserve layouts, make sure to run this to update the window title etc
-        // make_editor_active(editors.active);
-    }
 
     start_workspace_scan();
 
@@ -389,12 +331,12 @@ reload_workspace :: (automatic := false) {
     add_success_message("Workspace has been reloaded", dismiss_in_seconds = 3);
 }
 
-should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
-    // If this is a special buffer we can recreate it later.
-    // If the buffer is unsaved, we're throwing it away (because the user decided not to save it)
-    if !has_file || deleted return false;
+should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer, automatic: bool) -> bool {
+    if internal return false;  // we will recreate any internal buffers
 
-    if is_our_config_file(file.full_path) return true;
+    if automatic && num_times_opened > 0 return true;  // on automatic workspace reloads we keep all buffers which the user opened manually
+    if !has_file || !file.full_path return false;
+
     if should_ignore_file(file.full_path) return false;
 
     for project_files  if platform_path_equals(file.full_path, it) return true;

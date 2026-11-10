@@ -318,6 +318,8 @@ set_path_chunks_from_file :: (file_path: string) {
 }
 
 clear_path_chunks :: () {
+    open_file_dialog.root_dir = "";
+
     for open_file_dialog.path_chunks free(it);
     array_reset(*open_file_dialog.path_chunks);
 }

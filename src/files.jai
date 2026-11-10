@@ -1,11 +1,11 @@
 get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info {
     assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
-    full_path := copy_string(abs_path);  // one allocation, the rest are views into it
-    path, basename, extension, name := path_decomp(full_path);
+    // Important: storing views into the passed string! Make sure it's owned properly
+    path, basename, extension, name := path_decomp(abs_path);
 
     info: File_Info;
-    info.full_path = full_path;
+    info.full_path = abs_path;
     info.name = name;
     if ends_with(path, "/") then path.count -= 1;  // strip the separator
     info.path = path;
