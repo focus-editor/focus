@@ -1,0 +1,113 @@
+[25]  # Version number. Do not delete.
+
+[colors]
+background0:                            F2F1EFFF
+background1:                            E2E1DFFF
+background2:                            E2E1DFFF
+background3:                            F2F1EFFF
+background4:                            C7D7E0FF
+selection_active:                       B5CBD2FF
+selection_inactive:                     C7D7E07F
+selection_highlight:                    C7D7E0FF
+search_result_active:                   B5CBD275
+search_result_inactive:                 5A778580
+scrollbar:                              9F9F99FF
+scrollbar_hover:                        5A7785FF
+scrollbar_background:                   F2F1EFFF
+cursor:                                 22262DFF
+cursor_inactive:                        9F9F99FF
+paste_animation:                        B5CBD2FF
+splitter:                               E2E1DFFF
+splitter_hover:                         C7D7E0FF
+letter_highlight:                       5A7785FF
+list_cursor_lite:                       E2E1DFFF
+list_cursor:                            E2E1DFFF
+shadow_dark:                            00000010
+shadow_transparent:                     00000000
+text_input_label:                       22262DFF
+char_under_cursor:                      FFFFFFFF
+
+ui_default:                             22262DFF
+ui_dim:                                 6D6D69FF
+ui_neutral:                             624C83FF
+ui_warning:                             E98A00FF
+ui_warning_dim:                         DE9800FF
+ui_error:                               E82424FF
+ui_error_bright:                        FF0000FF
+ui_success:                             6E915FFF
+
+region_scope_export:                    F2F1EFFF
+region_scope_file:                      F2F1EF75
+region_scope_module:                    F2F1EF75
+region_header:                          E2E1DFFF
+region_success:                         B7D0AEFF
+region_warning:                         E98A00FF
+region_error:                           E82424FF
+region_heredoc:                         F2F1EFFF
+
+build_panel_background:                 F2F1EFFF
+build_panel_scrollbar:                  9F9F99FF
+build_panel_scrollbar_hover:            5A7785FF
+build_panel_scrollbar_background:       E2E1DFFF
+build_panel_title_bar:                  E2E1DFFF
+
+code_default:                           22262DFF
+code_comment:                           6D6D69FF
+code_type:                              597B75FF
+code_function:                          4D699BFF
+code_punctuation:                       6D6D69FF
+code_operation:                         77713FFF
+code_string_literal:                    6F894EFF
+code_value:                             CC6D00FF
+code_highlight:                         B5CBD2FF
+code_error:                             E82424FF
+code_warning:                           E98A00FF
+code_keyword:                           624C83FF
+code_invalid:                           E82424FF
+code_multiline_string:                  6F894EFF
+code_raw_string:                        6F894EFF
+code_char_literal:                      CC6D00FF
+code_identifier:                        22262DFF
+code_note:                              6D6D69FF
+code_number:                            B35B79FF
+code_multiline_comment:                 6D6D69FF
+code_modifier:                          624C83FF
+code_attribute:                         624C83FF
+code_enum_variant:                      CC6D00FF
+code_macro:                             C84053FF
+code_builtin_variable:                  CC6D00FF
+code_builtin_function:                  4D699BFF
+code_builtin_exception:                 C84053FF
+code_directive:                         624C83FF
+code_directive_modifier:                624C83FF
+code_header:                            C84053FF
+code_header2:                           CC6D00FF
+code_header3:                           77713FFF
+code_header4:                           6F894EFF
+code_header5:                           4D699BFF
+code_header6:                           624C83FF
+
+ruler:                                  E2E1DFFF
+bracket_highlight:                      9F9F99FF
+indent_guide:                           DDDDBDFF
+# Added after migration to version [17]
+active_pane_border:                     5A7785FF
+
+# Added after migration to version [18]
+inactive_pane_dim_overlay:              F2F1EFAA
+
+# Added after migration to version [19]
+code_comment_highlight1:                624C83FF
+code_comment_highlight2:                E82424FF
+code_comment_highlight3:                CC6D00FF
+code_comment_highlight4:                B35B79FF
+
+# Added after migration to version [20]
+cursor_line_highlight:                  E2E1DFFF
+color_preview_title_bar:                E2E1DFFF
+
+# Added after migration to version [21]
+code_addition:                          6E915FFF
+code_deletion:                          D7474BFF
+region_addition:                        B7D0AE4C
+region_deletion:                        7722224C
