@@ -1205,8 +1205,7 @@ close_editor_by_id :: (editor_id: Editor_Id) -> *Editor_Pane {
 
     if editor_id == active_editor_id {
         // We just closed the active editor
-        new_editor_id := get_visible_editor_id(pane);
-        make_editor_active(new_editor_id);
+        activate_pane(pane);
     }
 
     editor_do_post_close_cleanup(editor_id);
@@ -1306,6 +1305,7 @@ close_all_editors :: () {
 
     for open_editors  close_buffer(it.buffer_id);
 
+    editors.active_pane = null;
     _free_pane_tree(editors.root);
 
     editors.root = New(Editor_Pane);
@@ -1760,10 +1760,18 @@ action_move_editor :: (placement: Editor_Placement) {
 
 activate_pane :: (pane: *Editor_Pane) {
     if !pane return;
-    assert(pane.layout == .single, "Trying to activate a non-leaf pane. This is a bug.");
-    editor_id := get_visible_editor_id(pane);
-    if editor_id >= 0 then make_editor_active(editor_id);
+    assert_leaf_pane(pane);
+
+    pane_changed := editors.active_pane != pane;
     editors.active_pane = pane;
+
+    activate_editors();
+
+    if pane_changed && editors.expand_active_pane then expand_pane(pane);
+
+    update_active_editor(get_visible_editor_id(pane));
+
+    redraw_requested = true;
 }
 
 activate_closest_single_pane :: (pane: *Editor_Pane, prefer_child1: bool) {
@@ -1932,9 +1940,8 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane, *Editor_Pane
     active_pane.editor_ids   = empty_ids;
     active_pane.editor_index = -1;
 
-    // We'll actually activate new_pane later. We're not activating it now because
-    // we want to detect that the active pane has changed further down
     editors.active_pane = other_pane;
+    if editors.expand_active_pane then expand_pane(other_pane);
 
     return new_pane, other_pane;
 }
@@ -1992,7 +1999,7 @@ center_pane_splitter :: () {
     start_animation(*parent.splitter_anim, parent.splitter_pos, 0.5);
     parent.saved_splitter_pos = 0.5;
 
-    editors.expanded_editor_id = -1;
+    editors.expand_active_pane = false;
 }
 
 center_all_pane_splitters :: () {
@@ -2008,7 +2015,7 @@ center_all_pane_splitters :: () {
 
     _center_splitter(editors.root);
 
-    editors.expanded_editor_id = -1;
+    editors.expand_active_pane = false;
 }
 
 assert_leaf_pane :: (pane: *Editor_Pane, msg := "Expected a leaf pane but got something else. This is a bug.") {
@@ -2344,43 +2351,45 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
     return top != old_top;
 }
 
+update_active_editor :: (editor_id: Editor_Id) {
+    if editor_id < 0 {
+        editors.last_active_editor_id = -1;
+        update_window_title(-1);
+        return;
+    }
+
+    if editors.last_active_editor_id != editor_id then cursors_start_blinking();
+    editors.last_active_editor_id = editor_id;
+
+    editor, buffer := get_editor_and_buffer(editor_id);
+    update_window_title(buffer.id);
+    update_most_recent_buffers(buffer.id);
+    maybe_detect_and_set_indentation(buffer);
+    maybe_mark_buffer_as_deleted(buffer.id);
+}
+
 make_editor_active :: (editor_id: Editor_Id) {
     if editor_id < 0 {
         update_window_title(-1);
         return;
     }
 
-    assert(exists(editor_id), "Trying to activate editor using an invalid editor id: %", editor_id);
-    if editors.last_active_editor_id != editor_id then cursors_start_blinking();
-    editors.last_active_editor_id = editor_id;
-
     if is_build_panel(editor_id) {
         build_panel_grab_focus();
+        update_active_editor(editor_id);
     } else if is_color_preview_panel(editor_id) {
         // TODO:
         // color_preview_grab_focus();
+        update_active_editor(editor_id);
     } else {
-        activate_editors();
         pane, editor_index := editors_find_pane_with_editor(editor_id);
-        if pane {
-            // Make the pane active
-            pane.editor_index = editor_index;
-            editors.active_pane = pane;
-        } else {
+        if !pane {
             log_error("Attempting to make an editor active, but it's missing in the pane tree. This is probably a bug.");
             return;
         }
-        // Maybe expand the newly activated editor
-        if editors.expanded_editor_id >= 0 && editors.expanded_editor_id != editor_id {
-            expand_active_editor();
-        }
+        pane.editor_index = editor_index;
+        activate_pane(pane);
     }
-
-    editor, buffer := get_editor_and_buffer(editor_id);
-    update_window_title(editor.buffer_id);
-    update_most_recent_buffers(editor.buffer_id);
-    maybe_detect_and_set_indentation(buffer);
-    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
 }
 
 update_most_recent_buffers :: (buffer_id: Buffer_Id) {
@@ -2903,23 +2912,31 @@ toggle_expand :: () {
     if build_panel_is_active() {
         build_panel_toggle_height();
     } else {
-        toggle_editor_expand();
+        toggle_pane_expand();
     }
 }
 
-toggle_editor_expand :: () {
+toggle_pane_expand :: () {
     if editors_get_layout() != .Multi return;
 
-    active_editor_id := get_active_editor_id();
-    if active_editor_id < 0 return;  // no active editor
+    editors.expand_active_pane = !editors.expand_active_pane;
 
-    if editors.expanded_editor_id == -1 {
-        // Expand
+    if editors.expand_active_pane {
         remember_all_splitter_positions();
-        expand_active_editor();
-    } else if editors.expanded_editor_id == active_editor_id {
-        editors.expanded_editor_id = -1;
+        expand_pane(editors.active_pane);
+    } else {
         restore_saved_splitter_positions();
+    }
+}
+
+expand_pane :: (pane: *Editor_Pane) {
+    parent := pane.parent;
+    while parent != null {
+        assert(parent.layout != .single);
+        splitter_target := ifx parent.child1 == pane then 0.9 else 0.1;
+        start_animation(*parent.splitter_anim, parent.splitter_pos, splitter_target);
+        pane = parent;
+        parent = pane.parent;
     }
 }
 
@@ -2947,20 +2964,6 @@ restore_saved_splitter_positions :: () {
         _restore_pos(child2);
     }
     _restore_pos(editors.root);
-}
-
-expand_active_editor :: () {
-    editors.expanded_editor_id = get_active_editor_id();
-
-    pane   := editors.active_pane;
-    parent := pane.parent;
-    while parent != null {
-        assert(parent.layout != .single);
-        splitter_target := ifx parent.child1 == pane then 0.9 else 0.1;
-        start_animation(*parent.splitter_anim, parent.splitter_pos, splitter_target);
-        pane = parent;
-        parent = pane.parent;
-    }
 }
 
 action_scroll_viewport :: (action: Action_Editors, event: Input.Event, editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
@@ -4951,9 +4954,9 @@ Paste_Animation :: struct {
 Editor_State :: struct {
     root: *Editor_Pane;
     active_pane: *Editor_Pane;
+    expand_active_pane := false;
 
     last_active_editor_id: Editor_Id = -1;
-    expanded_editor_id:    Editor_Id = -1;
 
     Layout :: enum u8 {
         None    :: 0;

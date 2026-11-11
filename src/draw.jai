@@ -88,10 +88,8 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
     if layout == .single {
         clicked := maybe_set_hot_or_active(root_pane_id, rect, .NORMAL);
         if clicked {
-            activate_editors();
             clear_all_lingering_actions();
-            editors.active_pane = pane;
-            redraw_requested = true;
+            activate_pane(pane);
         }
         if editor_index >= 0 {
             draw_editor(editor_ids[editor_index], rect, pane_ui_id, pane, show_status_bar);
@@ -2202,10 +2200,8 @@ draw_status_bar :: (using editor: Editor, buffer: Buffer, pane: *Editor_Pane, ed
     ui_id := get_ui_id_from_loc(parent_id = editor_ui_id);
     clicked := maybe_set_hot_or_active(ui_id, status_bar_rect, .NORMAL);
     if clicked {
-        activate_editors();
         clear_all_lingering_actions();
-        editors.active_pane = pane;
-        redraw_requested = true;
+        activate_pane(pane);
     }
 
     pen := Vector2.{

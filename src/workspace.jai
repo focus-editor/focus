@@ -291,7 +291,6 @@ reload_workspace :: (automatic := false) {
         }
         remove_editor(editor_id);
     }
-    if array_find(editors_to_remove, editors.expanded_editor_id) then editors.expanded_editor_id = -1;
 
     for buffer_id : buffers_to_remove {
         array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
