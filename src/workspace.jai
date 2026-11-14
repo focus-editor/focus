@@ -340,7 +340,7 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer, automatic:
 
     for project_files  if platform_path_equals(file.full_path, it) return true;
 
-    return dir_is_within_project(get_parent_dir_path(file.full_path));
+    return path_is_within_project(get_parent_dir_path(file.full_path));
 }
 
 

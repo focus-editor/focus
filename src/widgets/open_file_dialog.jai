@@ -299,7 +299,7 @@ set_path_chunks_from_file :: (file_path: string) {
 
     parent_dir := get_parent_dir_path(file_path);
 
-    is_project_dir, project_dir := dir_is_within_project(parent_dir);
+    is_project_dir, project_dir := path_is_within_project(parent_dir);
     if is_project_dir {
         root_dir = copy_string(project_dir.path);  // leak
         array_add(*path_chunks, copy_string(project_dir.name));

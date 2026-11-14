@@ -41,7 +41,7 @@ start_file_watcher :: () {
 
     // Add directories that contain standalone files which we want to watch
     for watch_dirs {
-        if dir_is_within_project(it) {
+        if path_is_within_project(it) {
             remove it;
             continue;
         }
@@ -63,100 +63,116 @@ start_file_watcher :: () {
 }
 
 file_watcher_process_changes :: () {
+    auto_release_temp();
+
+    using watchers;
+
     // Check for any changes to the files we care about
-    array_reset_keeping_memory(*watchers.project_changes);
-    array_reset_keeping_memory(*watchers.external_changes);
+    array_reset_keeping_memory(*changes);
 
-    files_changed :=  process_changes(*watchers.project_watcher);
-    files_changed ||= process_changes(*watchers.external_watcher);
+    process_changes(*project_watcher);
+    process_changes(*external_watcher);
 
-    if files_changed {
-        using watchers;
+    if !changes return;
 
-        for project_changes  color_preview_invalidate_theme(it.full_path);
-        for external_changes color_preview_invalidate_theme(it.full_path);
+    paths_to_refresh: [..] string;
+    deletion_checks:  [..] string;
+    dirs_to_scan:     [..] string;
 
-        // TODO:
-        for project_changes   print("Project change: %\n", it);
-        for external_changes  print("External change: %\n", it);
+    paths_to_refresh.allocator = temp;
+    deletion_checks.allocator  = temp;
+    dirs_to_scan.allocator     = temp;
 
-        // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
-        // In this case we don't want to rescan anything, but only if no other events were received in the same frame
-        if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
-            change := pop(*project_changes);
-            if should_watch_file_for_changes(change.full_path) then refresh_buffer_from_disk_by_path(path = change.full_path);
+    for changes  color_preview_invalidate_theme(it.full_path);
+
+    // // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
+    // // In this case we don't want to rescan anything, but only if no other events were received in the same frame
+    // if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
+    //     change := pop(*project_changes);
+    //     if should_watch_file_for_changes(change.full_path) then array_add(*paths_to_refresh, change.full_path);
+    // }
+    // if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
+    //     change := pop(*external_changes);
+    //     if file_is_watched(change.full_path) then array_add(*paths_to_refresh, change.full_path);
+    // }
+
+    // // When a file or a folder is renamed or moved, we should receive 2 MOVED events in a single batch.
+    // // On Windows they will be tagged as MOVED_FROM and MOVED_TO, but e.g. on macos they won't be, so
+    // // we can't rely on that, therefore we'll have to check for file existence instead
+    // maybe_process_file_or_directory_moves(*changes);
+
+    update_scan_queue :: (dirs_to_scan: *[..] string, dir: string) {
+        for dirs_to_scan.* {
+            if path_is_within_other_path(dir, it) return;  // dir is already covered
         }
-        if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
-            change := pop(*external_changes);
-            parent_dir := get_parent_dir_path(change.full_path);
-            if dir_is_within_project(parent_dir) || file_is_watched(change.full_path) {
-                // We only want to refresh if the modified event is for a file we care about
-                refresh_buffer_from_disk_by_path(path = change.full_path);
+        for dirs_to_scan.* {
+            if path_is_within_other_path(it, dir) remove it;  // we're adding a parent of an existing dir
+        }
+        array_add(dirs_to_scan, dir);
+    }
+
+    for change : changes {
+        path := change.full_path;
+
+        if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then array_add(*deletion_checks, path);
+
+        if !path_is_within_project(path) {
+            for watched_path : watch_files {
+                if path_is_within_other_path(watched_path, path) then array_add(*paths_to_refresh, watched_path);
             }
+            continue;
         }
 
-        // When a file or a folder is renamed or moved, we should receive 2 MOVED events in a single batch.
-        // On Windows they will be tagged as MOVED_FROM and MOVED_TO, but e.g. on macos they won't be, so
-        // we can't rely on that, therefore we'll have to check for file existence instead
-        maybe_process_file_or_directory_moves(*project_changes);
-        maybe_process_file_or_directory_moves(*external_changes);
+        is_dir, success := is_directory(path);
 
-        // Maybe add to scanning queue
-        dirs_to_scan: [..] string;
-        dirs_to_scan.allocator = temp;
+        if (change.events & .SCAN_CHILDREN) || (success && is_dir) {
+            update_scan_queue(*dirs_to_scan, path);
+            continue;
+        }
 
-        maybe_add_to_queue :: (dirs_to_scan: *[..] string, dir: string) {
-            add_to_queue := true;
-            for dirs_to_scan.* {
-                if begins_with_nocase(dir, it) {
-                    add_to_queue = false;  // parent or itself is already in the queue
-                    break;
-                }
-                if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
+        if success {
+            if should_watch_file_for_changes(path) {
+                array_add(*paths_to_refresh, path);
             }
-            if add_to_queue array_add_if_unique(dirs_to_scan, dir);
+            continue;
         }
 
-        for change : project_changes {
-            dir: string;
-            is_directory, success := is_directory(change.full_path);
-            if success && is_directory {
-                dir = change.full_path;  // we got an event for a dir within the project
-            } else if should_watch_file_for_changes(change.full_path) {
-                dir = get_parent_dir_path(change.full_path);
-            }
-            if dir && dir_is_within_project(dir) then maybe_add_to_queue(*dirs_to_scan, dir);
-
-            if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
+        // Known buffers still need checking even if their files disappear
+        if find_buffer_id_by_path(path) >= 0 {
+            array_add(*paths_to_refresh, path);
+            continue;
         }
 
-        for change : external_changes {
-            if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
+        if change.events & (.ADDED | .REMOVED | .MOVED) {
+            parent_dir := get_parent_dir_path(path);
+            if parent_dir && path_is_within_project(parent_dir) then update_scan_queue(*dirs_to_scan, parent_dir);
         }
+    }
 
-        visitor_func :: (file: *File_Visit_Info, userdata: *void) {
-            auto_release_temp();
-
-            if file.is_directory {
-                if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
-                return;
-            }
-            if file.is_symlink return;
-
-            if !should_watch_file_for_changes(file.full_name) return;
-
-            refresh_buffer_from_disk_by_path(path = file.full_name);
+    // Scan the scan queue
+    visitor_func :: (file: *File_Visit_Info, paths_to_refresh: *[..] string) {
+        if file.is_directory {
+            if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
+            return;
         }
+        if file.is_symlink return;
 
-        if dirs_to_scan {
-            print("Scanning dirs: %\n", dirs_to_scan);
-        }
+        if !should_watch_file_for_changes(file.full_name) return;
 
-        // @Speed: this may be super expensive on crazy projects like Unreal,
-        // TODO! do this asynchronously
-        for dirs_to_scan {
-            visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
-        }
+        array_add(paths_to_refresh, copy_temporary_string(file.full_name));
+    }
+
+    for dirs_to_scan {
+        print("Scanning dir: %\n", it);
+        visit_files(it, recursive = true, *paths_to_refresh, visitor_func, visit_directories = true);
+    }
+
+    for deletion_checks {
+        maybe_mark_buffer_as_deleted(it);
+    }
+
+    for paths_to_refresh {
+        refresh_buffer_from_disk_by_path(it);
     }
 }
 
@@ -211,7 +227,7 @@ stop_watching_file :: (file_path: string) {
 
 file_is_watched :: (file_path: string) -> bool {
     parent_dir := get_parent_dir_path(file_path);
-    if dir_is_within_project(parent_dir) return true;  // project dirs are watched
+    if path_is_within_project(parent_dir) return true;  // project dirs are watched
     for watch_files {
         if platform_path_equals(it, file_path) return true;
     }
@@ -228,8 +244,7 @@ should_watch_file_for_changes :: inline (path: string) -> bool {
 #scope_file
 
 file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-    dest := ifx watcher == *watchers.project_watcher then *watchers.project_changes else *watchers.external_changes;
-    array_add(dest, File_Change.{
+    array_add(*watchers.changes, File_Change.{
         full_path = copy_temporary_string(change.full_path),
         events = change.events,
         time_of_last_change = change.time_of_last_change,
@@ -287,8 +302,7 @@ watchers : struct {
     project_watcher:  File_Watcher;   // recursive
     external_watcher: File_Watcher;   // non-recursive
 
-    project_changes:  [..] File_Change;
-    external_changes: [..] File_Change;
+    changes: [..] File_Change;
 }
 
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs

@@ -491,11 +491,22 @@ RUN_WILDCARD_TESTS :: false;
 
 #scope_export
 
-dir_is_within_project :: (dir_path: string) -> bool, Project_Dir {
+path_is_within_project :: (dir_path: string) -> bool, Project_Dir {
     for project_dirs {
-        if platform_path_equals(dir_path, it.path) || platform_path_contains(dir_path, tprint("%/", it.path)) return true, it;
+        if path_is_within_other_path(dir_path, it.path) return true, it;
     }
     return false, Project_Dir.{};
+}
+
+path_is_within_other_path :: (path: string, other_path: string) -> bool {
+    // Assuming normalised path separators!
+    if !path || !other_path return false;
+    if !platform_path_begins_with(path, other_path) return false;
+
+    if path.count == other_path.count return true;
+
+    // Need to make sure /path/to/foobar is not counted as being within /path/to/foo
+    return ends_with(other_path, #char "/") || path[other_path.count] == #char "/";
 }
 
 get_parent_dir_path :: (file_path: string) -> string {
