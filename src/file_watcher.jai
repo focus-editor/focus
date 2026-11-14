@@ -76,30 +76,14 @@ file_watcher_process_changes :: () {
     if !changes return;
 
     paths_to_refresh: [..] string;
-    deletion_checks:  [..] string;
+    affected_paths:  [..] string;
     dirs_to_scan:     [..] string;
 
     paths_to_refresh.allocator = temp;
-    deletion_checks.allocator  = temp;
+    affected_paths.allocator  = temp;
     dirs_to_scan.allocator     = temp;
 
     for changes  color_preview_invalidate_theme(it.full_path);
-
-    // // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
-    // // In this case we don't want to rescan anything, but only if no other events were received in the same frame
-    // if project_changes.count == 1 && project_changes[0].events == .MODIFIED {
-    //     change := pop(*project_changes);
-    //     if should_watch_file_for_changes(change.full_path) then array_add(*paths_to_refresh, change.full_path);
-    // }
-    // if external_changes.count == 1 && external_changes[0].events == .MODIFIED {
-    //     change := pop(*external_changes);
-    //     if file_is_watched(change.full_path) then array_add(*paths_to_refresh, change.full_path);
-    // }
-
-    // // When a file or a folder is renamed or moved, we should receive 2 MOVED events in a single batch.
-    // // On Windows they will be tagged as MOVED_FROM and MOVED_TO, but e.g. on macos they won't be, so
-    // // we can't rely on that, therefore we'll have to check for file existence instead
-    // maybe_process_file_or_directory_moves(*changes);
 
     update_scan_queue :: (dirs_to_scan: *[..] string, dir: string) {
         for dirs_to_scan.* {
@@ -114,7 +98,7 @@ file_watcher_process_changes :: () {
     for change : changes {
         path := change.full_path;
 
-        if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then array_add(*deletion_checks, path);
+        if change.events & (.REMOVED | .MOVED) then array_add(*affected_paths, path);
 
         if !path_is_within_project(path) {
             for watched_path : watch_files {
@@ -130,16 +114,16 @@ file_watcher_process_changes :: () {
             continue;
         }
 
-        if success {
-            if should_watch_file_for_changes(path) {
-                array_add(*paths_to_refresh, path);
-            }
-            continue;
-        }
-
         // Known buffers still need checking even if their files disappear
         if find_buffer_id_by_path(path) >= 0 {
             array_add(*paths_to_refresh, path);
+            continue;
+        }
+
+        if success {
+            if !should_ignore_file(path) || is_our_config_file(path) {
+                array_add(*paths_to_refresh, path);
+            }
             continue;
         }
 
@@ -151,24 +135,38 @@ file_watcher_process_changes :: () {
 
     // Scan the scan queue
     visitor_func :: (file: *File_Visit_Info, paths_to_refresh: *[..] string) {
+        path := file.full_name;
+
         if file.is_directory {
-            if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
+            if !should_descend_into_dir(path) then file.descend_into_directory = false;
             return;
         }
         if file.is_symlink return;
 
-        if !should_watch_file_for_changes(file.full_name) return;
+        if find_buffer_id_by_path(path) >= 0 return;  // let the scanner discover only new files
+        if should_ignore_file(path) && !is_our_config_file(path) return;
 
-        array_add(paths_to_refresh, copy_temporary_string(file.full_name));
+        array_add(paths_to_refresh, copy_temporary_string(path));
     }
 
     for dirs_to_scan {
+        array_add(*affected_paths, it);
+
         print("Scanning dir: %\n", it);
         visit_files(it, recursive = true, *paths_to_refresh, visitor_func, visit_directories = true);
     }
 
-    for deletion_checks {
-        maybe_mark_buffer_as_deleted(it);
+    // We have to check all open buffers because if e.g. a directory is deleted, we won't get a notification
+    // for every file within that directory and must check ourselves
+    for * buffer : open_buffers {
+        if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
+
+        for affected_path : affected_paths {
+            if path_is_within_other_path(buffer.file.full_path, affected_path) {
+                array_add(*paths_to_refresh, buffer.file.full_path);
+                break;
+            }
+        }
     }
 
     for paths_to_refresh {
@@ -233,13 +231,6 @@ file_is_watched :: (file_path: string) -> bool {
     }
     return false;
 }
-
-should_watch_file_for_changes :: inline (path: string) -> bool {
-    return !should_ignore_file(path) ||
-            is_our_config_file(path) ||
-            find_buffer_id_by_path(path) >= 0;  // if buffer is already open, we want to see changes even if it's ignored
-}
-
 
 #scope_file
 

@@ -1541,7 +1541,9 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
 
 refresh_buffer_from_disk_by_path :: (path: string) {
     is_dir, is_dir_success := is_directory(path);
-    if is_dir || !is_dir_success || !file_exists(path) {
+    if !is_dir_success && !path_is_missing(path) return;
+
+    if is_dir || !is_dir_success {
         // Either this is a dir, or a deleted dir, or a deleted file.
 
         // Find if there's an existing buffer already and mark it as deleted
@@ -1632,16 +1634,10 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
     return true;
 }
 
-maybe_mark_buffer_as_deleted :: (path: string) {
-    found_buffer, buffer_id := table_find(*buffers_table, path);
-    if !found_buffer return;  // no buffer for this path
-    maybe_mark_buffer_as_deleted(buffer_id);
-}
-
 maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
     buffer := get_buffer(buffer_id);
     if !buffer.has_file return;
-    if file_exists(buffer.file.full_path) return;  // no need to mark as deleted
+    if !path_is_missing(buffer.file.full_path) return;  // no need to mark as deleted
 
     buffer.deleted = true;
     finder.need_to_refresh_results = true;

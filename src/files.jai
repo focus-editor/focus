@@ -371,6 +371,30 @@ path_wildcard_match :: (path: string, wildcard: string) -> bool {
     return _wildcard_match(path, wildcard);
 }
 
+path_is_missing :: (path: string) -> bool {
+    #if OS == .WINDOWS {
+        W :: #import "Windows";
+
+        wide_path, converted := utf8_to_wide(path,, temp);
+        if !converted return false;
+
+        attributes := W.GetFileAttributesW(wide_path);
+        if attributes != W.INVALID_FILE_ATTRIBUTES return false;
+
+        ERROR_PATH_NOT_FOUND :: 3;
+        error := W.GetLastError();
+        return error == W.ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;
+    } else {
+        P :: #import "POSIX";
+
+        stats: P.stat_t;
+        if P.stat(temp_c_string(path), *stats) == 0 return false;
+
+        error := P.errno();
+        return error == P.ENOENT || error == P.ENOTDIR;
+    }
+}
+
 #scope_file
 
 _wildcard_match :: (s: string, pat: string) -> bool {
