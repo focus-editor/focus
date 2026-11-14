@@ -1556,10 +1556,12 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
         found_buffer, buffer_id := table_find(*buffers_table, path);
         if found_buffer {
             buffer := get_buffer(buffer_id);
-            if !buffer.deleted then buffer.time_when_deleted = frame_time64;
-            buffer.deleted = true;
-            finder.need_to_refresh_results = true;
-            open_file_dialog.should_refresh_entries = true;
+            if !buffer.deleted {
+                buffer.time_when_deleted = frame_time64;
+                buffer.deleted = true;
+                finder.need_to_refresh_results = true;
+                open_file_dialog.should_refresh_entries = true;
+            }
         }
 
         return;
@@ -1568,7 +1570,12 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
     maybe_defer_refresh_config_or_theme(path);
 
     buffer_id, created := find_or_create_buffer(path);
-    if created return;
+    if created {
+        finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
+        return;
+    }
+
     if buffer_id < 0 {
         log_error("Couldn't open file because path is too long for Windows: %\n", path);
         return;
@@ -1581,7 +1588,6 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
     // switches branches in version control
     was_deleted := buffer.deleted;
     buffer.deleted = false;
-    open_file_dialog.should_refresh_entries = true;
 
     if !check_contents && !was_deleted && !buffer_file_has_changed_on_disk(buffer) {
         buffer.file_identity = get_file_identity(path);
@@ -1591,9 +1597,9 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
     // Buffer may have changed on disk - reload and compare hashes to be sure
     assert(platform_path_equals(path, buffer.file.full_path));
 
-    reload_from_disk(buffer_id);
-
     finder.need_to_refresh_results = true;
+    open_file_dialog.should_refresh_entries = true;
+    reload_from_disk(buffer_id);
 }
 
 reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages := false) -> success: bool {
@@ -1658,10 +1664,10 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 
 maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
     buffer := get_buffer(buffer_id);
-    if !buffer.has_file return;
+    if !buffer.has_file || buffer.deleted return;
     if !path_is_missing(buffer.file.full_path) return;  // no need to mark as deleted
 
-    if !buffer.deleted then buffer.time_when_deleted = frame_time64;
+    buffer.time_when_deleted = frame_time64;
     buffer.deleted = true;
     finder.need_to_refresh_results = true;
     open_file_dialog.should_refresh_entries = true;
