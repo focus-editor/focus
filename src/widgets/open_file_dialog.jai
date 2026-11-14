@@ -1,6 +1,8 @@
 open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     using open_file_dialog;
 
+    open_file_dialog_maybe_refresh_entries();
+
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {

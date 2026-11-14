@@ -163,11 +163,13 @@ file_watcher_process_changes :: () {
 
         for affected_path : affected_paths {
             if path_is_within_other_path(buffer.file.full_path, affected_path) {
-                array_add(*paths_to_refresh, buffer.file.full_path);
+                array_add(*paths_to_refresh, copy_temporary_string(buffer.file.full_path));
                 break;
             }
         }
     }
+
+    process_moves_within_project(paths_to_refresh);
 
     for paths_to_refresh {
         refresh_buffer_from_disk_by_path(it);
@@ -242,42 +244,126 @@ file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, us
     });
 }
 
-maybe_process_file_or_directory_moves :: (changes_ptr: *[] File_Change) {
-    changes := changes_ptr.*;
-
-    // Find all MOVED events in the batch
-    change1, change2: File_Change;
-    num_moved_events := 0;
-    for changes {
-        if !(it.events & .MOVED) continue;
-        if      num_moved_events == 0  change1 = it;
-        else if num_moved_events == 1  change2 = it;
-        num_moved_events += 1;
+process_moves_within_project :: (paths_to_refresh: [] string) {
+    have_new_project_paths := false;
+    for path : paths_to_refresh {
+        if path_is_within_project(path) && find_buffer_id_by_path(path) < 0 {
+            have_new_project_paths = true;
+            break;
+        }
     }
-    // We only handle the case when there are exactly 2 MOVED events, otherwise we fall back to scanning
-    if num_moved_events != 2 return;
+    if have_new_project_paths {
+        buffers_by_identity: Table(File_Identity, Buffer_Id, given_hash_function = get_file_identity_hash, given_compare_function = same_identity);
+        buffers_by_identity.allocator = temp;
 
-    moved_from, moved_to := change1.full_path, change2.full_path;
-    if file_exists(moved_from) then moved_from, moved_to = moved_to, moved_from;
+        for * buffer : open_buffers {
+            if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
+            if buffer.deleted && frame_time64 - buffer.time_when_deleted > 5.0 continue;  // don't check old deleted buffers in case their filesystem identity is reused by the OS
+            if !is_valid(buffer.file_identity) continue;
+            if !path_is_within_project(buffer.file.full_path) continue;
 
-    // In fact these could be just due to a race (imagine if some program keeps renaming files very quickly),
-    // but there's not much we can do in that case, so we just give up
-    if file_exists(moved_from) {
-        log_error("Potential File Watcher bug: got 2 MOVED events for files that both exist: %, %\n", change1, change2);
-        return;
-    }
-    if !file_exists(moved_to) {
-        log_error("Potential File Watcher bug: got 2 MOVED events, but the target doesn't exist: %, %\n", change1, change2);
-        return;
-    }
+            existing := table_find_pointer(*buffers_by_identity, buffer.file_identity);
+            if existing {
+                existing.* = -1;  // ambiguous identity
+            } else {
+                table_add(*buffers_by_identity, buffer.file_identity, buffer.id);
+            }
+        }
 
-    // At this point we've determined that we have 2 correct MOVED events
-    if is_directory(moved_to) {
-        // Move dir (TODO)
-        print("Moving dir '%' to '%'\n", moved_from, moved_to);
-    } else {
-        // Move file
-        print("Moving file '%' to '%'\n", moved_from, moved_to);
+        move_destinations: Table(Buffer_Id, string);
+        move_destinations.allocator = temp;
+
+        for dest_path : paths_to_refresh {
+            if !path_is_within_project(dest_path) continue;
+            if find_buffer_id_by_path(dest_path) >= 0 continue;  // an existing association takes precedence over identity matching
+
+            identity := get_file_identity(dest_path);
+            if !is_valid(identity) continue;
+
+            found, buffer_id := table_find(*buffers_by_identity, identity);
+            if !found || buffer_id < 0 continue;
+
+            buffer := get_buffer(buffer_id);
+
+            // Do not follow and old object into a backup while its original path exists
+            if !path_is_missing(buffer.file.full_path) continue;
+
+            in_project, project_dir := path_is_within_project(buffer.file.full_path);
+            if !in_project continue;
+
+            // If a workspace root is renamed, we consider that a delete (because it also lives in the config and that is the source of truth for the workspace)
+            root_is_directory, root_success := is_directory(project_dir.path);
+            if !root_success || !root_is_directory continue;
+
+            existing_destination := table_find_pointer(*move_destinations, buffer_id);
+            if existing_destination {
+                if !platform_path_equals(existing_destination.*, dest_path) {
+                    existing_destination.* = "";  // multiple destinations are ambiguous
+                }
+                continue;
+            }
+
+            table_add(*move_destinations, buffer_id, dest_path);
+        }
+
+        old_registry_keys: Table(Buffer_Id, string);
+        old_registry_keys.allocator = temp;
+        for buffer_id, key : buffers_table {
+            destination := table_find_pointer(*move_destinations, buffer_id);
+            if !destination || !destination.* continue;
+
+            table_add(*old_registry_keys, buffer_id, key);
+        }
+
+        moved_any := false;
+
+        for dest_path, buffer_id : move_destinations {
+            if !dest_path continue;
+
+            buffer := get_buffer(buffer_id);
+            old_key := table_find_pointer(*old_registry_keys, buffer_id);
+
+            assert(old_key != null);
+            assert(find_buffer_id_by_path(dest_path) < 0);
+
+            new_file := get_file_info_from_full_path(copy_string(dest_path));
+            new_lang := get_lang_from_path(dest_path);
+
+            removed, removed_id := table_remove(*buffers_table, old_key.*);
+            assert(removed && removed_id == buffer_id);
+
+            free(old_key.*);
+            table_add(*buffers_table, copy_string(dest_path), buffer_id);
+
+            lock(*buffer.content_lock);
+            lock(*buffer.settings_lock);
+
+            old_path := buffer.file.full_path;
+
+            buffer.file = new_file;
+            buffer.lang = new_lang;
+            buffer.settings_revision += 1;
+            buffer.needs_tokenizing = true;
+            buffer.deleted = false;
+
+            free(old_path);
+
+            unlock(*buffer.settings_lock);
+            unlock(*buffer.content_lock);
+
+            maybe_detect_and_set_indentation(buffer);
+            refresh_all_editors_for_buffer(buffer_id);
+
+            moved_any = true;
+        }
+
+        if moved_any {
+            finder.need_to_refresh_results = true;
+            open_file_dialog.should_refresh_entries = true;
+
+            _, active_buffer := get_active_editor_and_buffer();
+            if active_buffer then update_window_title(active_buffer.id);
+        }
     }
 }
 

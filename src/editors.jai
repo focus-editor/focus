@@ -691,7 +691,7 @@ _create_or_update_global_troubleshooting_buffer :: () {
         buffer.lang = .Plain_Text;
         buffer.file.name = "Troubleshooting Info";
         buffer.file.icon = .debug;
-        buffer.has_file = true;
+        buffer.has_file = true;  // TODO: remove this hack because has_file suggests it has a real file
         buffer.settings_revision += 1;
         unlock(*buffer.settings_lock);
     }

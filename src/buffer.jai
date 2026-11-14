@@ -840,6 +840,8 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     success := write_entire_file(file.full_path, buffer_contents);
 
     if success {
+        file_identity = get_file_identity(file.full_path);
+
         modified = false;
         modified_on_disk = false;
         deleted = false;
@@ -1240,6 +1242,7 @@ load_buffer_data_from_file :: (path: string) -> success: bool, Buffer_Data {
     }
 
     buffer_data.file = get_file_info_from_full_path(copy_string(path));
+    buffer_data.file_identity = get_file_identity(path);
     buffer_data.has_file = true;
 
     remember_last_mod_info(*buffer_data);
@@ -1550,6 +1553,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         found_buffer, buffer_id := table_find(*buffers_table, path);
         if found_buffer {
             buffer := get_buffer(buffer_id);
+            if !buffer.deleted then buffer.time_when_deleted = frame_time64;
             buffer.deleted = true;
             finder.need_to_refresh_results = true;
             open_file_dialog.should_refresh_entries = true;
@@ -1575,7 +1579,10 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     buffer.deleted = false;
     open_file_dialog.should_refresh_entries = true;
 
-    if !buffer_file_has_changed_on_disk(buffer) return;
+    if !buffer_file_has_changed_on_disk(buffer) {
+        buffer.file_identity = get_file_identity(path);
+        return;
+    }
 
     // Buffer may have changed on disk - reload and compare hashes to be sure
     assert(platform_path_equals(path, buffer.file.full_path));
@@ -1603,6 +1610,9 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
         }
         return false;
     }
+
+    buffer.file_identity = get_file_identity(path);
+
     if is_file_binary(file_contents_str) {
         free(file_contents_str);
         file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
@@ -1639,6 +1649,7 @@ maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
     if !buffer.has_file return;
     if !path_is_missing(buffer.file.full_path) return;  // no need to mark as deleted
 
+    if !buffer.deleted then buffer.time_when_deleted = frame_time64;
     buffer.deleted = true;
     finder.need_to_refresh_results = true;
     open_file_dialog.should_refresh_entries = true;
@@ -1902,6 +1913,8 @@ Buffer_Data :: struct {
     regions:     Array(Buffer_Region);  // for highlighting parts of buffer
 
     file: File_Info;
+    file_identity: File_Identity;
+    time_when_deleted: float64;  // for detecting moves
 
     meow_hash: u64;
     last_edit_time: float64;  // for creating new edit groups

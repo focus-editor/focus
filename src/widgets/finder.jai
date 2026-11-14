@@ -393,13 +393,13 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     for buffer : array_view(buffer_ptrs_snapshot, buffer_start_index, buffer_end_index - buffer_start_index + 1) {
         if task.request_id < finder.request.id  break;  // exit early if a newer request exists
 
-        // Search in buffer
-        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
-        if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
-
         // Make sure the buffer contents doesn't change while we're scanning it
         lock(*buffer.content_lock);
         defer unlock(*buffer.content_lock);
+
+        // Search in buffer
+        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
+        if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;

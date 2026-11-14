@@ -558,12 +558,92 @@ read_a_chunk_of_file_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool
     return false;
 }
 
+get_file_identity :: (path: string) -> File_Identity {
+    #if OS == .WINDOWS {
+        W :: #import "Windows";
+
+        kernel32 :: #system_library "kernel32";
+
+        BY_HANDLE_FILE_INFORMATION :: struct {
+            dwFileAttributes:     u32;
+            ftCreationTime:       W.FILETIME;
+            ftLastAccessTime:     W.FILETIME;
+            ftLastWriteTime:      W.FILETIME;
+            dwVolumeSerialNumber: u32;
+            nFileSizeHigh:        u32;
+            nFileSizeLow:         u32;
+            nNumberOfLinks:       u32;
+            nFileIndexHigh:       u32;
+            nFileIndexLow:        u32;
+        }
+
+        GetFileInformationByHandle :: (
+            handle: W.HANDLE,
+            info: *BY_HANDLE_FILE_INFORMATION
+        ) -> W.BOOL #foreign kernel32;
+
+        #assert(size_of(BY_HANDLE_FILE_INFORMATION) == 52);
+
+        wide_path, converted := utf8_to_wide(path,, temp);
+        if !converted return .{};
+
+        handle := W.CreateFileW(
+            wide_path,
+            0,
+            W.FILE_SHARE_READ | W.FILE_SHARE_WRITE | W.FILE_SHARE_DELETE,
+            creation = W.OPEN_EXISTING,
+            flags_and_attributes = 0
+        );
+        if handle == W.INVALID_HANDLE_VALUE return .{};
+        defer W.CloseHandle(handle);
+
+        info: BY_HANDLE_FILE_INFORMATION;
+        if GetFileInformationByHandle(handle, *info) == .FALSE return .{};
+        if info.nNumberOfLinks != 1 return .{};
+
+        return .{
+            volume = cast(u64) info.dwVolumeSerialNumber,
+            index = (cast(u64) info.nFileIndexHigh << 32) |
+                     cast(u64) info.nFileIndexLow,
+        };
+    } else {
+        P :: #import "POSIX";
+
+        stats: P.stat_t;
+        if P.stat(temp_c_string(path), *stats) != 0 return .{};
+        if !P.S_ISREG(stats.st_mode) return .{};
+        if stats.st_nlink != 1 return .{};
+
+        return .{
+            volume = cast(u64) stats.st_dev,
+            index = cast(u64) stats.st_ino,
+        };
+    }
+}
+
+is_valid :: inline (identity: File_Identity) -> bool {
+    return identity.index > 0;  // NOTE: this is not an OS-level guarantee but our convention (which should be fine for our purposes)
+}
+
+same_identity :: (a: File_Identity, b: File_Identity) -> bool {
+    return a.volume == b.volume && a.index == b.index;
+}
+
+get_file_identity_hash :: (identity: File_Identity) -> u32 {
+    return Hash.get_hash(identity.volume) ^ Hash.get_hash(identity.index);
+}
+
 File_Info :: struct {
     full_path: string;
     name: string;
     path: string;
     icon: Icon;
     project_dir_id: s8 = 0;  // to be used for sorting
+}
+
+File_Identity :: struct {
+    volume: u64;
+    index: u64;  // for our purposes we treat index = 0 as invalid
 }
 
 init_file_tables :: () {
