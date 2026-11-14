@@ -157,7 +157,7 @@ file_watcher_process_changes :: () {
     for dirs_to_scan {
         array_add(*affected_paths, it);
 
-        print("Scanning dir: %\n", it);
+        log("Scanning dir: %\n", it);
         visit_files(it, recursive = true, *files_to_refresh, visitor_func, visit_directories = true);
     }
 
@@ -170,6 +170,22 @@ file_watcher_process_changes :: () {
             if path_is_within_other_path(buffer.file.full_path, affected_path) {
                 array_add(*files_to_refresh, .{ path = copy_temporary_string(buffer.file.full_path), check_contents = false });
                 break;
+            }
+        }
+    }
+
+    // Deduplicate file refreshes
+    {
+        path_to_index: Table(string, int);
+        path_to_index.allocator = temp;
+
+        for files_to_refresh {
+            found, index := table_find(*path_to_index, it.path);
+            if found {
+                files_to_refresh[index].check_contents |= it.check_contents;
+                remove it;
+            } else {
+                table_add(*path_to_index, it.path, it_index);
             }
         }
     }
@@ -258,120 +274,114 @@ process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
             break;
         }
     }
-    if have_new_project_paths {
-        buffers_by_identity: Table(File_Identity, Buffer_Id, given_hash_function = get_file_identity_hash, given_compare_function = same_identity);
-        buffers_by_identity.allocator = temp;
+    if !have_new_project_paths return;
 
-        for * buffer : open_buffers {
-            if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
-            if buffer.deleted && frame_time64 - buffer.time_when_deleted > 5.0 continue;  // don't check old deleted buffers in case their filesystem identity is reused by the OS
-            if !is_valid(buffer.file_identity) continue;
-            if !path_is_within_project(buffer.file.full_path) continue;
+    buffers_by_identity: Table(File_Identity, Buffer_Id, given_hash_function = get_file_identity_hash, given_compare_function = same_identity);
+    buffers_by_identity.allocator = temp;
 
-            existing := table_find_pointer(*buffers_by_identity, buffer.file_identity);
-            if existing {
-                existing.* = -1;  // ambiguous identity
-            } else {
-                table_add(*buffers_by_identity, buffer.file_identity, buffer.id);
+    for * buffer : open_buffers {
+        if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
+        if buffer.deleted && frame_time64 - buffer.time_when_deleted > 5.0 continue;  // don't check old deleted buffers in case their filesystem identity is reused by the OS
+        if !is_valid(buffer.file_identity) continue;
+        if !path_is_within_project(buffer.file.full_path) continue;
+
+        existing := table_find_pointer(*buffers_by_identity, buffer.file_identity);
+        if existing {
+            existing.* = -1;  // ambiguous identity
+        } else {
+            table_add(*buffers_by_identity, buffer.file_identity, buffer.id);
+        }
+    }
+
+    move_destinations: Table(Buffer_Id, string);
+    move_destinations.allocator = temp;
+
+    for files_to_refresh {
+        dest_path := it.path;
+
+        if !path_is_within_project(dest_path) continue;
+        if find_buffer_id_by_path(dest_path) >= 0 continue;  // an existing association takes precedence over identity matching
+
+        identity := get_file_identity(dest_path);
+        if !is_valid(identity) continue;
+
+        found, buffer_id := table_find(*buffers_by_identity, identity);
+        if !found || buffer_id < 0 continue;
+
+        buffer := get_buffer(buffer_id);
+
+        // Do not follow and old object into a backup while its original path exists
+        if !path_is_missing(buffer.file.full_path) continue;
+
+        in_project, project_dir := path_is_within_project(buffer.file.full_path);
+        if !in_project continue;
+
+        // If a workspace root is renamed, we consider that a delete (because it also lives in the config and that is the source of truth for the workspace)
+        root_is_directory, root_success := is_directory(project_dir.path);
+        if !root_success || !root_is_directory continue;
+
+        existing_destination := table_find_pointer(*move_destinations, buffer_id);
+        if existing_destination {
+            if !platform_path_equals(existing_destination.*, dest_path) {
+                existing_destination.* = "";  // multiple destinations are ambiguous
             }
+            continue;
         }
 
-        move_destinations: Table(Buffer_Id, string);
-        move_destinations.allocator = temp;
+        table_add(*move_destinations, buffer_id, dest_path);
+    }
 
-        for files_to_refresh {
-            dest_path := it.path;
+    if move_destinations.count == 0 return;
 
-            if !path_is_within_project(dest_path) continue;
-            if find_buffer_id_by_path(dest_path) >= 0 continue;  // an existing association takes precedence over identity matching
+    for buffer_id, key : buffers_table {
+        destination := table_find_pointer(*move_destinations, buffer_id);
+        if !destination || !destination.* continue;
 
-            identity := get_file_identity(dest_path);
-            if !is_valid(identity) continue;
+        remove buffer_id;
+        free(key);
+    }
 
-            found, buffer_id := table_find(*buffers_by_identity, identity);
-            if !found || buffer_id < 0 continue;
+    moved_any := false;
 
-            buffer := get_buffer(buffer_id);
+    for dest_path, buffer_id : move_destinations {
+        if !dest_path continue;
 
-            // Do not follow and old object into a backup while its original path exists
-            if !path_is_missing(buffer.file.full_path) continue;
+        buffer := get_buffer(buffer_id);
+        assert(find_buffer_id_by_path(dest_path) < 0);
 
-            in_project, project_dir := path_is_within_project(buffer.file.full_path);
-            if !in_project continue;
+        new_file := get_file_info_from_full_path(copy_string(dest_path));
+        new_lang := get_lang_from_path(dest_path);
 
-            // If a workspace root is renamed, we consider that a delete (because it also lives in the config and that is the source of truth for the workspace)
-            root_is_directory, root_success := is_directory(project_dir.path);
-            if !root_success || !root_is_directory continue;
+        table_add(*buffers_table, copy_string(dest_path), buffer_id);
 
-            existing_destination := table_find_pointer(*move_destinations, buffer_id);
-            if existing_destination {
-                if !platform_path_equals(existing_destination.*, dest_path) {
-                    existing_destination.* = "";  // multiple destinations are ambiguous
-                }
-                continue;
-            }
+        lock(*buffer.content_lock);
+        lock(*buffer.settings_lock);
 
-            table_add(*move_destinations, buffer_id, dest_path);
-        }
+        old_path := buffer.file.full_path;
 
-        old_registry_keys: Table(Buffer_Id, string);
-        old_registry_keys.allocator = temp;
-        for buffer_id, key : buffers_table {
-            destination := table_find_pointer(*move_destinations, buffer_id);
-            if !destination || !destination.* continue;
+        buffer.file = new_file;
+        buffer.lang = new_lang;
+        buffer.settings_revision += 1;
+        buffer.needs_tokenizing = true;
+        buffer.deleted = false;
 
-            table_add(*old_registry_keys, buffer_id, key);
-        }
+        free(old_path);
 
-        moved_any := false;
+        unlock(*buffer.settings_lock);
+        unlock(*buffer.content_lock);
 
-        for dest_path, buffer_id : move_destinations {
-            if !dest_path continue;
+        maybe_detect_and_set_indentation(buffer);
+        refresh_all_editors_for_buffer(buffer_id);
 
-            buffer := get_buffer(buffer_id);
-            old_key := table_find_pointer(*old_registry_keys, buffer_id);
+        moved_any = true;
+    }
 
-            assert(old_key != null);
-            assert(find_buffer_id_by_path(dest_path) < 0);
+    if moved_any {
+        finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
 
-            new_file := get_file_info_from_full_path(copy_string(dest_path));
-            new_lang := get_lang_from_path(dest_path);
-
-            removed, removed_id := table_remove(*buffers_table, old_key.*);
-            assert(removed && removed_id == buffer_id);
-
-            free(old_key.*);
-            table_add(*buffers_table, copy_string(dest_path), buffer_id);
-
-            lock(*buffer.content_lock);
-            lock(*buffer.settings_lock);
-
-            old_path := buffer.file.full_path;
-
-            buffer.file = new_file;
-            buffer.lang = new_lang;
-            buffer.settings_revision += 1;
-            buffer.needs_tokenizing = true;
-            buffer.deleted = false;
-
-            free(old_path);
-
-            unlock(*buffer.settings_lock);
-            unlock(*buffer.content_lock);
-
-            maybe_detect_and_set_indentation(buffer);
-            refresh_all_editors_for_buffer(buffer_id);
-
-            moved_any = true;
-        }
-
-        if moved_any {
-            finder.need_to_refresh_results = true;
-            open_file_dialog.should_refresh_entries = true;
-
-            _, active_buffer := get_active_editor_and_buffer();
-            if active_buffer then update_window_title(active_buffer.id);
-        }
+        _, active_buffer := get_active_editor_and_buffer();
+        if active_buffer then update_window_title(active_buffer.id);
     }
 }
 
@@ -392,4 +402,3 @@ watchers : struct {
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch
 
-file_watch_thread_group:    Thread_Group;
