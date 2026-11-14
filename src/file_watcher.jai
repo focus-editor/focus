@@ -75,11 +75,11 @@ file_watcher_process_changes :: () {
 
     if !changes return;
 
-    paths_to_refresh: [..] string;
-    affected_paths:  [..] string;
+    files_to_refresh: [..] File_Refresh;
+    affected_paths:   [..] string;
     dirs_to_scan:     [..] string;
 
-    paths_to_refresh.allocator = temp;
+    files_to_refresh.allocator = temp;
     affected_paths.allocator  = temp;
     dirs_to_scan.allocator     = temp;
 
@@ -102,7 +102,12 @@ file_watcher_process_changes :: () {
 
         if !path_is_within_project(path) {
             for watched_path : watch_files {
-                if path_is_within_other_path(watched_path, path) then array_add(*paths_to_refresh, watched_path);
+                if path_is_within_other_path(watched_path, path) {
+                    array_add(*files_to_refresh, .{
+                        path = watched_path,
+                        check_contents = platform_path_equals(watched_path, path),  // force refresh on direct events
+                    });
+                }
             }
             continue;
         }
@@ -116,13 +121,13 @@ file_watcher_process_changes :: () {
 
         // Known buffers still need checking even if their files disappear
         if find_buffer_id_by_path(path) >= 0 {
-            array_add(*paths_to_refresh, path);
+            array_add(*files_to_refresh, .{ path = path, check_contents = true });
             continue;
         }
 
         if success {
             if !should_ignore_file(path) || is_our_config_file(path) {
-                array_add(*paths_to_refresh, path);
+                array_add(*files_to_refresh, .{ path = path, check_contents = true });
             }
             continue;
         }
@@ -134,7 +139,7 @@ file_watcher_process_changes :: () {
     }
 
     // Scan the scan queue
-    visitor_func :: (file: *File_Visit_Info, paths_to_refresh: *[..] string) {
+    visitor_func :: (file: *File_Visit_Info, files_to_refresh: *[..] File_Refresh) {
         path := file.full_name;
 
         if file.is_directory {
@@ -146,14 +151,14 @@ file_watcher_process_changes :: () {
         if find_buffer_id_by_path(path) >= 0 return;  // let the scanner discover only new files
         if should_ignore_file(path) && !is_our_config_file(path) return;
 
-        array_add(paths_to_refresh, copy_temporary_string(path));
+        array_add(files_to_refresh, .{ path = copy_temporary_string(path), check_contents = false });
     }
 
     for dirs_to_scan {
         array_add(*affected_paths, it);
 
         print("Scanning dir: %\n", it);
-        visit_files(it, recursive = true, *paths_to_refresh, visitor_func, visit_directories = true);
+        visit_files(it, recursive = true, *files_to_refresh, visitor_func, visit_directories = true);
     }
 
     // We have to check all open buffers because if e.g. a directory is deleted, we won't get a notification
@@ -163,16 +168,16 @@ file_watcher_process_changes :: () {
 
         for affected_path : affected_paths {
             if path_is_within_other_path(buffer.file.full_path, affected_path) {
-                array_add(*paths_to_refresh, copy_temporary_string(buffer.file.full_path));
+                array_add(*files_to_refresh, .{ path = copy_temporary_string(buffer.file.full_path), check_contents = false });
                 break;
             }
         }
     }
 
-    process_moves_within_project(paths_to_refresh);
+    process_moves_within_project(files_to_refresh);
 
-    for paths_to_refresh {
-        refresh_buffer_from_disk_by_path(it);
+    for files_to_refresh {
+        refresh_buffer_from_disk_by_path(it.path, check_contents = it.check_contents);
     }
 }
 
@@ -244,9 +249,10 @@ file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, us
     });
 }
 
-process_moves_within_project :: (paths_to_refresh: [] string) {
+process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
     have_new_project_paths := false;
-    for path : paths_to_refresh {
+    for files_to_refresh {
+        path := it.path;
         if path_is_within_project(path) && find_buffer_id_by_path(path) < 0 {
             have_new_project_paths = true;
             break;
@@ -273,7 +279,9 @@ process_moves_within_project :: (paths_to_refresh: [] string) {
         move_destinations: Table(Buffer_Id, string);
         move_destinations.allocator = temp;
 
-        for dest_path : paths_to_refresh {
+        for files_to_refresh {
+            dest_path := it.path;
+
             if !path_is_within_project(dest_path) continue;
             if find_buffer_id_by_path(dest_path) >= 0 continue;  // an existing association takes precedence over identity matching
 
@@ -367,10 +375,9 @@ process_moves_within_project :: (paths_to_refresh: [] string) {
     }
 }
 
-file_watch_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    // TODO
-
-    return .CONTINUE;
+File_Refresh :: struct {
+    path: string;
+    check_contents: bool;
 }
 
 watchers : struct {

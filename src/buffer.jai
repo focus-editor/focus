@@ -796,7 +796,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
             return;
         }
 
-        refresh_buffer_from_disk_by_path(file_path);
+        refresh_buffer_from_disk_by_path(file_path, true);
         new_id, created := find_or_create_buffer(file_path);
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
         if new_id < 0 return;  // logged elsewhere
@@ -1117,9 +1117,11 @@ remember_last_mod_info :: (using buffer: *Buffer_Data) {
 
     modtime_apollo, size, success := file_modtime_and_size(file.full_path);
     if success {
-        // We don't care too much about precision here. We only care about last_modtime being different from the previous one if it changes
-        mod_info.last_modtime = cast,trunc(s32) to_milliseconds(modtime_apollo);
-        mod_info.last_size    = cast(s32) size;
+        last_modtime, conversion_success := to_nanoseconds(modtime_apollo);
+        if conversion_success {
+            mod_info.last_modtime = last_modtime;
+        }
+        mod_info.last_size = size;
     } else {
         log_error("Couldn't get modtime and size of file %\n", file.full_path);
     }
@@ -1132,8 +1134,9 @@ buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
         log_error("Couldn't get modtime and size of %\n", file.full_path);
         return true;  // consider changed
     }
-    modtime := cast,trunc(s32) to_milliseconds(modtime_apollo);
-    return modtime != mod_info.last_modtime || size != mod_info.last_size;
+    modtime, conversion_success := to_nanoseconds(modtime_apollo);
+    if !conversion_success return true;
+    return  modtime != mod_info.last_modtime || size != mod_info.last_size;
 }
 
 is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
@@ -1542,7 +1545,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     }
 }
 
-refresh_buffer_from_disk_by_path :: (path: string) {
+refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
     is_dir, is_dir_success := is_directory(path);
     if !is_dir_success && !path_is_missing(path) return;
 
@@ -1576,10 +1579,11 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     // If we got to this point, the file definitely exists. Mark it as not deleted.
     // This will "undelete" previously deleted files, which is helpful when e.g. a user
     // switches branches in version control
+    was_deleted := buffer.deleted;
     buffer.deleted = false;
     open_file_dialog.should_refresh_entries = true;
 
-    if !buffer_file_has_changed_on_disk(buffer) {
+    if !check_contents && !was_deleted && !buffer_file_has_changed_on_disk(buffer) {
         buffer.file_identity = get_file_identity(path);
         return;
     }
@@ -1613,6 +1617,13 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 
     buffer.file_identity = get_file_identity(path);
 
+    // If we've successfully reloaded from disk then it's not deleted
+    if buffer.deleted {
+        buffer.deleted = false;
+        finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
+    }
+
     if is_file_binary(file_contents_str) {
         free(file_contents_str);
         file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
@@ -1622,11 +1633,13 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 
     bytes_removed := remove_crlf_in_place(*file_contents_str);
     file_hash := calculate_hash(cast([] u8) file_contents_str);
+
+    remember_last_mod_info(buffer);
+
     if buffer.meow_hash == file_hash && !force return true;
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
-    buffer.deleted = false;
 
     if buffer.modified && !force {
         // Mark conflict
@@ -1634,7 +1647,6 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
         buffer.modified_on_disk = true;
     } else {
         buffer.modified_on_disk = false;
-        remember_last_mod_info(buffer);
         cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
         replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
         restore_cursor_positions(buffer_id, cursor_positions);
@@ -1978,8 +1990,8 @@ Buffer :: struct {
     Extra_Type :: enum { focus_config; }
 
     Mod_Info :: struct {
-        last_modtime: s32;  // Apollo_Time converted to milliseconds
-        last_size:    s32;
+        last_modtime: s64;
+        last_size:    s64;
     }
 
     Edit_Group :: struct {
