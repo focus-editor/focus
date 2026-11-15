@@ -194,7 +194,7 @@ parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
                 eat_white_space(tokenizer);
                 eat_until_any(tokenizer, " []</!?\t\r\n");
                 eat_white_space(tokenizer);
-                if t.* == #char "[" {
+                if at_char(tokenizer, #char "[") {
                     t += 1;
                 } else {
                     t = t_original;
