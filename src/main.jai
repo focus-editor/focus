@@ -503,17 +503,8 @@ load_configs_and_start_session :: (args: [] string) {
         }
     }
 
-    // Maybe load project from a .focus-config file in the current directory
-    if !project_config_path {
-        potential_config_path := find_focus_config_file_in_directory(get_working_directory());
-        if potential_config_path {
-            project_config_path = potential_config_path;
-            project_config_source = "it's a .focus-config file in the current directory";
-        }
-    }
-
     // Start a session
-    if !project_config_path && !dirs_from_args && !files_from_args {
+    if args.count == 1 {  // no arguments passed to the editor
         session = maybe_load_previous_session();
 
         // Maybe load most recent project

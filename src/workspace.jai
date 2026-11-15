@@ -112,6 +112,14 @@ add_directory_to_workspace :: (path: string, index := -1) {
 }
 
 start_workspace_scan :: () {
+    if !unique_project_dirs && !project_files {
+        complete_workspace_scan();
+        start_file_watcher();
+        init_open_file_dialog();
+        init_finder();
+        return;
+    }
+
     file_list_ready = false;
     workspace_scan_complete = false;
 
