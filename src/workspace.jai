@@ -158,6 +158,11 @@ workspace_update :: () {
                 shutdown(*file_list_thread_group);
                 file_list_thread_group = Thread_Group.{};
 
+                for files_to_scan {
+                    // Don't schedule scans for files we already have to avoid wasteful work
+                    if find_buffer_id_by_path(it) >= 0 remove it;
+                }
+
                 // Start the actual scanning of the workspace
                 num_jobs_to_complete = 0;
                 num_jobs_completed   = 0;
