@@ -3,7 +3,7 @@ init_finder :: () {
     num_threads := max(num_cpus - 1, 1);
 
     thread_group = Thread_Group.{};
-    init(*thread_group, num_threads, group_proc = search_threadproc);
+    init(*thread_group, num_threads, group_proc = search_threadproc, temporary_storage_size = 1024 * 1024);
     thread_group.name = "Finder";
     thread_group.logging = false;
     for * thread_group.worker_info { it.thread.starting_context.logger_data = context.logger_data; }

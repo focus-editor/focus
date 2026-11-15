@@ -151,7 +151,7 @@ file_watcher_process_changes :: () {
         if find_buffer_id_by_path(path) >= 0 return;  // let the scanner discover only new files
         if should_ignore_file(path) && !is_our_config_file(path) return;
 
-        array_add(files_to_refresh, .{ path = copy_temporary_string(path), check_contents = false });
+        array_add(files_to_refresh, .{ path = path, check_contents = false });
     }
 
     for dirs_to_scan {

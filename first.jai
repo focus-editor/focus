@@ -22,7 +22,7 @@ build :: () {
 
     options := get_build_options();
     options.minimum_os_version = .{10, 13};
-    options.temporary_storage_size = 1048576;  // 1 MB per thread
+    options.temporary_storage_size = 4 * 1024 * 1024;  // for the main thread
     args := options.compile_time_command_line;
 
     import_path: [..] string;
