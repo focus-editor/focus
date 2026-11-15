@@ -669,7 +669,7 @@ _maybe_create_global_config_buffer :: () {
     global_config_buffer_id = create_an_empty_buffer();
     buffer := get_buffer(global_config_buffer_id);
     replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
-    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer.hash = calculate_hash(to_view(buffer.bytes));
     buffer.readonly = true;
     buffer.internal = true;
     lock(*buffer.settings_lock);
@@ -697,7 +697,7 @@ _create_or_update_global_troubleshooting_buffer :: () {
     }
     buffer := get_buffer(global_troubleshooting_buffer_id);
     replace_range_raw(buffer, 0, xx buffer.bytes.count, platform_get_troubleshooting_info());
-    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer.hash = calculate_hash(to_view(buffer.bytes));
     rescan_for_lines(buffer);
 }
 

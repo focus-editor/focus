@@ -146,7 +146,7 @@ open_editors: Bucket_Array(Editor, items_per_bucket = 128);
 
 // A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, Buffer_Id,
-                     given_hash_function = x => Hash.get_hash(to_lower_copy(x,, temp)),
+                     given_hash_function = get_platform_path_hash,
                      given_compare_function = platform_path_equals);
 
 #scope_file

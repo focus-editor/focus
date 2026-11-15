@@ -20,7 +20,7 @@ refresh_open_buffers :: () {
         session_notify_modified_buffer(editor.buffer_id);
 
         // Maybe mark buffer as not modified if we've made it match the contents on disk
-        if !buffer.readonly then buffer.modified = buffer.meow_hash != calculate_hash(to_view(buffer.bytes));
+        if !buffer.readonly then buffer.modified = buffer.hash != calculate_hash(to_view(buffer.bytes));
         if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
 
         if !buffer.internal && !buffer.binary {
@@ -846,7 +846,7 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
         modified_on_disk = false;
         deleted = false;
 
-        meow_hash = calculate_hash(to_view(bytes));
+        hash = calculate_hash(to_view(bytes));
 
         error_when_saving = false;
     } else {
@@ -1253,7 +1253,7 @@ load_buffer_data_from_file :: (path: string) -> success: bool, Buffer_Data {
     buffer_data.bytes = from_view(to_bytes(file_data));
     bytes_removed := remove_crlf_in_place(*buffer_data.bytes);
     buffer_data.crlf = bytes_removed > 0;
-    buffer_data.meow_hash = calculate_hash(to_view(buffer_data.bytes));
+    buffer_data.hash = calculate_hash(to_view(buffer_data.bytes));
 
     rescan_for_lines_no_lock(*buffer_data);
     retokenize_no_lock(*buffer_data);
@@ -1642,10 +1642,10 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 
     remember_last_mod_info(buffer);
 
-    if buffer.meow_hash == file_hash && !force return true;
+    if buffer.hash == file_hash && !force return true;
 
     buffer.crlf = bytes_removed > 0;
-    buffer.meow_hash = file_hash;
+    buffer.hash = file_hash;
 
     if buffer.modified && !force {
         // Mark conflict
@@ -1934,7 +1934,7 @@ Buffer_Data :: struct {
     file_identity: File_Identity;
     time_when_deleted: float64;  // for detecting moves
 
-    meow_hash: u64;
+    hash: u64;
     last_edit_time: float64;  // for creating new edit groups
 
     mod_info: Buffer.Mod_Info;  // for detecting whether a file has changed

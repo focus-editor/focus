@@ -317,7 +317,7 @@ should_descend_into_dir :: (path: string) -> bool {
     if context.config.workspace.allow return true;
 
     #if OS == .WINDOWS {
-        return !should_ignore_path(to_lower_copy(path),, temp);
+        return !should_ignore_path(to_lower_copy(path,, temp));
     } else {
         return !should_ignore_path(path);
     }

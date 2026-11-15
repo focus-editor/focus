@@ -940,7 +940,7 @@ focus_allocator: Allocator;
 #load "keymap.jai";
 #load "session.jai";
 #load "projects.jai";
-#load "meow_hash.jai";
+#load "hash.jai";
 #load "user_messages.jai";
 #load "deferred_actions.jai";
 #load "history.jai";
