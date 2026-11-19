@@ -759,12 +759,12 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
 
     if !buffer.has_file && !buffer.readonly {
         // We're saving a new buffer into a file (and the path has been chosen already)
-        lock(*buffer.settings_lock);
+        lock(*buffer.metadata_lock);
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(copy_string(file_path));
         buffer.lang = get_lang_from_path(file_path);
         buffer.settings_revision += 1;
-        unlock(*buffer.settings_lock);
+        unlock(*buffer.metadata_lock);
         buffer.needs_tokenizing = true;
 
         found_existing, existing_buffer_id := table_find(*buffers_table, file_path);
@@ -796,7 +796,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
             return;
         }
 
-        refresh_buffer_from_disk_by_path(file_path, true);
+        refresh_buffer_from_disk_by_path(file_path);
         new_id, created := find_or_create_buffer(file_path);
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
         if new_id < 0 return;  // logged elsewhere
@@ -804,6 +804,7 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         reroute_editors_to_new_buffer(buffer.id, new_id);
         update_window_title(get_editor(get_active_editor_id()).buffer_id);
         update_most_recent_buffers(new_id);
+        file_watcher_ignore_pending_results(new_id);
     }
 
     start_watching_file_if_not_already(file_path);
@@ -840,6 +841,8 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     success := write_entire_file(file.full_path, buffer_contents);
 
     if success {
+        file_watcher_ignore_pending_results(buffer.id);
+
         file_identity = get_file_identity(file.full_path);
 
         modified = false;
@@ -853,7 +856,9 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
         error_when_saving = true;
     }
 
+    lock(*metadata_lock);
     remember_last_mod_info(buffer);
+    unlock(*metadata_lock);
 
     _, active_buffer := get_active_editor_and_buffer();
     if active_buffer then update_window_title(active_buffer.id);
@@ -1127,12 +1132,10 @@ remember_last_mod_info :: (using buffer: *Buffer_Data) {
     }
 }
 
-buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
-    assert(has_file);
-    modtime_apollo, size, success := file_modtime_and_size(file.full_path);
+file_has_changed_on_disk :: (path: string, mod_info: Buffer.Mod_Info) -> changed: bool {
+    modtime_apollo, size, success := file_modtime_and_size(path);
     if !success {
-        log_error("Couldn't get modtime and size of %\n", file.full_path);
-        return true;  // consider changed
+        return true;  // consider changed. Maybe the file was deleted
     }
     modtime, conversion_success := to_nanoseconds(modtime_apollo);
     if !conversion_success return true;
@@ -1273,6 +1276,59 @@ publish_prepared_buffer :: (buffer_data: *Buffer_Data) -> Buffer_Id {
     buffer.indentation.size = 0;
 
     return buffer.id;
+}
+
+replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
+    assert(buffer.has_file && buffer.file.full_path);
+    assert(buffer_data.has_file);
+    assert(platform_path_equals(buffer.file.full_path, buffer_data.file.full_path));
+
+    if buffer_data.readonly && !buffer_data.binary {
+        log_error("%\n", to_string(buffer_data.bytes));
+        return;
+    }
+
+    previous_buffer_id := context.current_buffer_id;
+    context.current_buffer_id = buffer.id;
+    defer context.current_buffer_id = previous_buffer_id;
+
+    lock(*buffer.metadata_lock);
+    buffer.mod_info = buffer_data.mod_info;
+    unlock(*buffer.metadata_lock);
+
+    buffer.file_identity = buffer_data.file_identity;
+
+    if buffer.deleted {
+        buffer.deleted = false;
+        finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
+    }
+
+    if buffer_data.binary then buffer.readonly = true;
+
+    if buffer.hash == buffer_data.hash return;
+
+    buffer.hash = buffer_data.hash;
+    buffer.crlf = buffer_data.crlf;
+
+    if buffer.modified {
+        buffer.modified_on_disk = true;
+    } else {
+        buffer.modified_on_disk = false;
+
+        if buffer.dirty then rescan_for_lines(buffer);
+
+        cursor_positions := remember_cursor_positions(buffer.id, in = .all_editors);
+        replace_range(buffer, .{ 0, buffer.bytes.count }, to_string(buffer_data.bytes));
+        restore_cursor_positions(buffer.id, cursor_positions);
+
+        buffer.needs_tokenizing = true;
+    }
+
+    finder.need_to_refresh_results = true;
+    open_file_dialog.should_refresh_entries = true;
+
+    refresh_all_editors_for_buffer(buffer.id);
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: Buffer_Id, created: bool {
@@ -1545,7 +1601,8 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     }
 }
 
-refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
+// TODO: this may no longer be needed, review and simplify
+refresh_buffer_from_disk_by_path :: (path: string) {
     is_dir, is_dir_success := is_directory(path);
     if !is_dir_success && !path_is_missing(path) return;
 
@@ -1553,8 +1610,8 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
         // Either this is a dir, or a deleted dir, or a deleted file.
 
         // Find if there's an existing buffer already and mark it as deleted
-        found_buffer, buffer_id := table_find(*buffers_table, path);
-        if found_buffer {
+        buffer_id := find_buffer_id_by_path(path);
+        if buffer_id >= 0 {
             buffer := get_buffer(buffer_id);
             if !buffer.deleted {
                 buffer.time_when_deleted = frame_time64;
@@ -1589,17 +1646,15 @@ refresh_buffer_from_disk_by_path :: (path: string, check_contents: bool) {
     was_deleted := buffer.deleted;
     buffer.deleted = false;
 
-    if !check_contents && !was_deleted && !buffer_file_has_changed_on_disk(buffer) {
+    if !was_deleted && !file_has_changed_on_disk(buffer.file.full_path, buffer.mod_info) {
         buffer.file_identity = get_file_identity(path);
-        return;
+    } else {
+        assert(platform_path_equals(path, buffer.file.full_path));
+
+        finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
+        reload_from_disk(buffer_id);
     }
-
-    // Buffer may have changed on disk - reload and compare hashes to be sure
-    assert(platform_path_equals(path, buffer.file.full_path));
-
-    finder.need_to_refresh_results = true;
-    open_file_dialog.should_refresh_entries = true;
-    reload_from_disk(buffer_id);
 }
 
 reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages := false) -> success: bool {
@@ -1621,6 +1676,8 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
         return false;
     }
 
+    file_watcher_ignore_pending_results(buffer.id);
+
     buffer.file_identity = get_file_identity(path);
 
     // If we've successfully reloaded from disk then it's not deleted
@@ -1640,7 +1697,9 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
     bytes_removed := remove_crlf_in_place(*file_contents_str);
     file_hash := calculate_hash(cast([] u8) file_contents_str);
 
+    lock(*buffer.metadata_lock);
     remember_last_mod_info(buffer);
+    unlock(*buffer.metadata_lock);
 
     if buffer.hash == file_hash && !force return true;
 
@@ -1685,7 +1744,7 @@ free_buffer :: (using buffer: *Buffer) {
     free(cursors);
 
     destroy(*content_lock);
-    destroy(*settings_lock);
+    destroy(*metadata_lock);
 
     extra = null;
 }
@@ -1980,8 +2039,8 @@ Buffer :: struct {
     cursors: Array(Cursor);  // cursor state before any current edits were made
 
     // Protects settings_revision, lang, has_file, and the file fields used to resolve settings.
-    // Do not acquire content_lock while holding settings_lock.
-    settings_lock: Mutex;
+    // Do not acquire content_lock while holding metadata_lock.
+    metadata_lock: Mutex;
     settings_revision: u64;
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)

@@ -29,7 +29,7 @@ register_new_buffer :: () -> Buffer_Id, buffer: *Buffer {
     table_set(*buffer_locators, buffer_id, locator);
 
     init(*buffer.content_lock);
-    init(*buffer.settings_lock);
+    init(*buffer.metadata_lock);
     buffer.id = buffer_id;
 
     buffer_registry_revision += 1;

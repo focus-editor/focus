@@ -2366,7 +2366,7 @@ File_Info_Draw_Flags :: enum_flags {
     config_warning;
     folder_separator;
     folder;
-    default :: file_name | modified | deleted_on_disk | modified_on_disk | read_only | folder | folder_separator;
+    default :: file_name | modified | deleted_on_disk | modified_on_disk | error_when_saving | read_only | folder | folder_separator;
 }
 
 File_Info_Font_Variant :: enum {

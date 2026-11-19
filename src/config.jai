@@ -1144,8 +1144,8 @@ Buffer_Settings_Cache :: struct {
 // Do not store them anywhere.
 get_settings :: (buffer: Buffer) -> *Settings {
     original := get_buffer(buffer.id);  // use the original buffer's mutex and metadata, not the copy
-    lock(*original.settings_lock);
-    defer unlock(*original.settings_lock);
+    lock(*original.metadata_lock);
+    defer unlock(*original.metadata_lock);
 
     found, entry := table_find(*context.buffer_settings_cache.table, buffer.id);
     if !found || entry.revision != original.settings_revision {
@@ -1174,13 +1174,13 @@ buffer_settings_cache_destroy :: () {
 }
 
 set_buffer_language :: (buffer: *Buffer, lang: Buffer.Lang) {
-    lock(*buffer.settings_lock);
+    lock(*buffer.metadata_lock);
     if buffer.lang != lang {
         buffer.lang = lang;
         buffer.needs_tokenizing = true;
         buffer.settings_revision += 1;
     }
-    unlock(*buffer.settings_lock);
+    unlock(*buffer.metadata_lock);
 }
 
 resolve_settings :: (config: Config, buffer: *Buffer) -> Settings, has_file_specific_settings: bool {

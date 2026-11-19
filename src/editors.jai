@@ -672,12 +672,12 @@ _maybe_create_global_config_buffer :: () {
     buffer.hash = calculate_hash(to_view(buffer.bytes));
     buffer.readonly = true;
     buffer.internal = true;
-    lock(*buffer.settings_lock);
+    lock(*buffer.metadata_lock);
     buffer.lang = .Focus_Config;
     buffer.file.name = "Default Focus Config";
     buffer.file.icon = .gear;
     buffer.settings_revision += 1;
-    unlock(*buffer.settings_lock);
+    unlock(*buffer.metadata_lock);
     rescan_for_lines(buffer);
 }
 
@@ -687,13 +687,13 @@ _create_or_update_global_troubleshooting_buffer :: () {
         buffer := get_buffer(global_troubleshooting_buffer_id);
         buffer.readonly = true;
         buffer.internal = true;
-        lock(*buffer.settings_lock);
+        lock(*buffer.metadata_lock);
         buffer.lang = .Plain_Text;
         buffer.file.name = "Troubleshooting Info";
         buffer.file.icon = .debug;
         buffer.has_file = true;  // TODO: remove this hack because has_file suggests it has a real file
         buffer.settings_revision += 1;
-        unlock(*buffer.settings_lock);
+        unlock(*buffer.metadata_lock);
     }
     buffer := get_buffer(global_troubleshooting_buffer_id);
     replace_range_raw(buffer, 0, xx buffer.bytes.count, platform_get_troubleshooting_info());

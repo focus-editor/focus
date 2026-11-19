@@ -16,13 +16,28 @@ init_file_watcher :: () {
         return;
     }
 
+    watchers.thread_group = Thread_Group.{};
+    init(*watchers.thread_group, num_threads = 1, group_proc = file_watcher_threadproc);
+    start(*watchers.thread_group);
+
     watchers.initialized = true;
 }
 
 deinit_file_watcher :: () {
     if !watchers.initialized return;
+
+    shutdown(*watchers.thread_group);
+
+    while watchers.outstanding_tasks.count {
+        task := watchers.outstanding_tasks[watchers.outstanding_tasks.count - 1];
+        free_file_watcher_task(task);
+    }
+
     deinit(watchers.project_watcher);
     deinit(watchers.external_watcher);
+
+    for watchers.changes  free(it.full_path);
+    array_reset_keeping_memory(*watchers.changes);
     for watch_files  free(it);
     array_reset_keeping_memory(*watch_files);
     watchers.initialized = false;
@@ -63,140 +78,63 @@ start_file_watcher :: () {
 }
 
 file_watcher_process_changes :: () {
-    auto_release_temp();
-
     using watchers;
 
-    // Check for any changes to the files we care about
-    array_reset_keeping_memory(*changes);
+    // Process async results
+    completed_tasks := get_completed_work(*thread_group);
+    for completed_tasks {
+        task := cast(*File_Watcher_Task) it;
 
+        for * result : task.results {
+            buffer_id := find_buffer_id_by_path(result.path);
+            if buffer_id >= 0 {
+                if array_find(task.ignored_buffer_ids, buffer_id) continue;
+
+                buffer := get_buffer(buffer_id);
+                if result.file_exists {
+                    if result.loaded_data.has_file {
+                        replace_buffer_data(buffer, result.loaded_data);
+                    } else if buffer.deleted {
+                        reload_from_disk(buffer.id);
+                    } else {
+                        continue;
+                    }
+                    maybe_defer_refresh_config_or_theme(result.path);
+                    finder.need_to_refresh_results = true;
+                    open_file_dialog.should_refresh_entries = true;
+                } else {
+                    if !buffer.deleted {
+                        buffer.time_when_deleted = frame_time64;
+                        buffer.deleted = true;
+                        finder.need_to_refresh_results = true;
+                        open_file_dialog.should_refresh_entries = true;
+                    }
+                }
+            } else {
+                if result.file_exists && result.loaded_data.has_file {
+                    publish_prepared_buffer(*result.loaded_data);
+                    maybe_defer_refresh_config_or_theme(result.path);
+                    finder.need_to_refresh_results = true;
+                    open_file_dialog.should_refresh_entries = true;
+                }
+            }
+        }
+
+        free_file_watcher_task(task);
+    }
+
+    // Check for new changes
     process_changes(*project_watcher);
     process_changes(*external_watcher);
 
     if !changes return;
 
-    files_to_refresh: [..] File_Refresh;
-    affected_paths:   [..] string;
-    dirs_to_scan:     [..] string;
-
-    files_to_refresh.allocator = temp;
-    affected_paths.allocator  = temp;
-    dirs_to_scan.allocator     = temp;
-
     for changes  color_preview_invalidate_theme(it.full_path);
 
-    update_scan_queue :: (dirs_to_scan: *[..] string, dir: string) {
-        for dirs_to_scan.* {
-            if path_is_within_other_path(dir, it) return;  // dir is already covered
-        }
-        for dirs_to_scan.* {
-            if path_is_within_other_path(it, dir) remove it;  // we're adding a parent of an existing dir
-        }
-        array_add(dirs_to_scan, dir);
-    }
+    process_file_change_batch(changes);
 
-    for change : changes {
-        path := change.full_path;
-
-        if change.events & (.REMOVED | .MOVED) then array_add(*affected_paths, path);
-
-        if !path_is_within_project(path) {
-            for watched_path : watch_files {
-                if path_is_within_other_path(watched_path, path) {
-                    array_add(*files_to_refresh, .{
-                        path = watched_path,
-                        check_contents = platform_path_equals(watched_path, path),  // force refresh on direct events
-                    });
-                }
-            }
-            continue;
-        }
-
-        is_dir, success := is_directory(path);
-
-        if (change.events & .SCAN_CHILDREN) || (success && is_dir) {
-            update_scan_queue(*dirs_to_scan, path);
-            continue;
-        }
-
-        // Known buffers still need checking even if their files disappear
-        if find_buffer_id_by_path(path) >= 0 {
-            array_add(*files_to_refresh, .{ path = path, check_contents = true });
-            continue;
-        }
-
-        if success {
-            if !should_ignore_file(path) || is_our_config_file(path) {
-                array_add(*files_to_refresh, .{ path = path, check_contents = true });
-            }
-            continue;
-        }
-
-        if change.events & (.ADDED | .REMOVED | .MOVED) {
-            parent_dir := get_parent_dir_path(path);
-            if parent_dir && path_is_within_project(parent_dir) then update_scan_queue(*dirs_to_scan, parent_dir);
-        }
-    }
-
-    // Scan the scan queue
-    visitor_func :: (file: *File_Visit_Info, files_to_refresh: *[..] File_Refresh) {
-        path := file.full_name;
-
-        if file.is_directory {
-            if !should_descend_into_dir(path) then file.descend_into_directory = false;
-            return;
-        }
-        if file.is_symlink return;
-
-        if find_buffer_id_by_path(path) >= 0 return;  // let the scanner discover only new files
-        if should_ignore_file(path) && !is_our_config_file(path) return;
-
-        array_add(files_to_refresh, .{ path = path, check_contents = false });
-    }
-
-    for dirs_to_scan {
-        array_add(*affected_paths, it);
-
-        log("Scanning dir: %\n", it);
-        visit_files(it, recursive = true, *files_to_refresh, visitor_func, visit_directories = true);
-    }
-
-    // We have to check all open buffers because if e.g. a directory is deleted, we won't get a notification
-    // for every file within that directory and must check ourselves
-    if affected_paths {
-        for * buffer : open_buffers {
-            if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
-
-            for affected_path : affected_paths {
-                if path_is_within_other_path(buffer.file.full_path, affected_path) {
-                    array_add(*files_to_refresh, .{ path = copy_temporary_string(buffer.file.full_path), check_contents = false });
-                    break;
-                }
-            }
-        }
-    }
-
-    // Deduplicate file refreshes
-    {
-        path_to_index: Table(string, int);
-        path_to_index.allocator = temp;
-
-        for files_to_refresh {
-            found, index := table_find(*path_to_index, it.path);
-            if found {
-                files_to_refresh[index].check_contents |= it.check_contents;
-                remove it;
-            } else {
-                table_add(*path_to_index, it.path, it_index);
-            }
-        }
-    }
-
-    process_moves_within_project(files_to_refresh);
-
-    for files_to_refresh {
-        refresh_buffer_from_disk_by_path(it.path, check_contents = it.check_contents);
-    }
+    for changes  free(it.full_path);
+    array_reset_keeping_memory(*changes);
 }
 
 start_watching_config_themes :: () {
@@ -257,14 +195,103 @@ file_is_watched :: (file_path: string) -> bool {
     return false;
 }
 
+file_watcher_ignore_pending_results :: (buffer_id: Buffer_Id) {
+    for task : watchers.outstanding_tasks {
+        array_add_if_unique(*task.ignored_buffer_ids, buffer_id);
+    }
+}
+
 #scope_file
 
 file_changed_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
     array_add(*watchers.changes, File_Change.{
-        full_path = copy_temporary_string(change.full_path),
+        full_path = copy_string(change.full_path),
         events = change.events,
         time_of_last_change = change.time_of_last_change,
     });
+}
+
+process_file_change_batch :: (changes: [] File_Change) {
+    task := create_file_watcher_task();
+
+    dirs_to_scan: [..] string;
+    dirs_to_scan.allocator = temp;
+
+    update_scan_queue :: (dirs_to_scan: *[..] string, dir: string) {
+        for dirs_to_scan.* {
+            if path_is_within_other_path(dir, it) return;  // dir is already covered
+        }
+        for dirs_to_scan.* {
+            if path_is_within_other_path(it, dir) remove it;  // we're adding a parent of an existing dir
+        }
+        array_add(dirs_to_scan, dir);
+    }
+
+    for change : changes {
+        path := change.full_path;
+
+        if change.events & (.REMOVED | .MOVED) then add_affected_path(task, path);
+
+        if !path_is_within_project(path) {
+            for watched_path : watch_files {
+                if path_is_within_other_path(watched_path, path) {
+                    add_file_to_refresh(task, watched_path, force = platform_path_equals(watched_path, path));  // force refresh on direct events
+                }
+            }
+            continue;
+        }
+
+        is_dir, success := is_directory(path);
+
+        if (change.events & .SCAN_CHILDREN) || (success && is_dir) {
+            update_scan_queue(*dirs_to_scan, path);
+            continue;
+        }
+
+        // Known buffers still need checking even if their files disappear
+        if find_buffer_id_by_path(path) >= 0 {
+            add_file_to_refresh(task, path, force = true);
+            continue;
+        }
+
+        if success {
+            if !should_ignore_file(path) || is_our_config_file(path) {
+                add_file_to_refresh(task, path, force = true);
+            }
+            continue;
+        }
+
+        if change.events & (.ADDED | .REMOVED | .MOVED) {
+            parent_dir := get_parent_dir_path(path);
+            if parent_dir && path_is_within_project(parent_dir) then update_scan_queue(*dirs_to_scan, parent_dir);
+        }
+    }
+
+    // Scan the scan queue
+    visitor_func :: (file: *File_Visit_Info, task: *File_Watcher_Task) {
+        path := file.full_name;
+
+        if file.is_directory {
+            if !should_descend_into_dir(path) then file.descend_into_directory = false;
+            return;
+        }
+        if file.is_symlink return;
+
+        if find_buffer_id_by_path(path) >= 0 return;  // let the scanner discover only new files
+        if should_ignore_file(path) && !is_our_config_file(path) return;
+
+        add_file_to_refresh(task, path, force = true);
+    }
+
+    for dirs_to_scan {
+        add_affected_path(task, it);  // any directory we need to scan is affected
+
+        log("Scanning dir: %\n", it);
+        visit_files(it, recursive = true, task, visitor_func, visit_directories = true);
+    }
+
+    array_add(*watchers.outstanding_tasks, task);
+    add_work(*watchers.thread_group, task);
 }
 
 process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
@@ -357,7 +384,7 @@ process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
         table_add(*buffers_table, copy_string(dest_path), buffer_id);
 
         lock(*buffer.content_lock);
-        lock(*buffer.settings_lock);
+        lock(*buffer.metadata_lock);
 
         old_path := buffer.file.full_path;
 
@@ -369,7 +396,7 @@ process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
 
         free(old_path);
 
-        unlock(*buffer.settings_lock);
+        unlock(*buffer.metadata_lock);
         unlock(*buffer.content_lock);
 
         maybe_detect_and_set_indentation(buffer);
@@ -387,13 +414,158 @@ process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
     }
 }
 
+file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    task := cast(*File_Watcher_Task) work;
+
+    context_set_config_snapshot(task.config_snapshot);
+    defer buffer_settings_cache_destroy();
+
+    // We have to check all open buffers because if e.g. a directory is deleted, we won't get a notification
+    // for every file within that directory and must check ourselves
+    if task.affected_paths {
+        for buffer : task.buffer_ptrs_snapshot {
+            buffer_path: string;
+            buffer_mod_info: Buffer.Mod_Info;
+            {
+                lock(*buffer.metadata_lock);
+                defer unlock(*buffer.metadata_lock);
+
+                if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
+
+                buffer_path = copy_temporary_string(buffer.file.full_path);
+                buffer_mod_info = buffer.mod_info;
+            }
+
+            for affected_path : task.affected_paths {
+                if path_is_within_other_path(buffer_path, affected_path) {
+                    add_file_to_refresh(task, buffer_path, force = false, mod_info = buffer_mod_info);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Deduplicate file refreshes
+    {
+        path_to_index: Table(string, int);
+        path_to_index.allocator = temp;
+
+        for task.files_to_refresh {
+            found, index := table_find(*path_to_index, it.path);
+            if found {
+                task.files_to_refresh[index].force |= it.force;
+                remove it;
+            } else {
+                table_add(*path_to_index, it.path, it_index);
+            }
+        }
+    }
+
+    // process_moves_within_project(task.files_to_refresh);
+
+    for task.files_to_refresh {
+        if !it.force && !file_has_changed_on_disk(it.path, it.mod_info) {
+            array_add(*task.results, .{ path = it.path, file_exists = true });  // main might reload if the buffer exists but was deleted
+            continue;
+        }
+
+        if path_is_missing(it.path) {
+            array_add(*task.results, .{ path = it.path, file_exists = false });
+            continue;
+        }
+
+        success, buffer_data := load_buffer_data_from_file(it.path);
+        if success {
+            array_add(*task.results, .{ path = it.path, file_exists = true, loaded_data = buffer_data });
+        } else {
+            log_error("Couldn't load buffer data when refreshing '%'", it.path);
+        }
+    }
+
+    reset_temporary_storage();
+
+    return .CONTINUE;
+}
+
+create_file_watcher_task :: () -> *File_Watcher_Task {
+    task := New(File_Watcher_Task);
+
+    task.allocator = allocator_of(*task.memory_pool);
+    task.affected_paths.allocator   = task.allocator;
+    task.files_to_refresh.allocator = task.allocator;
+    task.results.allocator          = task.allocator;
+
+    task.ignored_buffer_ids.allocator = focus_allocator;  // must not use the task memory pool because the main thread appends to it
+
+    task.buffer_ptrs_snapshot = get_immutable_buffer_ptrs_snapshot();
+    begin_buffer_snapshot_use();
+
+    task.config_snapshot = acquire_current_config_snapshot();
+
+    return task;
+}
+
+free_file_watcher_task :: (task: *File_Watcher_Task) {
+    found, index := array_find(watchers.outstanding_tasks, task);
+    assert(found);
+    array_unordered_remove_by_index(*watchers.outstanding_tasks, index);
+
+    end_buffer_snapshot_use();
+    release_config_snapshot(task.config_snapshot);
+
+    for * task.results  free_buffer_data(*it.loaded_data);
+
+    array_free(task.ignored_buffer_ids);
+
+    fini(*task.memory_pool);
+    free(task);
+}
+
+add_affected_path :: inline (task: *File_Watcher_Task, path: string) {
+    array_add(*task.affected_paths, copy_string(path,, task.allocator));
+}
+
+add_file_to_refresh :: inline (task: *File_Watcher_Task, path: string, force: bool, mod_info: Buffer.Mod_Info = .{}) {
+    array_add(*task.files_to_refresh, .{
+        path = copy_string(path,, task.allocator),
+        force = force,
+        mod_info = mod_info,
+    });
+}
+
+
+File_Watcher_Task :: struct {
+    memory_pool: Flat_Pool;
+    allocator: Allocator;
+
+    buffer_ptrs_snapshot: [] *Buffer;
+    config_snapshot: *Config_Snapshot;
+
+    affected_paths: [..] string;
+    files_to_refresh: [..] File_Refresh;
+
+    ignored_buffer_ids: [..] Buffer_Id;  // to handle a data race when a file is saved while the file watcher is working
+
+    results: [..] File_Watcher_Task_Result;
+}
+
 File_Refresh :: struct {
+    force: bool;
     path: string;
-    check_contents: bool;
+    mod_info: Buffer.Mod_Info;
+}
+
+File_Watcher_Task_Result :: struct {
+    path: string;
+    file_exists: bool;
+    loaded_data: Buffer_Data;
 }
 
 watchers : struct {
     initialized := false;
+
+    thread_group: Thread_Group;
+    outstanding_tasks: [..] *File_Watcher_Task;
 
     project_watcher:  File_Watcher;   // recursive
     external_watcher: File_Watcher;   // non-recursive
