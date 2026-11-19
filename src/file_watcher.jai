@@ -85,40 +85,9 @@ file_watcher_process_changes :: () {
     for completed_tasks {
         task := cast(*File_Watcher_Task) it;
 
-        for * result : task.results {
-            buffer_id := find_buffer_id_by_path(result.path);
-            if buffer_id >= 0 {
-                if array_find(task.ignored_buffer_ids, buffer_id) continue;
+        apply_moves_within_project(task);
 
-                buffer := get_buffer(buffer_id);
-                if result.file_exists {
-                    if result.loaded_data.has_file {
-                        replace_buffer_data(buffer, result.loaded_data);
-                    } else if buffer.deleted {
-                        reload_from_disk(buffer.id);
-                    } else {
-                        continue;
-                    }
-                    maybe_defer_refresh_config_or_theme(result.path);
-                    finder.need_to_refresh_results = true;
-                    open_file_dialog.should_refresh_entries = true;
-                } else {
-                    if !buffer.deleted {
-                        buffer.time_when_deleted = frame_time64;
-                        buffer.deleted = true;
-                        finder.need_to_refresh_results = true;
-                        open_file_dialog.should_refresh_entries = true;
-                    }
-                }
-            } else {
-                if result.file_exists && result.loaded_data.has_file {
-                    publish_prepared_buffer(*result.loaded_data);
-                    maybe_defer_refresh_config_or_theme(result.path);
-                    finder.need_to_refresh_results = true;
-                    open_file_dialog.should_refresh_entries = true;
-                }
-            }
-        }
+        apply_file_watcher_task_results(task);
 
         free_file_watcher_task(task);
     }
@@ -257,6 +226,7 @@ process_file_change_batch :: (changes: [] File_Change) {
         if success {
             if !should_ignore_file(path) || is_our_config_file(path) {
                 add_file_to_refresh(task, path, force = true);
+                task.have_new_project_paths = true;
             }
             continue;
         }
@@ -281,6 +251,7 @@ process_file_change_batch :: (changes: [] File_Change) {
         if should_ignore_file(path) && !is_our_config_file(path) return;
 
         add_file_to_refresh(task, path, force = true);
+        task.have_new_project_paths = true;
     }
 
     for dirs_to_scan {
@@ -294,70 +265,72 @@ process_file_change_batch :: (changes: [] File_Change) {
     add_work(*watchers.thread_group, task);
 }
 
-process_moves_within_project :: (files_to_refresh: [] File_Refresh) {
-    have_new_project_paths := false;
-    for files_to_refresh {
-        path := it.path;
-        if path_is_within_project(path) && find_buffer_id_by_path(path) < 0 {
-            have_new_project_paths = true;
-            break;
-        }
-    }
-    if !have_new_project_paths return;
+apply_file_watcher_task_results :: (task: *File_Watcher_Task) {
+    for * result : task.results {
+        buffer_id := find_buffer_id_by_path(result.path);
+        if buffer_id >= 0 {
+            if array_find(task.ignored_buffer_ids, buffer_id) continue;
 
-    buffers_by_identity: Table(File_Identity, Buffer_Id, given_hash_function = get_file_identity_hash, given_compare_function = same_identity);
-    buffers_by_identity.allocator = temp;
-
-    for * buffer : open_buffers {
-        if buffer.internal || !buffer.has_file || !buffer.file.full_path continue;
-        if buffer.deleted && frame_time64 - buffer.time_when_deleted > 5.0 continue;  // don't check old deleted buffers in case their filesystem identity is reused by the OS
-        if !is_valid(buffer.file_identity) continue;
-        if !path_is_within_project(buffer.file.full_path) continue;
-
-        existing := table_find_pointer(*buffers_by_identity, buffer.file_identity);
-        if existing {
-            existing.* = -1;  // ambiguous identity
+            buffer := get_buffer(buffer_id);
+            if result.file_exists {
+                if result.loaded_data.has_file {
+                    replace_buffer_data(buffer, result.loaded_data);
+                } else if buffer.deleted {
+                    reload_from_disk(buffer.id);
+                } else {
+                    continue;
+                }
+                maybe_defer_refresh_config_or_theme(result.path);
+                finder.need_to_refresh_results = true;
+                open_file_dialog.should_refresh_entries = true;
+            } else {
+                if !buffer.deleted {
+                    buffer.time_when_deleted = frame_time64;
+                    buffer.deleted = true;
+                    finder.need_to_refresh_results = true;
+                    open_file_dialog.should_refresh_entries = true;
+                }
+            }
         } else {
-            table_add(*buffers_by_identity, buffer.file_identity, buffer.id);
+            if result.file_exists && result.loaded_data.has_file {
+                publish_prepared_buffer(*result.loaded_data);
+                maybe_defer_refresh_config_or_theme(result.path);
+                finder.need_to_refresh_results = true;
+                open_file_dialog.should_refresh_entries = true;
+            }
         }
     }
+}
+
+apply_moves_within_project :: (task: *File_Watcher_Task) {
+    if !task.moves return;
 
     move_destinations: Table(Buffer_Id, string);
     move_destinations.allocator = temp;
 
-    for files_to_refresh {
-        dest_path := it.path;
+    for move : task.moves {
+        if array_find(task.ignored_buffer_ids, move.buffer_id) continue;
 
-        if !path_is_within_project(dest_path) continue;
-        if find_buffer_id_by_path(dest_path) >= 0 continue;  // an existing association takes precedence over identity matching
+        buffer := get_buffer(move.buffer_id);
 
-        identity := get_file_identity(dest_path);
-        if !is_valid(identity) continue;
+        if buffer.internal || !buffer.has_file continue;
+        if !platform_path_equals(buffer.file.full_path, move.old_path) continue;
+        if !same_identity(buffer.file_identity, move.identity) continue;
 
-        found, buffer_id := table_find(*buffers_by_identity, identity);
-        if !found || buffer_id < 0 continue;
+        if buffer.deleted && frame_time64 - buffer.time_when_deleted > 5.0 continue;
 
-        buffer := get_buffer(buffer_id);
+        if find_buffer_id_by_path(move.old_path) != move.buffer_id continue;
 
-        // Do not follow and old object into a backup while its original path exists
-        if !path_is_missing(buffer.file.full_path) continue;
+        // Existing destination associations take precedence
+        if find_buffer_id_by_path(move.new_path) >= 0 continue;
 
-        in_project, project_dir := path_is_within_project(buffer.file.full_path);
-        if !in_project continue;
-
-        // If a workspace root is renamed, we consider that a delete (because it also lives in the config and that is the source of truth for the workspace)
-        root_is_directory, root_success := is_directory(project_dir.path);
-        if !root_success || !root_is_directory continue;
-
-        existing_destination := table_find_pointer(*move_destinations, buffer_id);
+        existing_destination := table_find_pointer(*move_destinations, move.buffer_id);
         if existing_destination {
-            if !platform_path_equals(existing_destination.*, dest_path) {
-                existing_destination.* = "";  // multiple destinations are ambiguous
-            }
+            if !platform_path_equals(existing_destination.*, move.new_path) then existing_destination.* = "";
             continue;
         }
 
-        table_add(*move_destinations, buffer_id, dest_path);
+        table_add(*move_destinations, move.buffer_id, move.new_path);
     }
 
     if move_destinations.count == 0 return;
@@ -420,12 +393,17 @@ file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     context_set_config_snapshot(task.config_snapshot);
     defer buffer_settings_cache_destroy();
 
+    move_sources: Table(File_Identity, File_Watcher_Move_Source, given_hash_function = get_file_identity_hash, given_compare_function = same_identity);
+    move_sources.allocator = temp;
+
     // We have to check all open buffers because if e.g. a directory is deleted, we won't get a notification
     // for every file within that directory and must check ourselves
-    if task.affected_paths {
+    if task.affected_paths || task.have_new_project_paths {
         for buffer : task.buffer_ptrs_snapshot {
             buffer_path: string;
             buffer_mod_info: Buffer.Mod_Info;
+            buffer_identity: File_Identity;
+
             {
                 lock(*buffer.metadata_lock);
                 defer unlock(*buffer.metadata_lock);
@@ -434,6 +412,16 @@ file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
 
                 buffer_path = copy_temporary_string(buffer.file.full_path);
                 buffer_mod_info = buffer.mod_info;
+                buffer_identity = buffer.file_identity;
+            }
+
+            if task.have_new_project_paths && is_valid(buffer_identity) && path_is_within_project(buffer_path) {
+                existing := table_find_pointer(*move_sources, buffer_identity);
+                if existing {
+                    existing.buffer_id = -1;
+                } else {
+                    table_add(*move_sources, buffer_identity, .{ buffer_id = buffer.id, path = buffer_path });
+                }
             }
 
             for affected_path : task.affected_paths {
@@ -447,7 +435,7 @@ file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
 
     // Deduplicate file refreshes
     {
-        path_to_index: Table(string, int);
+        path_to_index: Table(string, int, given_hash_function = get_platform_path_hash, given_compare_function = platform_path_equals);
         path_to_index.allocator = temp;
 
         for task.files_to_refresh {
@@ -461,8 +449,6 @@ file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
         }
     }
 
-    // process_moves_within_project(task.files_to_refresh);
-
     for task.files_to_refresh {
         if !it.force && !file_has_changed_on_disk(it.path, it.mod_info) {
             array_add(*task.results, .{ path = it.path, file_exists = true });  // main might reload if the buffer exists but was deleted
@@ -475,11 +461,39 @@ file_watcher_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
         }
 
         success, buffer_data := load_buffer_data_from_file(it.path);
-        if success {
-            array_add(*task.results, .{ path = it.path, file_exists = true, loaded_data = buffer_data });
-        } else {
+        if !success {
             log_error("Couldn't load buffer data when refreshing '%'", it.path);
+            continue;
         }
+
+        array_add(*task.results, .{ path = it.path, file_exists = true, loaded_data = buffer_data });
+
+        // Process moves
+
+        if !task.have_new_project_paths continue;
+        if !is_valid(buffer_data.file_identity) continue;
+        if !path_is_within_project(it.path) continue;
+
+        found, source := table_find(*move_sources, buffer_data.file_identity);
+        if !found || source.buffer_id < 0 continue;
+        if platform_path_equals(source.path, it.path) continue;
+
+        // Don't follow a file into a backup while its original path exists
+        if !path_is_missing(source.path) continue;
+
+        in_project, project_dir := path_is_within_project(source.path);
+        if !in_project continue;
+
+        // Renaming a workspace root is treated as a deletion
+        root_is_directory, root_success := is_directory(project_dir.path);
+        if !root_success || !root_is_directory continue;
+
+        array_add(*task.moves, .{
+            buffer_id = source.buffer_id,
+            old_path = copy_string(source.path,, task.allocator),
+            new_path = it.path,
+            identity = buffer_data.file_identity,
+        });
     }
 
     reset_temporary_storage();
@@ -494,6 +508,7 @@ create_file_watcher_task :: () -> *File_Watcher_Task {
     task.affected_paths.allocator   = task.allocator;
     task.files_to_refresh.allocator = task.allocator;
     task.results.allocator          = task.allocator;
+    task.moves.allocator            = task.allocator;
 
     task.ignored_buffer_ids.allocator = focus_allocator;  // must not use the task memory pool because the main thread appends to it
 
@@ -541,12 +556,14 @@ File_Watcher_Task :: struct {
     buffer_ptrs_snapshot: [] *Buffer;
     config_snapshot: *Config_Snapshot;
 
-    affected_paths: [..] string;
+    have_new_project_paths: bool;
+    affected_paths:   [..] string;
     files_to_refresh: [..] File_Refresh;
 
     ignored_buffer_ids: [..] Buffer_Id;  // to handle a data race when a file is saved while the file watcher is working
 
     results: [..] File_Watcher_Task_Result;
+    moves:   [..] File_Watcher_Move;
 }
 
 File_Refresh :: struct {
@@ -559,6 +576,18 @@ File_Watcher_Task_Result :: struct {
     path: string;
     file_exists: bool;
     loaded_data: Buffer_Data;
+}
+
+File_Watcher_Move :: struct {
+    buffer_id: Buffer_Id;
+    old_path: string;
+    new_path: string;
+    identity: File_Identity;
+}
+
+File_Watcher_Move_Source :: struct {
+    buffer_id: Buffer_Id;
+    path: string;
 }
 
 watchers : struct {

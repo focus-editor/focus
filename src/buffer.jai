@@ -843,7 +843,10 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     if success {
         file_watcher_ignore_pending_results(buffer.id);
 
-        file_identity = get_file_identity(file.full_path);
+        new_identity := get_file_identity(file.full_path);
+        lock(*metadata_lock);
+        file_identity = new_identity;
+        unlock(*metadata_lock);
 
         modified = false;
         modified_on_disk = false;
@@ -1294,9 +1297,8 @@ replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
 
     lock(*buffer.metadata_lock);
     buffer.mod_info = buffer_data.mod_info;
-    unlock(*buffer.metadata_lock);
-
     buffer.file_identity = buffer_data.file_identity;
+    unlock(*buffer.metadata_lock);
 
     if buffer.deleted {
         buffer.deleted = false;
@@ -1647,7 +1649,10 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     buffer.deleted = false;
 
     if !was_deleted && !file_has_changed_on_disk(buffer.file.full_path, buffer.mod_info) {
-        buffer.file_identity = get_file_identity(path);
+        new_identity := get_file_identity(path);
+        lock(*buffer.metadata_lock);
+        buffer.file_identity = new_identity;
+        unlock(*buffer.metadata_lock);
     } else {
         assert(platform_path_equals(path, buffer.file.full_path));
 
@@ -1678,8 +1683,6 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
 
     file_watcher_ignore_pending_results(buffer.id);
 
-    buffer.file_identity = get_file_identity(path);
-
     // If we've successfully reloaded from disk then it's not deleted
     if buffer.deleted {
         buffer.deleted = false;
@@ -1697,8 +1700,11 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
     bytes_removed := remove_crlf_in_place(*file_contents_str);
     file_hash := calculate_hash(cast([] u8) file_contents_str);
 
+    new_identity := get_file_identity(path);
+
     lock(*buffer.metadata_lock);
     remember_last_mod_info(buffer);
+    buffer.file_identity = new_identity;
     unlock(*buffer.metadata_lock);
 
     if buffer.hash == file_hash && !force return true;
@@ -2038,8 +2044,7 @@ Buffer :: struct {
 
     cursors: Array(Cursor);  // cursor state before any current edits were made
 
-    // Protects settings_revision, lang, has_file, and the file fields used to resolve settings.
-    // Do not acquire content_lock while holding metadata_lock.
+    // Do not acquire content_lock while holding metadata_lock
     metadata_lock: Mutex;
     settings_revision: u64;
 
