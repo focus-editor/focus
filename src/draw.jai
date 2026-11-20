@@ -2688,6 +2688,10 @@ draw_open_file_dialog :: () {
 
         project_dir_id := -1;  // to draw project boundary
 
+        // Get highlights on the fly
+        highlight_filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
+        highlight_paths := mode == .search || mode == .open_editors;
+
         for entry, i : visible_entries {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
@@ -2739,9 +2743,19 @@ draw_open_file_dialog :: () {
             Simp.draw_prepared_text(get_font(.icons), xx icon_x, xx pen.y, color = xx name_color);
 
             // Draw name
+            name_highlights: [] bool;
+            path_highlights: [] bool;
+
+            if highlight_filter.chunks && entry.type != .save && entry.type != .nothing {
+                _, name_exact:, name_highlights = fuzzy_match(entry.entry_name, highlight_filter, want_highlights = true,, temp);
+                if highlight_paths && entry.path {
+                    _, _, path_highlights = fuzzy_match(entry.path, highlight_filter, only_exact = name_exact, want_highlights = true,, temp);
+                }
+            }
+
             pen.x += xx get_font(.icons).em_width + padding * 1.5;
-            if entry.type != .save {
-                width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
+            if name_highlights {
+                width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.entry_name, name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
             } else {
                 width = xx Simp.draw_text(get_font(.ui), xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);
             }
@@ -2766,7 +2780,11 @@ draw_open_file_dialog :: () {
             // Draw file path
             pen.x += width + padding;
             if pen.x < path_align_x then pen.x = path_align_x;
-            width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = xx Color.UI_DIM, highlight_color = xx Color.LETTER_HIGHLIGHT);
+            if path_highlights {
+                width = xx Simp.draw_text_with_highlights(get_font(.ui), xx pen.x, xx pen.y, entry.path, path_highlights, color = xx Color.UI_DIM, highlight_color = xx Color.LETTER_HIGHLIGHT);
+            } else {
+                width = xx Simp.draw_text(get_font(.ui), xx pen.x, xx pen.y, entry.path, color = xx Color.UI_DIM);
+            }
         }
 
         // Deselect any previously clicked entry

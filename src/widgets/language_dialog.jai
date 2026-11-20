@@ -44,7 +44,7 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     langs := #run get_available_language_list();
 
     for * lang: langs {
-        score, highlights := fuzzy_match(lang.name, filter);
+        score, _, highlights := fuzzy_match(lang.name, filter, want_highlights = true);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);

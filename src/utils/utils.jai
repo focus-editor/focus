@@ -133,113 +133,6 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
     return -1;
 }
 
-fuzzy_match :: (str: string, filter: Fuzzy_Filter, only_exact := false) -> score: s32, highlights: [] bool, exact_match := false {
-    highlights := NewArray(str.count, bool, initialized = true);
-    if !filter.chunks return 0, highlights;
-
-    MAX_CHARS :: 400;
-
-    // Try matching the full string first and rank it the highest
-    {
-        index := find_index_from_left_nocase(str, filter.full_string, 0);
-        if index >= 0 {
-            memset(highlights.data + index, cast(u8) true, filter.full_string.count);
-            score := (400 + filter.full_string.count) * (MAX_CHARS - index);
-            return cast(s32) score, highlights, true;
-        }
-    }
-
-    score := 0;
-
-    auto_release_temp();
-    chunk_highlights := NewArray(str.count, bool, initialized = false,, allocator = temp);  // to store temporary highlights we might later reject
-
-    // Try matching each chunk exactly and accept the match if at least one matches
-    for chunk : filter.chunks {
-        chunk_score := 0;
-        memset(chunk_highlights.data, 0, chunk_highlights.count);
-
-        index := find_index_from_left_nocase(str, chunk.str, 0);
-        if index >= 0 {
-            memset(chunk_highlights.data + index, cast(u8) true, chunk.str.count);
-            chunk_score += (200 + chunk.str.count) * (MAX_CHARS - index) - str.count;
-        }
-
-        if chunk_score >= 0 {
-            score += chunk_score;
-            for i : 0 .. chunk_highlights.count - 1 { highlights[i] |= chunk_highlights[i]; }  // apply chunk highlights
-        }
-    }
-
-    if score > 0 return xx score, highlights, true;  // if we had at least one exact match, don't proceed
-    if score <= 0 && only_exact return xx score, highlights;
-
-    // Then match individual chars
-    for chunk : filter.chunks {
-        pos := 0;
-        chunk_score := 0;
-        memset(chunk_highlights.data, 0, chunk_highlights.count);
-
-        // Try matching the full chunk first
-        for char : chunk.chars {
-            index := find_index_from_left_nocase(str, char, pos);
-            if index < 0 { chunk_score = -1; break; }
-            chunk_highlights[index] = true;
-            chunk_score += 10 * (MAX_CHARS - index);  // the closer to the beginning, the better
-            pos = index + char.count;
-        }
-
-        if chunk_score >= 0 {
-            score += chunk_score;
-            for i : 0 .. chunk_highlights.count - 1 { highlights[i] |= chunk_highlights[i]; }  // apply chunk highlights
-        }
-    }
-
-    // if score <= 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
-
-    return xx score, highlights;
-}
-
-construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> Fuzzy_Filter {
-    str := copy_temporary_string(trim(filter_str));
-    if !str return .{};
-
-    chunks: [..] Fuzzy_Filter.Chunk;
-    chunks.allocator = temp;
-
-    // Maybe split into strings separated by spaces or slashes (useful for the open file dialog)
-    strings: [] string;
-    if multi_chunk_search {
-        space := cast(u8) #char " ";
-        replace_chars(str, "\\/", space);
-        strings = split(str, space,, allocator = temp);
-    } else {
-        strings = .[str];  // treat the whole search string as one (useful for commands etc)
-    }
-
-    for s : strings {
-        if !s continue;
-
-        // Split the strings into individual chars
-        chars: [..] string;
-        chars.allocator = temp;
-        array_reserve(*chars, strings.count);
-
-        t := s.data;
-        while t < s.data + s.count {
-            substr: string = ---;
-            substr.data = t;
-            t = unicode_next_character(t);
-            substr.count = t - substr.data;
-            array_add(*chars, substr);
-        }
-
-        array_add(*chunks, Fuzzy_Filter.Chunk.{ str = s, chars = chars });
-    }
-
-    return Fuzzy_Filter.{ full_string = str, chunks = chunks };
-}
-
 bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
     skip_table: [256] s32 = ---;
     for * skip_table { it.* = cast,no_check(s32) needle.count; }
@@ -264,6 +157,66 @@ bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_t
             i += skip_table[to_lower(s[i + needle.count - 1])];
         }
     }
+    return -1;
+}
+
+kmp_build_prefix_table :: (needle: string) -> [] int {
+    if !needle return .[];
+
+    table := NewArray(needle.count, int, initialized = false,, temp);
+    table[0] = 0;
+
+    matched := 0;
+    for i : 1 .. needle.count - 1 {
+        c := needle[i];
+        while matched > 0 && c != needle[matched] {
+            matched = table[matched - 1];
+        }
+        if c == needle[matched] then matched += 1;
+        table[i] = matched;
+    }
+
+    return table;
+}
+
+kmp_find_index_from_left :: (str: string, needle: string, table: [] int) -> s64 {
+    if !needle || needle.count > str.count return -1;
+    assert(table.count == needle.count);
+
+    first := needle[0];
+    if needle.count == 1 return find_index_from_left(str, first);
+
+    // Leave short tails to the scalar loop rather than paying SIMD setup cost.
+    MIN_SKIP_BYTES :: 32;
+
+    i := 0;
+    matched := 0;
+    while i < str.count {
+        c := str[i];
+
+        if matched == 0 {
+            if c != first {
+                if str.count - i < MIN_SKIP_BYTES {
+                    i += 1;
+                    continue;
+                }
+
+                i = find_index_from_left(str, first, i + 1);
+                if i < 0 return -1;
+            }
+
+            matched = 1;
+        } else {
+            while matched > 0 && c != needle[matched] {
+                matched = table[matched - 1];
+            }
+            if c == needle[matched] then matched += 1;
+            if matched == needle.count return i - needle.count + 1;
+        }
+
+        i += 1;
+    }
+
     return -1;
 }
 
@@ -699,16 +652,6 @@ Movement_Type :: enum {
     by_character_type_fast;  // like above, but treats underscores as part of word, and skips 1 space (unless multiple cursors are used)
     through_word;            // goes through anything to reach the end of the next word block
     through_word_throttled;  // like above, but goes through at most 2 blocks of characters at a time
-}
-
-Fuzzy_Filter :: struct {
-    full_string: string;
-    chunks: [] Chunk;
-
-    Chunk :: struct {
-        str: string;
-        chars: [] string;
-    }
 }
 
 rgb_from_hsl :: (hsl: Vector3) -> Vector3 {

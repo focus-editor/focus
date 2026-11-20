@@ -195,7 +195,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     visit_files(themes_dir, recursive = false, *themes, visitor, visit_files = true, visit_directories = false);
 
     for theme : themes {
-        score, highlights := fuzzy_match(theme.name, filter);
+        score, _, highlights := fuzzy_match(theme.name, filter, want_highlights = true);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);

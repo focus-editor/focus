@@ -68,7 +68,7 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 
     for project : project_configs {
-        score, highlights := fuzzy_match(project.name, filter);
+        score, _, highlights := fuzzy_match(project.name, filter, want_highlights = true);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);

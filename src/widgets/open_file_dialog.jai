@@ -354,8 +354,8 @@ refresh_entries :: (clear_input := true) {
         if (buffer.deleted && !buffer.modified) || buffer.internal continue;
 
         buffer_name := get_buffer_name(buffer);
-        name_score, name_highlights, exact_match := fuzzy_match(buffer_name,      filter);
-        path_score, path_highlights              := fuzzy_match(buffer.file.path, filter, only_exact=exact_match);
+        name_score, exact_match := fuzzy_match(buffer_name,      filter);
+        path_score              := fuzzy_match(buffer.file.path, filter, only_exact=exact_match);
         score := 200 * name_score + path_score;  // name score is much more important
         if score <= 0 && filter.full_string continue;
 
@@ -367,8 +367,6 @@ refresh_entries :: (clear_input := true) {
             entry.entry_name = copy_string(buffer_name);
             entry.icon = Icon.text;
         }
-        entry.name_highlights = name_highlights;
-        entry.path_highlights = path_highlights;
 
         // Sort open editors on top
         // @speed: could become slow if too many open buffers
@@ -401,7 +399,7 @@ refresh_entries :: (clear_input := true) {
             if !path_chunks {
                 // Display project dirs and drives
                 for project_dirs {
-                    score, name_highlights := fuzzy_match(it.name, filter);
+                    score := fuzzy_match(it.name, filter);
                     if score <= 0 && filter.full_string continue;
                     if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
 
@@ -413,8 +411,6 @@ refresh_entries :: (clear_input := true) {
                     entry.path = it.path;
                     entry.icon = .folder;
                     entry.project_dir_id = xx (it_index + 1);
-                    entry.name_highlights = name_highlights;
-                    entry.path_highlights = NewArray(entry.path.count, bool);
 
                     dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
@@ -422,7 +418,7 @@ refresh_entries :: (clear_input := true) {
                 }
                 for project_files {
                     path, _, extension, name := path_decomp(it);
-                    score, name_highlights := fuzzy_match(name, filter);
+                    score := fuzzy_match(name, filter);
                     if score <= 0 && filter.full_string continue;
                     if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
 
@@ -434,8 +430,6 @@ refresh_entries :: (clear_input := true) {
                     entry.path = trim_right(path, "/");
                     entry.icon = get_file_icon(name, extension);
                     entry.project_dir_id = xx (it_index + 1 + project_dirs.count);
-                    entry.name_highlights = name_highlights;
-                    entry.path_highlights = NewArray(entry.path.count, bool);
 
                     dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
@@ -444,7 +438,7 @@ refresh_entries :: (clear_input := true) {
                 for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 
-                    score, name_highlights := fuzzy_match(name, filter);
+                    score := fuzzy_match(name, filter);
                     if score <= 0 && filter.full_string continue;
                     if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
 
@@ -456,8 +450,6 @@ refresh_entries :: (clear_input := true) {
                     entry.path = "";
                     entry.icon = .drive;
                     entry.project_dir_id = 127;
-                    entry.name_highlights = name_highlights;
-                    entry.path_highlights = .[];
 
                     dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
@@ -466,7 +458,7 @@ refresh_entries :: (clear_input := true) {
             } else {
                 // Filter current files
                 for current_files {
-                    score, name_highlights := fuzzy_match(it.name, filter);
+                    score := fuzzy_match(it.name, filter);
                     if score <= 0 && filter.full_string continue;
                     if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
 
@@ -474,8 +466,6 @@ refresh_entries :: (clear_input := true) {
                     entry.* = it;
 
                     entry.entry_name = entry.name;
-                    entry.name_highlights = name_highlights;
-                    entry.path_highlights = .[];
 
                     // If we have a buffer for this file we want to show if it's modified or modified on disk
                     buffer_id := find_buffer_id_by_path(entry.full_path);
@@ -516,8 +506,6 @@ refresh_entries :: (clear_input := true) {
             file = File_Info.{ full_path = "", name = "", path = "", icon = .save },
             entry_name = entry_name,
             type = .save,
-            name_highlights = .[],
-            path_highlights = .[],
             sort_key = (1 << 55),  // show after directories but before files (so that people can easily descend into dirs but save as a new file by default)
         });
     }
@@ -537,8 +525,6 @@ refresh_entries :: (clear_input := true) {
         array_add(*entries.filtered, Entry.{
             file = File_Info.{ full_path = "", name = "", path = "", icon = .dots, },
             type = .nothing,
-            name_highlights = .[],
-            path_highlights = .[],
         });
     }
 }
@@ -672,7 +658,5 @@ Entry :: struct {
     }
     type: enum u8 { file; folder; drive; project_dir; save; nothing; } = .file;
     entry_name: string;
-    name_highlights: [] bool;
-    path_highlights: [] bool;
     sort_key: u64;
 }

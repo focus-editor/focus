@@ -97,7 +97,7 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
         if command.requires_layout == .Multi && editor_layout != .Multi continue;
         if !project_config.loaded && (command.action == xx Action_Editors.open_project_config || command.action == xx Action_Editors.close_project) continue;
 
-        score, highlights := fuzzy_match(command.name, filter);
+        score, _, highlights := fuzzy_match(command.name, filter, want_highlights = true);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);
