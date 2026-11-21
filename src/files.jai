@@ -10,6 +10,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     if ends_with(path, "/") then path.count -= 1;  // strip the separator
     info.path = path;
     info.workspace_member_index = find_workspace_member_index(abs_path);
+    info.workspace_depth        = get_workspace_depth(abs_path, info.workspace_member_index);
 
     if proj_prefix_len <= 0 {
         for workspace_members {
@@ -640,7 +641,10 @@ File_Info :: struct {
     name: string;
     path: string;
     icon: Icon;
-    workspace_member_index: s16 = -1;  // to be used for sorting
+
+    // For sorting
+    workspace_member_index: s16 = -1;
+    workspace_depth: u8 = 255;
 }
 
 File_Identity :: struct {

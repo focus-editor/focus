@@ -28,6 +28,7 @@ init_workspace :: () {
     for * buffer : open_buffers {
         if !buffer.has_file || !buffer.file.full_path continue;
         buffer.file.workspace_member_index = find_workspace_member_index(buffer.file.full_path);
+        buffer.file.workspace_depth        = get_workspace_depth(buffer.file.full_path, buffer.file.workspace_member_index);
     }
 }
 
@@ -364,6 +365,21 @@ find_workspace_member_index :: (full_path: string) -> s16 {
     }
 
     return member_index.(s16);
+}
+
+get_workspace_depth :: (full_path: string, member_index: s16) -> u8 {
+    if member_index < 0 return 255;
+
+    member := workspace_members[member_index];
+    if !member.is_directory return 0;
+
+    relative_path := trim_left(advance(full_path, member.path.count), "/");
+    depth := 0;
+    for i : 0 .. relative_path.count - 1 {
+        if relative_path[i] == #char "/" then depth += 1;
+    }
+
+    return min(depth, 254).(u8);
 }
 
 

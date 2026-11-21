@@ -360,10 +360,17 @@ refresh_entries :: (clear_input := true) {
         if (buffer.deleted && !buffer.modified) || buffer.internal continue;
 
         buffer_name := get_buffer_name(buffer);
-        name_score, exact_match := fuzzy_match(buffer_name,      filter);
-        path_score              := fuzzy_match(buffer.file.path, filter, only_exact=exact_match);
-        score := 200 * name_score + path_score;  // name score is much more important
-        if score <= 0 && filter.full_string continue;
+        score: s32;
+        search_score: Search_Score;
+        if use_search_score {
+            search_score = get_search_score(buffer_name, buffer.file.path, filter.chunks);
+            if search_score.priority_sum == 0 continue;
+        } else {
+            name_score, exact_match := fuzzy_match(buffer_name, filter);
+            path_score              := fuzzy_match(buffer.file.path, filter, only_exact = exact_match);
+            score = 200 * name_score + path_score;
+            if score <= 0 && filter.full_string continue;
+        }
 
         entry := array_add(*entries.filtered);
         entry.buffer_id = buffer.id;
@@ -372,6 +379,14 @@ refresh_entries :: (clear_input := true) {
         if !buffer.has_file {
             entry.entry_name = copy_string(buffer_name);
             entry.icon = Icon.text;
+        }
+
+        if buffer.modified          then entry.flags |= .MODIFIED;
+        if buffer.modified_on_disk  then entry.flags |= .MODIFIED_ON_DISK;
+
+        if use_search_score {
+            entry.search_score = search_score;
+            continue;
         }
 
         // Sort open editors on top
@@ -394,8 +409,7 @@ refresh_entries :: (clear_input := true) {
         if !filter.full_string then length_part = 0;  // don't sort by length when no filtering is applied
         entry.sort_key = member_part | score_part | length_part | opened_part;
 
-        if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
-        if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
+        if buffer.modified || buffer.modified_on_disk then entry.sort_key |= top_priority_bit;
     }
 
     if #complete mode == {
@@ -520,14 +534,14 @@ refresh_entries :: (clear_input := true) {
         });
     }
 
-    if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
-
+    if use_search_score {
+        quick_sort(entries.filtered, compare_search_entries);
+    } else if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
         compare_entries :: (e1: Entry, e2: Entry) -> s64 {
             key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
             if key_diff != 0 return key_diff;
             return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
         }
-
         quick_sort(entries.filtered, compare_entries);
     }
 
@@ -537,6 +551,69 @@ refresh_entries :: (clear_input := true) {
             type = .nothing,
         });
     }
+}
+
+get_best_search_match :: (name: string, path: string, chunk: Fuzzy_Filter.Chunk) -> Search_Match {
+    name_match := fuzzy_match_chunk(name, chunk);
+    if name_match.kind == .prefix       return Search_Match.{ priority = .name_prefix,      chunk_match = name_match };
+    if name_match.kind == .substring    return Search_Match.{ priority = .name_substring,   chunk_match = name_match };
+
+    path_match := fuzzy_match_chunk(path, chunk);
+    if path_match.kind == .prefix || path_match.kind == .substring  return Search_Match.{ priority = .path_substring, chunk_match = path_match };
+
+    if name_match.kind == .scattered return Search_Match.{ priority = .name_scattered, chunk_match = name_match };
+    if path_match.kind == .scattered return Search_Match.{ priority = .path_scattered, chunk_match = path_match };
+
+    if !path || !name return .{};
+
+    // If neither field matches alone, a term can still span the folder and filename
+    auto_release_temp();
+    path_and_name := tprint("%/%", trim_right(path, "/"), name);
+    path_match = fuzzy_match_chunk(path_and_name, chunk);
+    if path_match.kind != .none return Search_Match.{ priority = .path_scattered, chunk_match = path_match };
+
+    return .{};
+}
+
+get_search_score :: (name: string, path: string, chunks: [] Fuzzy_Filter.Chunk) -> Search_Score {
+    result: Search_Score;
+
+    for chunk : chunks {
+        search_match := get_best_search_match(name, path, chunk);
+        if search_match.priority == .none return .{};
+
+        chunk_match := search_match.chunk_match;
+        result.priority_sum   += search_match.priority.(int);
+        result.adjacent_pairs += chunk_match.adjacent_pairs;
+        result.skipped_bytes  += chunk_match.skipped_bytes;
+        result.text_count     += chunk_match.text_count;
+        result.offset_sum     += chunk_match.offset;
+    }
+
+    return result;
+}
+
+compare_search_entries :: (e1: Entry, e2: Entry) -> s64 {
+    s1 := e1.search_score;
+    s2 := e2.search_score;
+
+    if s1.priority_sum   != s2.priority_sum   return s2.priority_sum   - s1.priority_sum;
+    if s1.adjacent_pairs != s2.adjacent_pairs return s2.adjacent_pairs - s1.adjacent_pairs;
+    if s1.skipped_bytes  != s2.skipped_bytes  return s1.skipped_bytes  - s2.skipped_bytes;
+
+    member1 := cast,trunc(u16) e1.workspace_member_index;
+    member2 := cast,trunc(u16) e2.workspace_member_index;
+    if member1 != member2 return member1.(s64) - member2.(s64);
+
+    if e1.workspace_depth != e2.workspace_depth return e1.workspace_depth.(s64) - e2.workspace_depth.(s64);
+
+    if s1.text_count != s2.text_count return s1.text_count - s2.text_count;  // shorter is better
+    if s1.offset_sum != s2.offset_sum return s1.offset_sum - s2.offset_sum;
+
+    name_order := compare_strings(e1.entry_name, e2.entry_name);
+    if name_order != 0 return name_order;
+
+    return compare_strings(e1.full_path, e2.full_path);
 }
 
 get_current_folder_path :: () -> string {
@@ -669,5 +746,28 @@ Entry :: struct {
     }
     type: enum u8 { file; folder; drive; project_dir; save; nothing; } = .file;
     entry_name: string;
-    sort_key: u64;
+    sort_key:   u64;
+    search_score: Search_Score;
 }
+
+Search_Score :: struct {
+    priority_sum:   int;
+    adjacent_pairs: int;
+    skipped_bytes:  int;
+    text_count:     int;
+    offset_sum:     int;
+}
+
+Search_Match :: struct {
+    priority: enum {  // weakest to strongest
+        none;
+        path_scattered;
+        name_scattered;
+        path_substring;
+        name_substring;
+        name_prefix;
+    } = .none;
+
+    chunk_match: Fuzzy_Chunk_Match;
+}
+
