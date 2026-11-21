@@ -3390,14 +3390,14 @@ draw_finder :: () {
     // Include files input
     {
         include_input_id := get_ui_id_from_loc(parent_id = ui_id);
-        became_active := draw_text_input(*finder.include, include_rect, ui_id = include_input_id, active = (finder.active_input == .include), label = " Include files, e.g. *.cpp, *.txt");
+        became_active := draw_text_input(*finder.include, include_rect, ui_id = include_input_id, active = (finder.active_input == .include), label = " Include files, e.g. .cpp$, .txt");
         if became_active then finder_activate_input(.include);
     }
 
     // Exclude files input
     {
         exclude_input_id := get_ui_id_from_loc(parent_id = ui_id);
-        became_active := draw_text_input(*finder.exclude, exclude_rect, ui_id = exclude_input_id, active = (finder.active_input == .exclude), label = " Exclude files, e.g. **/node_modules/**/*.js");
+        became_active := draw_text_input(*finder.exclude, exclude_rect, ui_id = exclude_input_id, active = (finder.active_input == .exclude), label = " Exclude files, e.g. ^node_modules$");
         if became_active then finder_activate_input(.exclude);
     }
 

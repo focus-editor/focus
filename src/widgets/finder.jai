@@ -381,19 +381,8 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     }
     defer if regex_search then re.uninit(*regex);
 
-    // Split wildcards into arrays
-    includes: [..] string;
-    excludes: [..] string;
-    includes.allocator = temp;
-    excludes.allocator = temp;
-    for rule : split(include, cast(u8) #char ",",, temp) {
-        trimmed := trim(rule);
-        if trimmed then array_add(*includes, trimmed);
-    }
-    for rule : split(exclude, cast(u8) #char ",",, temp) {
-        trimmed := trim(rule);
-        if trimmed then array_add(*excludes, trimmed);
-    }
+    includes := parse_finder_file_filters(include);
+    excludes := parse_finder_file_filters(exclude);
 
     for buffer : array_view(buffer_ptrs_snapshot, buffer_start_index, buffer_end_index - buffer_start_index + 1) {
         if search_task_is_stale(task) break;
@@ -404,7 +393,9 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 
         // Search in buffer
         if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
-        if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
+        path := ifx buffer.has_file then buffer.file.full_path else "";
+        if includes && !finder_path_matches_any(path, includes) continue;
+        if excludes &&  finder_path_matches_any(path, excludes) continue;
 
         // Sort key parts
         member_order := min(buffer.file.workspace_member_index.(int) + 2, 127);
@@ -425,29 +416,52 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
 
-should_include_buffer :: (buffer: Buffer, includes: [] string) -> bool {
-    if !includes return true;
-    return _buffer_matches_wildcards(buffer, includes);
+parse_finder_file_filters :: (text: string) -> [] Finder_File_Filter {  /* temp */
+    filters: [..] Finder_File_Filter;
+    filters.allocator = temp;
+
+    for rule : split(text, cast(u8) #char ",",, temp) {
+        pattern := trim(rule);
+        anchored_start := starts_with(pattern, #char "^");
+        anchored_end   := ends_with(pattern, #char "$");
+        if anchored_start then advance(*pattern);
+        if anchored_end   then pattern.count -= 1;
+        if !pattern continue;
+
+        if !anchored_start && !anchored_end && !contains_wildcards(pattern) {
+            array_add(*filters, .{ pattern = pattern, kind = .substring });
+            continue;
+        }
+
+        whole_path := contains(pattern, #char "/");
+        padding := ifx whole_path then "**" else "*";
+        prefix := ifx anchored_start then "" else padding;
+        suffix := ifx anchored_end   then "" else padding;
+        if prefix || suffix then pattern = tprint("%%%", prefix, pattern, suffix);
+
+        filter := array_add(*filters);
+        filter.pattern = pattern;
+        filter.kind = ifx whole_path then .full_path else .component;
+    }
+
+    return filters;
 }
 
-should_exclude_buffer :: inline (buffer: Buffer, excludes: [] string) -> bool {
-    if !excludes return false;
-    return _buffer_matches_wildcards(buffer, excludes);
-}
+finder_path_matches_any :: (path: string, filters: [] Finder_File_Filter) -> bool {
+    auto_release_temp();
+    path_chunks: [] string;
 
-_buffer_matches_wildcards :: (buffer: Buffer, wildcards: [] string) -> bool {
-    path := ifx buffer.has_file then buffer.file.full_path else "";  // defaulting to "" in case there's an all-catch wildcard
-    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
-
-    for wildcards {
-        if contains(it, cast(u8) #char "/") {
-            // Match whole path
-            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return true;
-        } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if path_wildcard_match(chunk, it) return true;
-            }
+    for filter : filters {
+        if #complete filter.kind == {
+            case .substring;
+                if platform_path_contains(path, filter.pattern) return true;
+            case .full_path;
+                if path_wildcard_match(path, filter.pattern) return true;
+            case .component;
+                if !path_chunks then path_chunks = split(path, cast(u8) #char "/",, temp);
+                for chunk : path_chunks {
+                    if path_wildcard_match(chunk, filter.pattern) return true;
+                }
         }
     }
 
@@ -630,6 +644,11 @@ Finder :: struct {
 
 #scope_file
 
+Finder_File_Filter :: struct {
+    pattern: string;
+    kind: enum { substring; full_path; component; }
+}
+
 Search_Result :: struct {
     // Line numbers and boundaries will be calculated at draw time only for the visible entries
     // as they require doing an additional search in buffer.
@@ -684,3 +703,4 @@ outstanding_tasks: [..] *Search_Task;
 thread_group: Thread_Group;
 
 MAX_RESULTS_PER_TASK :: 1000;
+
