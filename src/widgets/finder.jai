@@ -402,10 +402,11 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Sort key parts
-        dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
+        member_order := min(buffer.file.workspace_member_index.(int) + 2, 127);
+        member_part:    u64 = (cast,trunc(u64) member_order) << 56;
         buffer_id_part: u64 = (cast,trunc(u64) (buffer_start_index + it_index))  << 32;
-        if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
-        buffer_sort_key: u64 = dir_id_part | buffer_id_part;
+        if buffer.modified || buffer.modified_on_disk then member_part = 0;  // make sure modified buffers are on top
+        buffer_sort_key: u64 = member_part | buffer_id_part;
 
         if regex_search {
             find_all_using_regex(task, regex, buffer, buffer_sort_key);

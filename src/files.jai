@@ -9,12 +9,13 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     info.name = name;
     if ends_with(path, "/") then path.count -= 1;  // strip the separator
     info.path = path;
+    info.workspace_member_index = find_workspace_member_index(abs_path);
 
     if proj_prefix_len <= 0 {
-        for project_dirs {
+        for workspace_members {
+            if !it.is_directory continue;
             if begins_with_nocase(path, it.path) && it.path_prefix_len > proj_prefix_len {
                 proj_prefix_len = it.path_prefix_len;
-                info.project_dir_id = xx (it_index + 1);
             }
         }
     }
@@ -515,11 +516,12 @@ RUN_WILDCARD_TESTS :: false;
 
 #scope_export
 
-path_is_within_project :: (dir_path: string) -> bool, Project_Dir {
-    for project_dirs {
+path_is_within_project :: (dir_path: string) -> bool, Workspace_Member {
+    for workspace_members {
+        if !it.is_directory continue;
         if path_is_within_other_path(dir_path, it.path) return true, it;
     }
-    return false, Project_Dir.{};
+    return false, Workspace_Member.{};
 }
 
 path_is_within_other_path :: (path: string, other_path: string) -> bool {
@@ -638,7 +640,7 @@ File_Info :: struct {
     name: string;
     path: string;
     icon: Icon;
-    project_dir_id: s8 = 0;  // to be used for sorting
+    workspace_member_index: s16 = -1;  // to be used for sorting
 }
 
 File_Identity :: struct {

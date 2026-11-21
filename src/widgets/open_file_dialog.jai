@@ -349,6 +349,12 @@ refresh_entries :: (clear_input := true) {
     // This bit will be set when we want to make sure an entry appears on top
     top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
 
+    query := to_string(input.text);
+    filter := construct_fuzzy_filter(query, multi_chunk_search = true);
+    use_search_score := mode == .search && filter.chunks.count > 0 &&
+                        find_index_from_left(query, #char "/")  < 0 &&
+                        find_index_from_left(query, #char "\\") < 0;
+
     maybe_add_a_buffer_entry :: (buffer: Buffer) #expand {
         // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
         if (buffer.deleted && !buffer.modified) || buffer.internal continue;
@@ -377,20 +383,20 @@ refresh_entries :: (clear_input := true) {
             most_recent_buffer_index = 0;
         }
 
+        member_order := min(buffer.file.workspace_member_index.(int) + 1, 63);
+
         score_part:      u64 = (cast,trunc(u64) score)                              << 32;
-        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 24;
+        member_part:     u64 = (cast,trunc(u64) (63 - member_order))                << 24;
         length_part:     u64 = (cast,trunc(u64) (400 - buffer_name.count))          << 16;
         // TODO: put it after score but before other things
         opened_part:     u64 = (cast,trunc(u64) (most_recent_buffer_index + 1))     <<  0;
 
         if !filter.full_string then length_part = 0;  // don't sort by length when no filtering is applied
-        entry.sort_key = dir_id_part | score_part | length_part | opened_part;
+        entry.sort_key = member_part | score_part | length_part | opened_part;
 
         if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
     }
-
-    filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
 
     if #complete mode == {
         case .save; #through;
@@ -398,43 +404,50 @@ refresh_entries :: (clear_input := true) {
         case .navigate;
             if !path_chunks {
                 // Display project dirs and drives
-                for project_dirs {
-                    score := fuzzy_match(it.name, filter);
-                    if score <= 0 && filter.full_string continue;
-                    if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
+                next_dir_order  := workspace_members.count;
+                next_file_order := workspace_members.count;
+
+                for workspace_members {
+                    if it.is_directory then next_file_order -= 1;
+                }
+
+                for member, member_index : workspace_members {
+                    member_order: int;
+                    if member.is_directory {
+                        member_order = next_dir_order;
+                        next_dir_order -= 1;
+                    } else {
+                        member_order = next_file_order;
+                        next_file_order -= 1;
+                    }
+
+                    score := fuzzy_match(member.name, filter);
+                    if score <=0 && filter.full_string continue;
+                    if filter.full_string then score -= xx member.name.count;
 
                     entry := array_add(*entries.filtered);
-                    entry.type = .project_dir;
-                    entry.full_path = it.path;
-                    entry.name = it.name;
-                    entry.entry_name = it.name;
-                    entry.path = it.path;
-                    entry.icon = .folder;
-                    entry.project_dir_id = xx (it_index + 1);
+                    entry.full_path = member.path;
+                    entry.name = member.name;
+                    entry.entry_name = member.name;
+                    entry.workspace_member_index = member_index.(s16);
 
-                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
-                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
-                    entry.sort_key = dir_id_part | score_part;
+                    if member.is_directory {
+                        entry.type = .project_dir;
+                        entry.path = member.path;
+                        entry.icon = .folder;
+                    } else {
+                        path, _, extension := path_decomp(member.path);
+                        entry.type = .file;
+                        entry.path = trim_right(path, "/");
+                        entry.icon = get_file_icon(member.name, extension);
+                    }
+
+                    // Leave bits 16 .. 46 for the nonnegative s32 score
+                    member_part: u64 = (cast,trunc(u64) member_order)  << 47;
+                    score_part:  u64 = (cast,trunc(u64) max(score, 0)) << 16;
+                    entry.sort_key = member_part | score_part;
                 }
-                for project_files {
-                    path, _, extension, name := path_decomp(it);
-                    score := fuzzy_match(name, filter);
-                    if score <= 0 && filter.full_string continue;
-                    if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
 
-                    entry := array_add(*entries.filtered);
-                    entry.type = .file;
-                    entry.full_path = it;
-                    entry.name = name;
-                    entry.entry_name = name;
-                    entry.path = trim_right(path, "/");
-                    entry.icon = get_file_icon(name, extension);
-                    entry.project_dir_id = xx (it_index + 1 + project_dirs.count);
-
-                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
-                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
-                    entry.sort_key = dir_id_part | score_part;
-                }
                 for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 
@@ -449,11 +462,8 @@ refresh_entries :: (clear_input := true) {
                     entry.entry_name = name;
                     entry.path = "";
                     entry.icon = .drive;
-                    entry.project_dir_id = 127;
 
-                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
-                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
-                    entry.sort_key = dir_id_part | score_part;
+                    entry.sort_key = (cast(u64) max(score, 0)) << 16;
                 }
             } else {
                 // Filter current files
@@ -569,6 +579,7 @@ scan_current_folder :: () {
         entry := array_add(*open_file_dialog.current_files);
         if file.is_directory then entry.type = .folder;
         entry.full_path = full_path;
+        entry.workspace_member_index = find_workspace_member_index(full_path);
         entry.name = name;
         entry.path = "";
         if file.is_directory {

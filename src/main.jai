@@ -535,7 +535,7 @@ load_configs_and_start_session :: (args: [] string) {
     merge_and_apply_configs(*loaded_global_config, loaded_project_config_ptr);
 
     // Add dirs and files
-    for < dir : dirs_from_args  add_directory_to_workspace(dir, index = 0);
+    for < dir : dirs_from_args  add_workspace_member(dir, at_front = true);
 
     for < path : files_from_args {
         opened := false;
@@ -853,9 +853,15 @@ dont_ignore_next_window_resize := false;
 
 Mods :: Input.Event.Modifier_Flags;
 
-project_dirs:  [..] Project_Dir;
-project_files: [..] string;  // individual files added to project
+workspace_members: [..] Workspace_Member;
 unique_project_dirs: [..] string;
+
+Workspace_Member :: struct {
+    path: string;
+    name: string;           // a view into path
+    path_prefix_len: s64;   // display prefix for directory members
+    is_directory: bool;
+}
 
 active_global_widget: Active_Global_Widget = .editors;
 
@@ -873,12 +879,6 @@ Active_Global_Widget :: enum {
     kill_running_command_dialog;
     theme_dialog;
     language_dialog;
-}
-
-Project_Dir :: struct {
-    path: string;          // e.g. "C:/projects/focus"
-    path_prefix_len: s64;  // in this case the length of "C:/projects/"
-    name: string;          // a view into path
 }
 
 Builtin_Theme :: struct {

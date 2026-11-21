@@ -1,33 +1,19 @@
 init_workspace :: () {
-    for path : context.config.workspace.members {
-        if file_exists(path) && !is_directory(path) {
-            add_file_to_workspace(path);
-        } else {
-            add_directory_to_workspace(path);
-        }
-    }
+    for path : context.config.workspace.members  add_workspace_member(path);
 
-    // Build a list of unique project dirs for watching and scanning
-    // For example, if project dirs are C:/dir and C:/dir/child, we will only keep the parent C:/dir
-    {
-        project_dirs_with_slashes: [..] string;
-        project_dirs_with_slashes.allocator = temp;
-        for project_dirs {
-            dir := it.path;
-            if !ends_with(dir, #char "/") then dir = tprint("%/", dir);
-            array_add(*project_dirs_with_slashes, dir);
-        }
+    // Nested directories are still members, but don't need their own scan
+    for member : workspace_members {
+        if !member.is_directory continue;
 
-        for dir : project_dirs {
-            is_unique := true;
-            for prefix : project_dirs_with_slashes {
-                if dir.path.count > prefix.count && platform_path_begins_with(dir.path, prefix) {
-                    is_unique = false;
-                    break;
-                }
+        is_unique := true;
+        for other : workspace_members {
+            if !other.is_directory || other.path.count >= member.path.count continue;
+            if path_is_within_other_path(member.path, other.path) {
+                is_unique = false;
+                break;
             }
-            if is_unique then array_add(*unique_project_dirs, dir.path);
         }
+        if is_unique then array_add(*unique_project_dirs, member.path);
     }
 
     // Change working directory to the first directory in the list
@@ -36,6 +22,12 @@ init_workspace :: () {
         set_working_directory(working_dir);
     } else {
         set_working_directory(data_dir);
+    }
+
+    // Refresh member indices for the buffers which are already registered
+    for * buffer : open_buffers {
+        if !buffer.has_file || !buffer.file.full_path continue;
+        buffer.file.workspace_member_index = find_workspace_member_index(buffer.file.full_path);
     }
 }
 
@@ -48,71 +40,73 @@ get_working_directory_from_workspace :: (members: [] string) -> string {
     return "";
 }
 
-add_file_to_workspace :: (path: string) {
+add_workspace_member :: (path: string, at_front := false) {
     full_path, success := get_absolute_path(path,, temp);
-
-    if !success || !file_exists(full_path) {
-        error_msg := tprint("Couldn't add % to workspace. File doesn't exist or is invalid.", path);
+    if !success {
+        error_msg := tprint("Couldn't resolve workspace path '%'", path);
         add_user_error(error_msg, dismiss_in_seconds = 10);
         log_error(error_msg);
         return;
     }
 
     path_overwrite_separators(full_path, #char "/");
-
-    already_exists := false;
-    for project_files {
-        if platform_path_equals(full_path, it) {
-            already_exists = true;
-            break;
-        }
-    }
-    if !already_exists then array_add(*project_files, copy_string(full_path));
-}
-
-add_directory_to_workspace :: (path: string, index := -1) {
-    full_path, success := get_absolute_path(path,, temp);
-    full_path = copy_string(full_path);
-    path_overwrite_separators(full_path, #char "/");
-
-    if !is_directory(full_path) || !success {
-        error_msg := tprint("Couldn't add % to workspace. Directory doesn't exist or is invalid.", path);
+    is_directory, exists := is_directory(full_path);
+    if !exists {
+        error_msg := tprint("Couldn't add '%' to workspace. The path doesn't exist or is invalid.", path);
         add_user_error(error_msg, dismiss_in_seconds = 10);
         log_error(error_msg);
         return;
     }
 
-    dir: Project_Dir;
-    dir.path = trim_right(full_path, "/");
-    dir.path_prefix_len = find_index_from_right(dir.path, #char "/") + 1;
-    dir.name = advance(dir.path, dir.path_prefix_len);
+    if is_directory && full_path != "/" then full_path = trim_right(full_path, "/");
 
-    // Disambiguate project names
-    // E.g. C:/projects/project1/src/code and C:/projects/project2/src/code should
-    // get the names project1/src/code and project2/src/code, not 'code' or 'src/code'
-    for i : 0..10 {   // paranoid about infinite looping
-        is_ambiguous := false;
-        for * project_dirs {
-            if it.name == dir.name {
+    for workspace_members {
+        if platform_path_equals(full_path, it.path) return;
+    }
+
+    member := Workspace_Member.{
+        path = copy_string(full_path),
+        is_directory = is_directory,
+    };
+
+    if is_directory {
+        member.path_prefix_len = find_index_from_right(member.path, #char "/") + 1;
+        member.name = advance(member.path, member.path_prefix_len);
+        if !member.name then member.name = member.path;
+
+        // Disambiguate project names by including more of their paths if the leaf directories have the same names
+        for 0 .. 10 {
+            is_ambiguous := false;
+
+            for * other : workspace_members {
+                if !other.is_directory || other.name != member.name continue;
+
                 is_ambiguous = true;
-                it.path_prefix_len = find_index_from_right(trim_right(slice(it.path, 0, it.path_prefix_len), "/"), #char "/") + 1;
-                it.name = advance(it.path, it.path_prefix_len);
+                prefix := trim_right(slice(other.path, 0, other.path_prefix_len), "/");
+                other.path_prefix_len = find_index_from_right(prefix, #char "/") + 1;
+                other.name = advance(other.path, other.path_prefix_len);
             }
+            if !is_ambiguous break;
+
+            prefix := trim_right(slice(member.path, 0, member.path_prefix_len), "/");
+            member.path_prefix_len = find_index_from_right(prefix, #char "/") + 1;
+            member.name = advance(member.path, member.path_prefix_len);
         }
-        if !is_ambiguous break;
-        dir.path_prefix_len = find_index_from_right(trim_right(slice(dir.path, 0, dir.path_prefix_len), "/"), #char "/") + 1;
-        dir.name = advance(dir.path, dir.path_prefix_len);
+    } else {
+        _, _, _, name := path_decomp(member.path);
+        member.name = name;
     }
 
-    if index < 0 {
-        array_add(*project_dirs, dir);
+    assert(workspace_members.count <= 32767);
+    if at_front {
+        array_insert_at(*workspace_members, member, 0);
     } else {
-        array_insert_at(*project_dirs, dir, index);
+        array_add(*workspace_members, member);
     }
 }
 
 start_workspace_scan :: () {
-    if !unique_project_dirs && !project_files {
+    if !workspace_members {
         complete_workspace_scan();
         start_file_watcher();
         init_open_file_dialog();
@@ -273,10 +267,9 @@ reload_workspace :: (automatic := false) {
 
     // Reinit things
     init_file_watcher();
-    array_reset_keeping_memory(*project_dirs);
     array_reset_keeping_memory(*unique_project_dirs);
-    for project_files  free(it);
-    array_reset_keeping_memory(*project_files);
+    for workspace_members  free(it.path);
+    array_reset_keeping_memory(*workspace_members);
     init_workspace();
 
     // Preserve open buffers and editors if they belong to the new workspace
@@ -351,9 +344,26 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer, automatic:
 
     if should_ignore_file(file.full_path) return false;
 
-    for project_files  if platform_path_equals(file.full_path, it) return true;
+    return find_workspace_member_index(file.full_path) >= 0;
+}
 
-    return path_is_within_project(get_parent_dir_path(file.full_path));
+find_workspace_member_index :: (full_path: string) -> s16 {
+    member_index := -1;
+    longest_dir  := -1;
+
+    for workspace_members {
+        if !it.is_directory {
+            if platform_path_equals(full_path, it.path) return it_index.(s16);
+            continue;
+        }
+
+        if it.path.count > longest_dir && path_is_within_other_path(full_path, it.path) {
+            member_index = it_index;
+            longest_dir = it.path.count;
+        }
+    }
+
+    return member_index.(s16);
 }
 
 
@@ -368,8 +378,9 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
     table_reset(*file_list_table);
 
     array_reset(*files_to_scan);
-    for project_files {
-        full_path := copy_string(it,, allocator=scan_pool_allocator);
+    for workspace_members {
+        if it.is_directory continue;
+        full_path := copy_string(it.path,, allocator=scan_pool_allocator);
         array_add(*files_to_scan, full_path);
         table_add(*file_list_table, full_path, true);
     }

@@ -2686,8 +2686,6 @@ draw_open_file_dialog :: () {
 
         path_align_x := files_rect.x + files_rect.w / 2.5;
 
-        project_dir_id := -1;  // to draw project boundary
-
         // Get highlights on the fly
         highlight_filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
         highlight_paths := mode == .search || mode == .open_editors;
@@ -2718,14 +2716,10 @@ draw_open_file_dialog :: () {
             }
 
             // Maybe draw project boundary
-            if mode == .search {
-                if project_dir_id < 0 then project_dir_id = entry.project_dir_id;
-                if entry.project_dir_id != project_dir_id {
-                    project_dir_id = entry.project_dir_id;
-                    separator := cut_top(entry_rect, 2 * dpi_scale);
-                    separator.y += 1;
-                    draw_rect(separator, Color.LIST_CURSOR_LITE);
-                }
+            if mode == .search && i > 0 && entry.workspace_member_index != visible_entries[i - 1].workspace_member_index {
+                separator := cut_top(entry_rect, 2 * dpi_scale);
+                separator.y += 1;
+                draw_rect(separator, Color.LIST_CURSOR_LITE);
             }
 
             pen := Vector2.{
@@ -2954,8 +2948,6 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
         entry_rect := cut_top(entries_rect, entry_height);
 
         path_align_x := entries_rect.x + entries_rect.w / 2.5;
-
-        project_dir_id := -1;  // to draw project boundary
 
         for entry, i : visible_entries {
             entry_index := visible_start + i;

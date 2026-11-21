@@ -88,6 +88,47 @@ fuzzy_match :: (s: string, filter: Fuzzy_Filter, only_exact := false, $want_high
     return xx score, false, highlights;
 }
 
+fuzzy_match_chunk :: (s: string, chunk: Fuzzy_Filter.Chunk) -> Fuzzy_Chunk_Match {
+    if !s || !chunk.chars || chunk.str.count > s.count return .{};
+
+    auto_release_temp();
+    str := to_lower_copy(s,, temp);
+
+    result: Fuzzy_Chunk_Match;
+    result.text_count = s.count;
+
+    index := kmp_find_index_from_left(str, chunk.str, chunk.prefix_table);
+    if index >= 0 {
+        result.kind = .substring;
+        if index == 0 then result.kind = .prefix;
+
+        result.offset = index;
+        result.adjacent_pairs = chunk.chars.count - 1;
+        return result;
+    }
+
+    pos := 0;
+    for char, char_index : chunk.chars {
+        if char.count == 1 {
+            index = find_index_from_left(str, char[0], pos);  // more efficient
+        } else {
+            index = find_index_from_left(str, char, pos);
+        }
+        if index < 0 return .{};
+
+        if char_index == 0 {
+            result.offset = index;
+        } else {
+            if index == pos then result.adjacent_pairs += 1;
+            result.skipped_bytes += index - pos;
+        }
+        pos = index + char.count;
+    }
+
+    result.kind = .scattered;
+    return result;
+}
+
 
 // NOTE: assuming the context allocator is either temp or a pool
 construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> Fuzzy_Filter {
@@ -142,4 +183,12 @@ Fuzzy_Filter :: struct {
         prefix_table: [] int;
         chars: [] string;
     }
+}
+
+Fuzzy_Chunk_Match :: struct {
+    kind: enum { none; scattered; substring; prefix; } = .none;
+    offset: int;
+    text_count: int;
+    adjacent_pairs: int;
+    skipped_bytes: int;
 }

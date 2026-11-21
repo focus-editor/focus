@@ -139,9 +139,10 @@ platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: 
     ofn.lpstrTitle  = utf8_to_wide(tprint("Choose where to save '%'", name),, allocator = temp);
     ofn.Flags       = OFN_NOCHANGEDIR;
 
-    for dir : project_dirs {
-        if dir.path {
-            ofn.lpstrInitialDir = utf8_to_wide(dir.path,, allocator = temp);
+    for workspace_members {
+        if !it.is_directory continue;
+        if it.path {
+            ofn.lpstrInitialDir = utf8_to_wide(it.path,, allocator = temp);
             break;
         }
     }
