@@ -236,6 +236,13 @@ open_file_dialog_maybe_expand :: () {
     redraw_requested = true;
 }
 
+construct_open_file_dialog_filter :: (query: string) -> Fuzzy_Filter {
+    case_sensitive := open_file_dialog.mode == .search &&
+                      context.config.settings.search_is_case_sensitive_when_uppercase_present &&
+                      contains_uppercase_ascii(query);
+    return construct_fuzzy_filter(query, multi_chunk_search = true, case_sensitive = case_sensitive);
+}
+
 
 #scope_file
 
@@ -349,8 +356,8 @@ refresh_entries :: (clear_input := true) {
     // This bit will be set when we want to make sure an entry appears on top
     top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
 
-    query := to_string(input.text);
-    filter := construct_fuzzy_filter(query, multi_chunk_search = true);
+    query  := to_string(input.text);
+    filter := construct_open_file_dialog_filter(query);
     use_search_score := mode == .search && filter.chunks.count > 0 &&
                         find_index_from_left(query, #char "/")  < 0 &&
                         find_index_from_left(query, #char "\\") < 0;
@@ -363,7 +370,7 @@ refresh_entries :: (clear_input := true) {
         score: s32;
         search_score: Search_Score;
         if use_search_score {
-            search_score = get_search_score(buffer_name, buffer.file.path, filter.chunks);
+            search_score = get_search_score(buffer_name, buffer.file.path, filter);
             if search_score.priority_sum == 0 continue;
         } else {
             name_score, exact_match := fuzzy_match(buffer_name, filter);
@@ -553,33 +560,33 @@ refresh_entries :: (clear_input := true) {
     }
 }
 
-get_best_search_match :: (name: string, path: string, chunk: Fuzzy_Filter.Chunk) -> Search_Match {
-    name_match := fuzzy_match_chunk(name, chunk);
+get_best_search_match :: (name: string, path: string, chunk: Fuzzy_Filter.Chunk, case_sensitive: bool) -> Search_Match {
+    name_match := fuzzy_match_chunk(name, chunk, case_sensitive);
     if name_match.kind == .prefix       return Search_Match.{ priority = .name_prefix,      chunk_match = name_match };
     if name_match.kind == .substring    return Search_Match.{ priority = .name_substring,   chunk_match = name_match };
 
-    path_match := fuzzy_match_chunk(path, chunk);
+    path_match := fuzzy_match_chunk(path, chunk, case_sensitive);
     if path_match.kind == .prefix || path_match.kind == .substring  return Search_Match.{ priority = .path_substring, chunk_match = path_match };
 
     if name_match.kind == .scattered return Search_Match.{ priority = .name_scattered, chunk_match = name_match };
     if path_match.kind == .scattered return Search_Match.{ priority = .path_scattered, chunk_match = path_match };
 
-    if !path || !name return .{};
+    if case_sensitive || !path || !name return .{};
 
     // If neither field matches alone, a term can still span the folder and filename
     auto_release_temp();
     path_and_name := tprint("%/%", trim_right(path, "/"), name);
-    path_match = fuzzy_match_chunk(path_and_name, chunk);
+    path_match = fuzzy_match_chunk(path_and_name, chunk, case_sensitive);
     if path_match.kind != .none return Search_Match.{ priority = .path_scattered, chunk_match = path_match };
 
     return .{};
 }
 
-get_search_score :: (name: string, path: string, chunks: [] Fuzzy_Filter.Chunk) -> Search_Score {
+get_search_score :: (name: string, path: string, filter: Fuzzy_Filter) -> Search_Score {
     result: Search_Score;
 
-    for chunk : chunks {
-        search_match := get_best_search_match(name, path, chunk);
+    for chunk : filter.chunks {
+        search_match := get_best_search_match(name, path, chunk, filter.case_sensitive);
         if search_match.priority == .none return .{};
 
         chunk_match := search_match.chunk_match;

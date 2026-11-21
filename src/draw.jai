@@ -2687,7 +2687,7 @@ draw_open_file_dialog :: () {
         path_align_x := files_rect.x + files_rect.w / 2.5;
 
         // Get highlights on the fly
-        highlight_filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
+        highlight_filter := construct_open_file_dialog_filter(to_string(input.text));
         highlight_paths := mode == .search || mode == .open_editors;
 
         for entry, i : visible_entries {

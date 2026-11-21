@@ -5,7 +5,7 @@ fuzzy_match :: (s: string, filter: Fuzzy_Filter, only_exact := false, $want_high
     }
 
     auto_release_temp();
-    str := to_lower_copy(s,, temp);
+    str := ifx filter.case_sensitive then s else to_lower_copy(s,, temp);
 
     if !filter.chunks || !str return 0, false, highlights;
 
@@ -88,11 +88,11 @@ fuzzy_match :: (s: string, filter: Fuzzy_Filter, only_exact := false, $want_high
     return xx score, false, highlights;
 }
 
-fuzzy_match_chunk :: (s: string, chunk: Fuzzy_Filter.Chunk) -> Fuzzy_Chunk_Match {
+fuzzy_match_chunk :: (s: string, chunk: Fuzzy_Filter.Chunk, case_sensitive: bool) -> Fuzzy_Chunk_Match {
     if !s || !chunk.chars || chunk.str.count > s.count return .{};
 
     auto_release_temp();
-    str := to_lower_copy(s,, temp);
+    str := ifx case_sensitive then s else to_lower_copy(s,, temp);
 
     result: Fuzzy_Chunk_Match;
     result.text_count = s.count;
@@ -131,9 +131,11 @@ fuzzy_match_chunk :: (s: string, chunk: Fuzzy_Filter.Chunk) -> Fuzzy_Chunk_Match
 
 
 // NOTE: assuming the context allocator is either temp or a pool
-construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> Fuzzy_Filter {
-    str := to_lower_copy(trim(filter_str),, temp);
-    if !str return .{};
+construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false, case_sensitive := false) -> Fuzzy_Filter {
+    trimmed := trim(filter_str);
+    if !trimmed return .{};
+
+    str := ifx case_sensitive then copy_string(trimmed,, temp) else to_lower_copy(trimmed,, temp);
 
     chunks: [..] Fuzzy_Filter.Chunk;
     chunks.allocator = temp;
@@ -168,7 +170,7 @@ construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> F
         array_add(*chunks, Fuzzy_Filter.Chunk.{ str = s, prefix_table = kmp_build_prefix_table(s), chars = chars });
     }
 
-    return Fuzzy_Filter.{ full_string = str, full_string_prefix_table = kmp_build_prefix_table(str), chunks = chunks };
+    return Fuzzy_Filter.{ full_string = str, full_string_prefix_table = kmp_build_prefix_table(str), chunks = chunks, case_sensitive = case_sensitive };
 }
 
 
@@ -177,6 +179,8 @@ Fuzzy_Filter :: struct {
     full_string_prefix_table: [] int;
 
     chunks: [] Chunk;
+
+    case_sensitive: bool;
 
     Chunk :: struct {
         str: string;
