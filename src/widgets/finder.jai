@@ -152,6 +152,8 @@ finder_update :: () {
         start_new_search(force = true);
     }
 
+    if !outstanding_tasks return;
+
     tasks := get_completed_work(*thread_group);
     for tasks {
         task := cast(*Search_Task) it;
