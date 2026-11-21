@@ -2119,12 +2119,13 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
 
     offset := 0;
     skip_table := bmh_prepare_skip_table(needle, case_sensitive);
+    search_needle := ifx case_sensitive then needle else to_lower_copy(needle,, temp);
 
     while true {
         if case_sensitive {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
+            offset = inline bmh_find_index_from_left(buffer_str, search_needle, start_index = offset, skip_table, case_sensitive = true);
         } else {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+            offset = inline bmh_find_index_from_left(buffer_str, search_needle, start_index = offset, skip_table, case_sensitive = false);
         }
         if offset < 0 break;
         if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }

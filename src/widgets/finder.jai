@@ -3,8 +3,7 @@ init_finder :: () {
     num_threads := max(num_cpus - 1, 1);
 
     thread_group = Thread_Group.{};
-    init(*thread_group, num_threads, group_proc = search_threadproc, temporary_storage_size = 1024 * 1024);
-    thread_group.name = "Finder";
+    init(*thread_group, num_threads, group_proc = search_threadproc, temporary_storage_size = 1024 * 1024, group_name = "Finder");
     thread_group.logging = false;
     for * thread_group.worker_info { it.thread.starting_context.logger_data = context.logger_data; }
 
@@ -334,10 +333,15 @@ start_new_search :: (force := false) {
     buffers_per_task := buffer_ptrs_snapshot.count / num_threads + 1;
     buffer_start_index := 0;
 
+    task_needle := request.needle;
+    if !request.case_sensitive && !request.regex_search {
+        task_needle = to_lower_copy(task_needle,, temp);
+    }
+
     while buffer_start_index < buffer_ptrs_snapshot.count {
         task := New(Search_Task);
         task.request_id = request.id;
-        task.needle  = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.needle  = copy_string(task_needle);
         task.include = copy_string(request.include);
         task.exclude = copy_string(request.exclude);
         task.skip_table = array_copy(request.skip_table);
@@ -362,6 +366,7 @@ start_new_search :: (force := false) {
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     using task := cast(*Search_Task) work;
+    if search_task_is_stale(task) return .CONTINUE;
 
     context_set_config_snapshot(task.config_snapshot);
     defer buffer_settings_cache_destroy();
@@ -391,7 +396,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     }
 
     for buffer : array_view(buffer_ptrs_snapshot, buffer_start_index, buffer_end_index - buffer_start_index + 1) {
-        if task.request_id < finder.request.id  break;  // exit early if a newer request exists
+        if search_task_is_stale(task) break;
 
         // Make sure the buffer contents doesn't change while we're scanning it
         lock(*buffer.content_lock);
@@ -487,33 +492,46 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
 find_all :: (using task: *Search_Task, buffer: Buffer, buffer_sort_key: u64) {
     buffer_str := to_string(buffer.bytes);
     offset := 0;
+    end_of_starts := buffer_str.count - needle.count + 1;
 
-    while true {
-        if case_sensitive {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
-        } else {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+    while offset < end_of_starts {
+        if search_task_is_stale(task) return;
+
+        batch_end := min(end_of_starts, offset + 64 * 1024);
+        scan_str := buffer_str;
+        scan_str.count = batch_end + needle.count - 1;
+
+        while offset < batch_end {
+            if case_sensitive {
+                offset = inline bmh_find_index_from_left(scan_str, needle, start_index = offset, skip_table, case_sensitive = true);
+            } else {
+                offset = inline bmh_find_index_from_left(scan_str, needle, start_index = offset, skip_table, case_sensitive = false);
+            }
+            if offset < 0 {
+                offset = batch_end;
+                break;
+            }
+            if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
+
+            result := *results[num_results];
+            result.buffer_id    = xx buffer.id;
+            result.match_offset = xx offset;
+            result.match_count  = xx needle.count;
+
+            offset_part: u64 = (cast,trunc(u64) offset) << 0;
+            result.sort_key = buffer_sort_key | offset_part;
+
+            num_results += 1;
+            if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; return; }
+
+            offset += needle.count;
         }
-        if offset < 0 break;
-        if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
-
-        result := *results[num_results];
-        result.buffer_id    = xx buffer.id;
-        result.match_offset = xx offset;
-        result.match_count  = xx needle.count;
-
-        offset_part: u64 = (cast,trunc(u64) offset) << 0;
-        result.sort_key = buffer_sort_key | offset_part;
-
-        num_results += 1;
-        if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; break; }
-
-        offset += needle.count;
     }
 }
 
 reset_search_request :: (using request: *Search_Request, new_needle: string, new_include: string, new_exclude: string) {
-    id += 1;
+    atomic_store(*id, atomic_load(*id) + 1);
+
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);
 
@@ -539,6 +557,10 @@ reset_results :: () {
     scroll_y = 0;
     scroll_anim.target = 0;
     selected = 0;
+}
+
+search_task_is_stale :: inline (task: *Search_Task) -> bool {
+    return task.request_id != atomic_load(*finder.request.id);
 }
 
 free_task :: (task: *Search_Task) {

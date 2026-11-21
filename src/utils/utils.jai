@@ -137,26 +137,48 @@ bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
     skip_table: [256] s32 = ---;
     for * skip_table { it.* = cast,no_check(s32) needle.count; }
     if case_sensitive {
-        for i : 0 .. needle.count - 2 { skip_table[needle[i]]           = cast,no_check(s32) (needle.count - 1 - i); }
+        for i : 0 .. needle.count - 2 {
+            skip_table[needle[i]] = cast,no_check(s32) (needle.count - 1 - i);
+        }
     } else {
-        for i : 0 .. needle.count - 2 { skip_table[to_lower(needle[i])] = cast,no_check(s32) (needle.count - 1 - i); }
+        for i : 0 .. needle.count - 2 {
+            shift := cast,no_check(s32) (needle.count - 1 - i);
+            skip_table[to_lower(needle[i])] = shift;
+            skip_table[to_upper(needle[i])] = shift;
+        }
     }
     return skip_table;
 }
 
 bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, $case_sensitive: bool) -> s64 {
+    last := needle.count - 1;
+    needle_last := needle[last];  // NOTE: assuming that in the case-insensitive case the needle is already lowercased
+    fold_mask: u8 = 0;
+    #if !case_sensitive {
+        if is_lower(needle_last) then fold_mask = 0x20;
+    }
+
     i := start_index;
     last_i := s.count - needle.count;
+
     while i <= last_i {
-        current := to_string(s.data + i, needle.count);
-        #if case_sensitive {
-            if current == needle return i;
-            i += skip_table[s[i + needle.count - 1]];
-        } else {
-            if equal_nocase(current, needle) return i;
-            i += skip_table[to_lower(s[i + needle.count - 1])];
+        last_byte := s[i + last];
+        if (last_byte | fold_mask)  == needle_last {
+            current := to_string(s.data + i, needle.count);
+            #if case_sensitive {
+                if current == needle return i;
+            } else {
+                j := 0;
+                while j < last && to_lower(current[j]) == needle[j] {
+                    j += 1;
+                }
+                if j == last return i;
+            }
         }
+
+        i += skip_table[last_byte];
     }
+
     return -1;
 }
 
