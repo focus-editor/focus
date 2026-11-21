@@ -1959,65 +1959,14 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
                 width: float;
 
                 line_range := get_real_line_range(buffer, entry.line);
-                text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
                 // Line number
                 width = xx Simp.prepare_text(get_font(.ui_small), tprint("%", entry.line + 1));
                 Simp.draw_prepared_text(get_font(.ui_small), xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
 
                 // Draw code line
-                {
-                    match_start := entry.offset;
-                    match_end   := min(entry.offset + entry.count, line_range.end);  // if we have a multi-line match, we will still show only the first line
-                    line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                    line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start), tab_size);
-                    cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start), tab_size);
-                    cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start), tab_size);
-
-                    // Figure out whether we need to cut the line so that the match is visible
-                    col_offset  := 0;
-                    byte_offset := 0;
-                    pad_cols := 2;
-                    if cols_until_match_end > max_code_chars {
-                        if (cols_until_match_end - cols_until_match_start) >= max_code_chars {
-                            // The match won't fit on the screen anyway - stick it to the left
-                            col_offset = xx max(0, cols_until_match_start - pad_cols);
-                        } else {
-                            // Stick the match to the right
-                            col_offset = cols_until_match_end - xx (max_code_chars - pad_cols);
-                        }
-                    }
-                    if col_offset > 0 {
-                        line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
-                        byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent, tab_size);
-                    }
-
-                    pen.x = text_x;
-                    if col_offset > 0 {
-                        // Line was cut on the left, draw an ellipsis
-                        Simp.draw_text(get_font(.editor), xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
-                        pen.x += char_x_advance;
-                    }
-
-                    // Draw highlight
-                    highlight_rect := entry_rect;
-                    highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
-                    highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
-                    draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE, extra_draw_info = .{is_background = true});
-
-                    // Draw line
-                    visible_offset_range = Offset_Range.{
-                        start = line_start + xx byte_offset,
-                        end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
-                    };
-                    line_str := get_range_as_string(buffer, visible_offset_range);
-                    if line_str.count > 0 {
-                        tokens := to_view(buffer.tokens, visible_offset_range.start, line_str.count);
-                        code_lines: [1] Simp.Code_Line;
-                        code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
-                        draw_code(get_font(.editor), pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
-                    }
-                }
+                pen.x = text_x;
+                draw_search_result_preview(buffer, line_range, entry.offset, entry.count, pen, shrink_y(entry_rect, padding), max_code_chars, tab_size);
             }
 
             if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_x_advance));
@@ -3231,6 +3180,92 @@ draw_kill_running_command_dialog :: () {
     );
 }
 
+draw_search_result_preview :: (buffer: *Buffer, line_range: Offset_Range, match_offset: s32, match_count: s32, _pen: Vector2, highlight_rect: Rect, max_code_chars: s32, tab_size: s32) {
+    if max_code_chars <= 0 return;
+
+    pen := _pen;
+    char_x_advance := get_char_x_advance();
+
+    match_start := clamp(match_offset, line_range.start, line_range.end);
+    match_end := cast(s32) clamp(
+        cast(s64) match_offset + match_count,
+        cast(s64) match_start, cast(s64) line_range.end);
+
+    preview: string;
+    preview_start: s32;
+    start_col := 0;
+    highlight_col := 0;
+    highlight_cols := 0;
+    clipped_left := false;
+
+    if line_range.end - line_range.start > 4096 {
+        // Long-line previews use local columns so we don't scan the prefix.
+        preview_start = match_start;
+        for 1..3 {
+            if preview_start <= line_range.start || preview_start >= line_range.end break;
+            if (buffer.bytes[preview_start] & 0xc0) != 0x80 break;
+            preview_start -= 1;
+        }
+
+        clipped_left = preview_start > line_range.start;
+        preview_cols := max_code_chars - (ifx clipped_left then 1 else 0);
+        if preview_cols <= 0 return;
+
+        suffix := cast(string) to_view(buffer.bytes, preview_start, line_range.end - preview_start);
+        preview = take_first_n_chars(suffix, preview_cols, tab_size);
+
+        if match_end > match_start {
+            highlight_bytes := min(preview.count, cast(s64) (match_end - preview_start));
+            highlight_cols = min(preview_cols, num_cols_in_string(slice(preview, 0, highlight_bytes), tab_size));
+        }
+    } else {
+        text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
+        line_start := ifx text_start <= match_start then text_start else line_range.start;
+        line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start), tab_size);
+        cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start), tab_size);
+        cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start), tab_size);
+
+        col_offset  := 0;
+        byte_offset := 0;
+        pad_cols := 2;
+        if cols_until_match_end > max_code_chars {
+            if cols_until_match_end - cols_until_match_start >= max_code_chars {
+                col_offset = xx max(0, cols_until_match_start - pad_cols);
+            } else {
+                col_offset = cols_until_match_end - xx (max_code_chars - pad_cols);
+            }
+        }
+        if col_offset > 0 {
+            line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end - line_start);
+            byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent, tab_size);
+        }
+
+        preview_start = line_start + xx byte_offset;
+        preview = cast(string) to_view(buffer.bytes, preview_start, min(line_range.end - preview_start, 4 * max_code_chars));
+        start_col = line_indent + col_offset;
+        highlight_col = cols_until_match_start - col_offset;
+        highlight_cols = cols_until_match_end - cols_until_match_start;
+        clipped_left = col_offset > 0;
+    }
+
+    if clipped_left {
+        Simp.draw_text(get_font(.editor), xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
+        pen.x += char_x_advance;
+    }
+
+    highlight := highlight_rect;
+    highlight.x = pen.x + char_x_advance * highlight_col;
+    highlight.w = char_x_advance * highlight_cols;
+    draw_rect(highlight, Color.SEARCH_RESULT_INACTIVE);
+
+    if preview.count > 0 {
+        tokens := to_view(buffer.tokens, preview_start, preview.count);
+        code_lines: [1] Simp.Code_Line;
+        code_lines[0] = .{ line = preview, tab_spaces = 0, tokens = xx,force tokens };
+        draw_code(get_font(.editor), pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = start_col);
+    }
+}
+
 draw_finder :: () {
     using finder;
 
@@ -3488,7 +3523,6 @@ draw_finder :: () {
             // Chose the first option at least for now.
             line_num := offset_to_real_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
             line_range := get_real_line_range(buffer, line_num);
-            text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
             // Draw file info
             {
@@ -3502,60 +3536,11 @@ draw_finder :: () {
             width = xx Simp.prepare_text(get_font(.ui_small), tprint("%", line_num + 1));
             Simp.draw_prepared_text(get_font(.ui_small), xx (line_num_x + line_num_col_width - width), xx pen.y, color = xx Color.UI_DIM);
 
+            if max_code_chars > 0 && buffer_needs_tokenizing(buffer) then retokenize(buffer);
+
             // Draw code line
-            {
-                match_start := entry.match_offset;
-                match_end   := min(entry.match_offset + entry.match_count, line_range.end);  // if we have a multi-line match, we will still show only the first line
-                line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start), tab_size);
-                cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start), tab_size);
-                cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start), tab_size);
-
-                // Figure out whether we need to cut the line so that the match is visible
-                col_offset  := 0;
-                byte_offset := 0;
-                pad_cols := 2;
-                if cols_until_match_end > max_code_chars {
-                    if (cols_until_match_end - cols_until_match_start) >= max_code_chars {
-                        // The match won't fit on the screen anyway - stick it to the left
-                        col_offset = xx max(0, cols_until_match_start - pad_cols);
-                    } else {
-                        // Stick the match to the right
-                        col_offset = cols_until_match_end - xx (max_code_chars - pad_cols);
-                    }
-                }
-                if col_offset > 0 {
-                    line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
-                    byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent, tab_size);
-                }
-
-                pen.x = text_x;
-                if col_offset > 0 {
-                    // Line was cut on the left, draw an ellipsis
-                    Simp.draw_text(get_font(.editor), xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
-                    pen.x += char_x_advance;
-                }
-                if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
-
-                // Draw highlight
-                highlight_rect := entry_rect;
-                highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
-                highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
-                draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE);
-
-                // Draw line
-                visible_range := Offset_Range.{
-                    start = line_start + xx byte_offset,
-                    end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
-                };
-                line_str := get_range_as_string(buffer, visible_range);
-                if line_str.count > 0 {
-                    tokens := to_view(buffer.tokens, visible_range.start, line_str.count);
-                    code_lines: [1] Simp.Code_Line;
-                    code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
-                    draw_code(get_font(.editor), pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
-                }
-            }
+            pen.x = text_x;
+            draw_search_result_preview(buffer, line_range, entry.match_offset, entry.match_count, pen, shrink_y(entry_rect, padding), max_code_chars, tab_size);
         }
 
         // Drawing the scrollbar here so that scopes don't cover it
