@@ -96,11 +96,7 @@ finder_open :: () {
     active_input = .input;
     case_sensitive_toggled_manually = false;
 
-    if need_to_refresh_results {
-        need_to_refresh_results = false;
-        reset_results();
-        start_new_search(force = true);
-    }
+    maybe_refresh_results();
 }
 
 finder_close :: () {
@@ -145,12 +141,7 @@ finder_update :: () {
     using finder;
     if !initted return;
 
-    // If a buffer has changed while we have the finder window open, we have to refresh
-    if finder_is_open() && need_to_refresh_results {
-        need_to_refresh_results = false;
-        reset_results();
-        start_new_search(force = true);
-    }
+    maybe_refresh_results();
 
     if !outstanding_tasks return;
 
@@ -164,14 +155,24 @@ finder_update :: () {
             continue;
         }
 
-        if task.worker_limit_reached then finder.result_limit_reached = true;
-
         array_add(*request.completed_tasks, task);
         request.num_tasks_left -= 1;
         if request.num_tasks_left == 0 {
+            old_selected := -1;
+            old_match: Search_Result;
+            if request.preserve_result_position && selected >= 0 && selected < results.count {
+                old_selected = selected;
+                old_match = results[selected];
+            }
+
             // Received all data, collect all results for displaying
             total_results := 0;
-            for request.completed_tasks total_results += it.num_results;
+            result_limit_reached = false;
+            for request.completed_tasks {
+                total_results += it.num_results;
+                if it.worker_limit_reached then result_limit_reached = true;
+            }
+
             array_resize(*results, total_results, initialize = false);
             i := 0;
             for request.completed_tasks {
@@ -192,19 +193,17 @@ finder_update :: () {
             for request.completed_tasks free_task(it);
             array_reset_keeping_memory(*request.completed_tasks);
 
-            scroll_y = 0;
-            scroll_anim.target = 0;
-            selected = 0;
+            restore_result_position(old_selected, old_match);
             request.in_progress = false;
         }
     }
 
-    if request.in_progress then redraw_requested = true;
+    if request.in_progress || (finder_is_open() && need_to_refresh_results) then redraw_requested = true;
 }
 
 finder_open_selected_result :: (placement: Editor_Placement, selected_num := -1) {
     using finder;
-    if request.in_progress return;
+    if request.in_progress || need_to_refresh_results return;
     if selected_num >= 0 then selected = selected_num;
     if selected >= results.count return;
 
@@ -214,8 +213,9 @@ finder_open_selected_result :: (placement: Editor_Placement, selected_num := -1)
 }
 
 finder_open_selected_result_in_pane :: (number: s64) {
-    if finder.request.in_progress return;
-    if finder.selected >= finder.results.count return;
+    using finder;
+    if request.in_progress || need_to_refresh_results return;
+    if selected >= results.count return;
 
     target_pane := editors_find_pane_by_number(number);
     if !target_pane {
@@ -277,6 +277,7 @@ get_active_input :: () -> *Text_Input {
 
 move_cursor :: (delta: s64, wrap := false, snap := true) {
     using finder;
+    if !results return;
 
     selected += delta;
 
@@ -288,6 +289,51 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
         if selected >= results.count then selected = results.count - 1;
     }
     scroll_to_cursor = ifx snap then Scroll_Mode.snap else .yes;
+}
+
+maybe_refresh_results :: () {
+    using finder;
+    if !initted || !finder_is_open() || !need_to_refresh_results || request.in_progress return;
+    need_to_refresh_results = false;
+
+    start_new_search(force = true);
+    if !request.in_progress && results then reset_results();
+}
+
+restore_result_position :: (old_selected: int, old_match: Search_Result) {
+    using finder;
+
+    selected_by_mouse = -1;
+    if old_selected < 0 || !results {
+        selected = 0;
+        scroll_to_cursor = .no;
+        scroll_y = 0;
+        scroll_anim.target = 0;
+        return;
+    }
+
+    selected = clamp(old_selected, 0, results.count - 1);
+    best_distance := S64_MAX;
+    for result : results {
+        if result.buffer_id != old_match.buffer_id continue;
+        distance := abs(cast(s64) result.match_offset - old_match.match_offset);
+        if distance == 0 && result.match_count == old_match.match_count {
+            selected = it_index;
+            break;
+        }
+        if distance < best_distance {
+            best_distance = distance;
+            selected = it_index;
+        }
+    }
+
+    old_y := old_selected * row_height - scroll_y;
+    if selected != old_selected && old_y < viewport_height && old_y + row_height > 0 {
+        delta := cast(s32) ((selected - old_selected) * row_height);
+        scroll_y += delta;
+        scroll_anim.start  += delta;
+        scroll_anim.target += delta;
+    }
 }
 
 start_new_search :: (force := false) {
@@ -303,15 +349,18 @@ start_new_search :: (force := false) {
         return;
     }
 
-    if !force && request.needle == new_needle && request.include == new_include && request.exclude == new_exclude return;  // nothing has changed, no need to repeat
-
     if context.config.settings.search_is_case_sensitive_when_uppercase_present && !case_sensitive_toggled_manually {
         case_sensitive = contains_uppercase_ascii(new_needle);
     }
 
-    request.case_sensitive = case_sensitive;
-    request.whole_word     = whole_word;
-    request.regex_search   = regex_search;
+    same_query := request.needle         == new_needle     &&
+                  request.include        == new_include    &&
+                  request.exclude        == new_exclude    &&
+                  request.case_sensitive == case_sensitive &&
+                  request.whole_word     == whole_word     &&
+                  request.regex_search   == regex_search;
+    if !force && same_query return;
+
     if regex_search {
         regex: re.Regexp;
 
@@ -319,13 +368,21 @@ start_new_search :: (force := false) {
         if !case_sensitive flags |= .FoldCase;
 
         regex, regex_is_valid = re.compile(new_needle, flags);
-        if !regex_is_valid return;  // only search if the regex is valid
+        if !regex_is_valid {
+            reset_search_request(*request, "", "", "");
+            reset_results();
+            return;
+        }
 
         re.uninit(*regex);
     }
 
+    request.case_sensitive = case_sensitive;
+    request.whole_word     = whole_word;
+    request.regex_search   = regex_search;
     reset_search_request(*request, new_needle, new_include, new_exclude);
-    request.in_progress = true;
+    request.preserve_result_position = same_query;
+    need_to_refresh_results = false;
 
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
@@ -363,7 +420,8 @@ start_new_search :: (force := false) {
         buffer_start_index += buffers_per_task;
     }
 
-    if regex_search && regex_is_valid  reset_results();
+    request.in_progress = request.num_tasks_left > 0;
+    if !request.in_progress || (regex_search && !same_query) then reset_results();
 }
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
@@ -561,7 +619,7 @@ reset_search_request :: (using request: *Search_Request, new_needle: string, new
     skip_table = bmh_prepare_skip_table(needle, case_sensitive);
     num_tasks_left = 0;
     in_progress = false;
-    finder.result_limit_reached = false;
+    preserve_result_position = false;
 }
 
 reset_results :: () {
@@ -573,6 +631,8 @@ reset_results :: () {
     scroll_y = 0;
     scroll_anim.target = 0;
     selected = 0;
+    selected_by_mouse = -1;
+    scroll_to_cursor = .no;
 }
 
 search_task_is_stale :: inline (task: *Search_Task) -> bool {
@@ -627,6 +687,8 @@ Finder :: struct {
     selected: s64;
     selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
     per_page := 10;
+    row_height: float;
+    viewport_height: float;
 
     scroll_y: s32;
     scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
@@ -671,6 +733,7 @@ Search_Request :: struct {
     exclude: string;
     skip_table: [256] s32;
     in_progress: bool;
+    preserve_result_position: bool;
     case_sensitive: bool;
     whole_word: bool;
     regex_search: bool;
@@ -704,5 +767,5 @@ outstanding_tasks: [..] *Search_Task;
 
 thread_group: Thread_Group;
 
-MAX_RESULTS_PER_TASK :: 1000;
+MAX_RESULTS_PER_TASK :: 500;
 

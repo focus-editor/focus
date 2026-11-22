@@ -3274,6 +3274,7 @@ draw_search_result_preview :: (buffer: *Buffer, line_range: Offset_Range, match_
 
 draw_finder :: () {
     using finder;
+    results_pending := request.in_progress || need_to_refresh_results;
 
     char_x_advance := get_char_x_advance();
 
@@ -3310,6 +3311,7 @@ draw_finder :: () {
         if result_limit_reached then template = "%+ results found";
         label := tprint(template, results.count);
         if results.count == 1 then label = "1 result found";
+        if results_pending then label = "Refreshing…";
         draw_tooltip_top_left(label, top_right(box_rect));
     }
 
@@ -3412,6 +3414,9 @@ draw_finder :: () {
 
     // Draw search results
     {
+        row_height = entry_height;
+        viewport_height = files_rect.h;
+
         // Remember how many fits per page
         per_page = cast(s64) (files_rect.h / entry_height);
         if per_page <= 0 then per_page = 2;
@@ -3424,6 +3429,8 @@ draw_finder :: () {
         // Scrollbar
         content_height := results.count * entry_height;
         max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
+        scroll_y = clamp(scroll_y, 0, max_y_scroll);
+        scroll_anim.target = clamp(scroll_anim.target, 0, max_y_scroll);
         new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
         if new_scroll_target != scroll_anim.target {
             scroll_y = new_scroll_target;
@@ -3439,7 +3446,7 @@ draw_finder :: () {
             selected_bottom := selected_top + entry_height;
             if selected_top < 0 then target = cast(s32) (selected * entry_height);
             if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-            if content_height - target < files_rect.h then target = cast(s32) (content_height - files_rect.h);
+            target = clamp(target, 0, max_y_scroll);
             if target != scroll_anim.target {
                 if scroll_to_cursor == .yes {
                     start_animation(*scroll_anim, scroll_y, target);
@@ -3467,7 +3474,7 @@ draw_finder :: () {
 
         if scroll_y != scroll_anim.target {
             redraw_requested = true;
-            scroll_y = get_animation_value(scroll_anim);
+            scroll_y = clamp(get_animation_value(scroll_anim), 0, max_y_scroll);
         }
 
         if !initted {
@@ -3505,7 +3512,7 @@ draw_finder :: () {
                 }
             }
 
-            if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
+            if !results_pending && mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Color.LIST_CURSOR_LITE);
                 placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
