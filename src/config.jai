@@ -4,7 +4,7 @@
 
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 26;
+CURRENT_CONFIG_VERSION :: 27;
 
 get_global_config_path :: inline () -> string /* temp */ {
     return tprint("%/global.focus-config", config_dir);
@@ -220,6 +220,7 @@ clamp_config_values :: (new_config: *Config) {
     settings := *new_config.settings;
 
     Clamp(*settings.tab_size, 1, 100);
+    settings.search_max_results = max(settings.search_max_results, 1);
 
     Clamp(*settings.line_height_scale_percent,  50,  1000);
     Clamp(*settings.build_panel_height_percent, 10,  100);
@@ -267,6 +268,8 @@ replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
     if diff.settings_changed {
         Simp.set_show_tab_characters_in_selection(context.config.settings.show_tab_characters_in_selection);
     }
+
+    if diff.search_max_results_changed then finder.need_to_refresh_results = true;
 
     // Update languages before any settings-dependent refreshes.
     if diff.file_associations_changed {
@@ -347,6 +350,7 @@ Config_Diff :: struct {
     comment_highlight_words_changed: bool;
     file_specific_settings_changed:  bool;
     tab_size_changed:                bool;
+    search_max_results_changed:      bool;
 
     keymap_changed:                  bool;
     build_config_changed:            bool;
@@ -372,6 +376,7 @@ get_config_diff :: (old: Config, new: Config) -> Config_Diff {
     diff.comment_highlight_words_changed = comment_highlight_words_changed(old, new);
     diff.file_specific_settings_changed  = file_specific_settings_changed(old, new);
     diff.tab_size_changed                = old.settings.tab_size != new.settings.tab_size;
+    diff.search_max_results_changed      = old.settings.search_max_results != new.settings.search_max_results;
 
     diff.keymap_changed                  = keymap_changed(old, new);
     diff.build_config_changed            = build_config_changed(old, new);
@@ -968,6 +973,7 @@ Settings :: struct {
     prefer_system_file_dialogs                              := false;   @v1
     persist_local_search_results                            := false;   @v2
     search_is_case_sensitive_when_uppercase_present         := false;   @v6
+    search_max_results                                      := 2000;    @v27
     load_most_recent_project_on_start                       := false;   @v5
     build_panel_width_percent                               := 50;      @v2
     build_panel_height_percent                              := 50;      @v2

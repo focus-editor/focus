@@ -70,6 +70,7 @@ save_current_buffer_on_build:                       false
 
 color_preview_popup:                                enabled  # options: enabled, minimized, disabled
 search_is_case_sensitive_when_uppercase_present:    true
+search_max_results:                                 2000  # maximum number of workspace search results
 
 detect_indentation:                                 true
 indent_using:                                       spaces

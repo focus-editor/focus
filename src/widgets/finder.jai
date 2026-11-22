@@ -170,15 +170,16 @@ finder_update :: () {
             total_results := 0;
             result_limit_reached = false;
             for request.completed_tasks {
-                total_results += it.num_results;
-                if it.worker_limit_reached then result_limit_reached = true;
+                total_results += it.results.count;
+                if it.results.count == it.max_results then result_limit_reached = true;
             }
 
             array_resize(*results, total_results, initialize = false);
             i := 0;
             for request.completed_tasks {
-                focus_memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
-                i += it.num_results;
+                if !it.results continue;
+                focus_memcpy(results.data + i, it.results.data, it.results.count * size_of(Search_Result));
+                i += it.results.count;
             }
 
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
@@ -389,8 +390,17 @@ start_new_search :: (force := false) {
     assert(num_threads > 0);
 
     buffer_ptrs_snapshot := get_immutable_buffer_ptrs_snapshot();
+    if !buffer_ptrs_snapshot {
+        reset_results();
+        return;
+    }
 
-    buffers_per_task := buffer_ptrs_snapshot.count / num_threads + 1;
+    max_results := context.config.settings.search_max_results;
+    num_tasks := min(num_threads, buffer_ptrs_snapshot.count, max_results);
+    buffers_per_task := buffer_ptrs_snapshot.count / num_tasks;
+    extra_buffers := buffer_ptrs_snapshot.count % num_tasks;
+    results_per_task := max_results / num_tasks;
+    extra_results := max_results % num_tasks;
     buffer_start_index := 0;
 
     task_needle := request.needle;
@@ -398,7 +408,7 @@ start_new_search :: (force := false) {
         task_needle = to_lower_copy(task_needle,, temp);
     }
 
-    while buffer_start_index < buffer_ptrs_snapshot.count {
+    for 0..num_tasks-1 {
         task := New(Search_Task);
         task.request_id = request.id;
         task.needle  = copy_string(task_needle);
@@ -407,10 +417,14 @@ start_new_search :: (force := false) {
         task.skip_table = array_copy(request.skip_table);
         task.buffer_ptrs_snapshot = buffer_ptrs_snapshot;
         task.buffer_start_index = buffer_start_index;
-        task.buffer_end_index   = min(buffer_start_index + buffers_per_task - 1, buffer_ptrs_snapshot.count - 1);
+        task.buffer_end_index   = buffer_start_index + buffers_per_task - 1;
+        if it < extra_buffers then task.buffer_end_index += 1;
         task.case_sensitive = request.case_sensitive;
         task.whole_word = request.whole_word;
         task.regex_search = request.regex_search;
+        task.max_results = results_per_task + (ifx it < extra_results then 1 else 0);
+        task.results.allocator = focus_allocator;
+        array_reserve(*task.results, task.max_results);
         task.config_snapshot = acquire_current_config_snapshot();
 
         begin_buffer_snapshot_use();
@@ -418,7 +432,7 @@ start_new_search :: (force := false) {
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
 
-        buffer_start_index += buffers_per_task;
+        buffer_start_index = task.buffer_end_index + 1;
     }
 
     request.in_progress = request.num_tasks_left > 0;
@@ -471,7 +485,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             find_all(task, buffer, buffer_sort_key);
         }
 
-        if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; break; }
+        if results.count == max_results break;
     }
 
     return .CONTINUE;  // we want to reuse this thread for future searches
@@ -551,7 +565,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
         if count == 0 || starts_with(buffer_str, #char "\n") then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
 
         // Valid result, add to the list
-        result := *results[num_results];
+        result := array_add(*results);
         result.buffer_id    = xx buffer.id;
         result.match_offset = xx offset;
         result.match_count  = xx count;
@@ -559,8 +573,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
         offset_part: u64 = (cast,trunc(u64) offset) << 0;
         result.sort_key = buffer_sort_key | offset_part;
 
-        num_results += 1;
-        if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; break; }
+        if results.count == max_results break;
     }
 }
 
@@ -588,7 +601,7 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_sort_key: u64) {
             }
             if whole_word && !is_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
 
-            result := *results[num_results];
+            result := array_add(*results);
             result.buffer_id    = xx buffer.id;
             result.match_offset = xx offset;
             result.match_count  = xx needle.count;
@@ -596,8 +609,7 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_sort_key: u64) {
             offset_part: u64 = (cast,trunc(u64) offset) << 0;
             result.sort_key = buffer_sort_key | offset_part;
 
-            num_results += 1;
-            if num_results >= MAX_RESULTS_PER_TASK { worker_limit_reached = true; return; }
+            if results.count == max_results return;
 
             offset += needle.count;
         }
@@ -649,6 +661,7 @@ free_task :: (task: *Search_Task) {
     free(task.include);
     free(task.exclude);
     array_free(task.skip_table);
+    array_free(task.results);
     release_config_snapshot(task.config_snapshot);
     end_buffer_snapshot_use();
     free(task);
@@ -756,10 +769,8 @@ Search_Task :: struct {
     buffer_start_index: s64;
     buffer_end_index:   s64;
 
-    // To be filled by the worker thread
-    num_results: s64;
-    results: [MAX_RESULTS_PER_TASK] Search_Result;
-    worker_limit_reached: bool;
+    max_results: s64;
+    results: [..] Search_Result;  // filled by the worker thread
 
     config_snapshot: *Config_Snapshot;
 }
@@ -767,6 +778,4 @@ Search_Task :: struct {
 outstanding_tasks: [..] *Search_Task;
 
 thread_group: Thread_Group;
-
-MAX_RESULTS_PER_TASK :: 500;
 
