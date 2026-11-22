@@ -77,10 +77,45 @@ deinit_open_file_dialog :: () {
     array_reset(*entries.filtered,, allocator = Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool });
 }
 
-open_file_dialog_maybe_refresh_entries :: inline () {
-    if !open_file_dialog.should_refresh_entries return;
-    refresh_entries(clear_input = false);
-    open_file_dialog.should_refresh_entries = false;
+open_file_dialog_maybe_refresh_entries :: () {
+    using open_file_dialog;
+    if !should_refresh_entries return;
+
+    // Remember selected entries to preserve them
+    old_selected_index := entries.selected;
+    old_selected_entry := remember_entry(old_selected_index);
+    old_pressed_entry  := remember_entry(entries.selected_by_mouse);
+
+    rebuild_entries();
+
+    filtered := entries.filtered;
+    entries.selected = clamp(old_selected_index, 0, filtered.count - 1);
+
+    // Try to preserve the old selected entry
+    if old_selected_entry.type != .nothing && !entry_matches(*old_selected_entry, *filtered[entries.selected]) {
+        for * entry : filtered {
+            if entry_matches(*old_selected_entry, entry) {
+                entries.selected = it_index;
+                break;
+            }
+        }
+    }
+
+    // Try to preserve viewport position
+    if entries.selected != old_selected_index {
+        old_y := old_selected_index * entries.row_height - entries.scroll_y;
+        if old_y < entries.viewport_height && old_y + entries.row_height > 0 {
+            delta := cast(s32) ((entries.selected - old_selected_index) * entries.row_height);
+            entries.scroll_y += delta;
+            entries.scroll_anim.start  += delta;
+            entries.scroll_anim.target += delta;
+        }
+    }
+
+    pressed := entries.selected_by_mouse;
+    if pressed >= 0 && (pressed >= filtered.count || !entry_matches(*old_pressed_entry, *filtered[pressed])) {
+        entries.selected_by_mouse = -1;  // drop the selected by mouse index only if we lost it
+    }
 }
 
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: Buffer_Id = -1, triggered_by: Deferred_Action_Id = -1, from_root := false) {
@@ -236,6 +271,48 @@ open_file_dialog_maybe_expand :: () {
     redraw_requested = true;
 }
 
+open_file_dialog_invalidate_file :: (path: string) {
+    using open_file_dialog;
+    if active_global_widget != .open_file_dialog || should_refresh_entries return;
+
+    if mode == .search || mode == .open_editors {
+        should_refresh_entries = true;
+        return;
+    }
+
+    if !path || !path_chunks return;
+
+    push_allocator(temp);
+    should_refresh_entries = platform_path_equals(get_parent_dir_path(path), get_current_folder_path());
+}
+
+open_file_dialog_invalidate_buffer :: inline (buffer: Buffer) {
+    if buffer.internal return;
+    open_file_dialog_invalidate_file(ifx buffer.has_file then buffer.file.full_path else "");
+}
+
+open_file_dialog_invalidate_directory :: (changes: [] File_Change) {
+    using open_file_dialog;
+    if active_global_widget != .open_file_dialog || should_refresh_entries return;
+    if mode == .search || mode == .open_editors || !path_chunks return;
+
+    push_allocator(temp);
+    folder := get_current_folder_path();
+    for change : changes {
+        path := trim_right(change.full_path, "/");
+        if !path then path = change.full_path;
+
+        if (change.events & (.ADDED | .REMOVED | .MOVED)) && platform_path_equals(get_parent_dir_path(path), folder) {
+            should_refresh_entries = true;
+            return;
+        }
+        if (change.events & (.REMOVED | .MOVED | .SCAN_CHILDREN)) && path_is_within_other_path(folder, path) {
+            should_refresh_entries = true;
+            return;
+        }
+    }
+}
+
 construct_open_file_dialog_filter :: (query: string) -> Fuzzy_Filter {
     case_sensitive := open_file_dialog.mode == .search &&
                       context.config.settings.search_is_case_sensitive_when_uppercase_present &&
@@ -336,8 +413,20 @@ clear_path_chunks :: () {
 refresh_entries :: (clear_input := true) {
     using open_file_dialog;
 
-    // Do it before pushing the pool allocator because the input uses use the global heap
     if clear_input then text_input_fully_clear(*input);
+
+    scroll_to_cursor = .snap;
+    entries.scroll_y = 0;
+    entries.scroll_anim.target = 0;
+    entries.selected = 0;
+    entries.selected_by_mouse = -1;
+
+    rebuild_entries();
+}
+
+rebuild_entries :: () {
+    using open_file_dialog;
+    should_refresh_entries = false;
 
     entries_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
     push_allocator(entries_allocator);
@@ -348,9 +437,6 @@ refresh_entries :: (clear_input := true) {
     // It also means we will always have the most recent contents of the dir and can use the memory pool
     scan_current_folder();
 
-    scroll_to_cursor = .snap;
-    entries.scroll_y = 0;
-    entries.selected = 0;
     array_reset(*entries.filtered);
 
     // This bit will be set when we want to make sure an entry appears on top
@@ -560,6 +646,24 @@ refresh_entries :: (clear_input := true) {
     }
 }
 
+remember_entry :: (index: int) -> Entry {
+    filtered := open_file_dialog.entries.filtered;
+    if index < 0 || index >= filtered.count return Entry.{ type = .nothing };
+
+    entry := *filtered[index];
+    if entry.buffer_id >= 0 return Entry.{ buffer_id = entry.buffer_id };
+    if entry.type == .drive return Entry.{ type = .drive, name = copy_temporary_string(entry.name) };
+    return Entry.{ type = entry.type, full_path = copy_temporary_string(entry.full_path) };
+}
+
+entry_matches :: (target: *Entry, entry: *Entry) -> bool {
+    if target.type == .nothing || target.type != entry.type return false;
+    if target.buffer_id >= 0 return target.buffer_id == entry.buffer_id;
+    if target.type == .drive return platform_path_equals(target.name, entry.name);
+    if target.type == .save return true;
+    return platform_path_equals(target.full_path, entry.full_path);
+}
+
 get_best_search_match :: (name: string, path: string, chunk: Fuzzy_Filter.Chunk, case_sensitive: bool) -> Search_Match {
     name_match := fuzzy_match_chunk(name, chunk, case_sensitive);
     if name_match.kind == .prefix       return Search_Match.{ priority = .name_prefix,      chunk_match = name_match };
@@ -721,6 +825,8 @@ Open_File_Dialog :: struct {
         scroll_y: s32;
         scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
         per_page: s64 = 10;
+        row_height: float;
+        viewport_height: float;
     }
 
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies

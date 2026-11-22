@@ -25,7 +25,7 @@ refresh_open_buffers :: () {
 
         if !buffer.internal && !buffer.binary {
             finder.need_to_refresh_results = true;
-            open_file_dialog.should_refresh_entries = true;
+            open_file_dialog_invalidate_buffer(buffer);
         }
     }
 }
@@ -906,7 +906,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     modified_on_disk = false;
 
     finder.need_to_refresh_results = true;
-    open_file_dialog.should_refresh_entries = true;
+    open_file_dialog_invalidate_buffer(buffer);
 
     if file_is_watched(file_path) then stop_watching_file(file_path);
     return true;
@@ -1303,7 +1303,7 @@ replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
     if buffer.deleted {
         buffer.deleted = false;
         finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
+        open_file_dialog_invalidate_buffer(buffer);
     }
 
     if buffer_data.binary then buffer.readonly = true;
@@ -1328,7 +1328,7 @@ replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
     }
 
     finder.need_to_refresh_results = true;
-    open_file_dialog.should_refresh_entries = true;
+    open_file_dialog_invalidate_buffer(buffer);
 
     refresh_all_editors_for_buffer(buffer.id);
 }
@@ -1619,7 +1619,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
                 buffer.time_when_deleted = frame_time64;
                 buffer.deleted = true;
                 finder.need_to_refresh_results = true;
-                open_file_dialog.should_refresh_entries = true;
+                open_file_dialog_invalidate_buffer(buffer);
             }
         }
 
@@ -1631,7 +1631,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     buffer_id, created := find_or_create_buffer(path);
     if created {
         finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
+        open_file_dialog_invalidate_file(path);
         return;
     }
 
@@ -1657,7 +1657,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         assert(platform_path_equals(path, buffer.file.full_path));
 
         finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
+        open_file_dialog_invalidate_file(path);
         reload_from_disk(buffer_id);
     }
 }
@@ -1687,7 +1687,7 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
     if buffer.deleted {
         buffer.deleted = false;
         finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
+        open_file_dialog_invalidate_buffer(buffer);
     }
 
     if is_file_binary(file_contents_str) {
@@ -1735,7 +1735,7 @@ maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
     buffer.time_when_deleted = frame_time64;
     buffer.deleted = true;
     finder.need_to_refresh_results = true;
-    open_file_dialog.should_refresh_entries = true;
+    open_file_dialog_invalidate_buffer(buffer);
 }
 
 free_buffer :: (using buffer: *Buffer) {

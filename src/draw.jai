@@ -2567,6 +2567,9 @@ draw_open_file_dialog :: () {
     if initted || mode == .navigate {
         using entries;
 
+        row_height = entry_height;
+        viewport_height = files_rect.h;
+
         // Remember how many fits per page
         per_page = cast(s64) (files_rect.h / entry_height);
         if per_page <= 0 then per_page = 2;
@@ -2578,6 +2581,8 @@ draw_open_file_dialog :: () {
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
+            scroll_y = clamp(scroll_y, 0, max_y_scroll);
+            scroll_anim.target = clamp(scroll_anim.target, 0, max_y_scroll);
             new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, 0, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
@@ -2593,6 +2598,7 @@ draw_open_file_dialog :: () {
                 selected_bottom := selected_top + entry_height;
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+                target = clamp(target, 0, max_y_scroll);
                 if target != scroll_anim.target {
                     if scroll_to_cursor == .yes {
                         start_animation(*scroll_anim, scroll_y, target);
@@ -2620,7 +2626,7 @@ draw_open_file_dialog :: () {
 
             if scroll_y != scroll_anim.target {
                 redraw_requested = true;
-                scroll_y = get_animation_value(scroll_anim);
+                scroll_y = clamp(get_animation_value(scroll_anim), 0, max_y_scroll);
             }
 
             // The above operations could've updated scrollbar position, so drawing it here

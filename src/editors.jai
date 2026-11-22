@@ -1226,7 +1226,7 @@ editor_do_post_close_cleanup :: (editor_id: Editor_Id) {
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
     array_add(*recently_closed_editors, editor_id);
 
-    open_file_dialog.should_refresh_entries = true;
+    open_file_dialog_invalidate_buffer(get_buffer(buffer_id));
 }
 
 close_buffer :: (buffer_id: Buffer_Id) {

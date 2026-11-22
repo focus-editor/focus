@@ -98,6 +98,7 @@ file_watcher_process_changes :: () {
 
     if !changes return;
 
+    open_file_dialog_invalidate_directory(changes);
     for changes  color_preview_invalidate_theme(it.full_path);
 
     process_file_change_batch(changes);
@@ -282,13 +283,13 @@ apply_file_watcher_task_results :: (task: *File_Watcher_Task) {
                 }
                 maybe_defer_refresh_config_or_theme(result.path);
                 finder.need_to_refresh_results = true;
-                open_file_dialog.should_refresh_entries = true;
+                open_file_dialog_invalidate_file(result.path);
             } else {
                 if !buffer.deleted {
                     buffer.time_when_deleted = frame_time64;
                     buffer.deleted = true;
                     finder.need_to_refresh_results = true;
-                    open_file_dialog.should_refresh_entries = true;
+                    open_file_dialog_invalidate_file(result.path);
                 }
             }
         } else {
@@ -296,7 +297,7 @@ apply_file_watcher_task_results :: (task: *File_Watcher_Task) {
                 publish_prepared_buffer(*result.loaded_data);
                 maybe_defer_refresh_config_or_theme(result.path);
                 finder.need_to_refresh_results = true;
-                open_file_dialog.should_refresh_entries = true;
+                open_file_dialog_invalidate_file(result.path);
             }
         }
     }
@@ -351,6 +352,9 @@ apply_moves_within_project :: (task: *File_Watcher_Task) {
         buffer := get_buffer(buffer_id);
         assert(find_buffer_id_by_path(dest_path) < 0);
 
+        open_file_dialog_invalidate_file(buffer.file.full_path);
+        open_file_dialog_invalidate_file(dest_path);
+
         new_file := get_file_info_from_full_path(copy_string(dest_path));
         new_lang := get_lang_from_path(dest_path);
 
@@ -380,7 +384,6 @@ apply_moves_within_project :: (task: *File_Watcher_Task) {
 
     if moved_any {
         finder.need_to_refresh_results = true;
-        open_file_dialog.should_refresh_entries = true;
 
         _, active_buffer := get_active_editor_and_buffer();
         if active_buffer then update_window_title(active_buffer.id);
