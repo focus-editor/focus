@@ -488,8 +488,8 @@ highlight_missing_path :: (p: *Config_Parser, path: string, source: string, base
     if !p.parse_for_highlighting return;
 
     for split(path, "/",, temp) {
+        if !it continue;
         prefix := slice(path, 0, it.data - path.data + it.count);
-        if !prefix continue;
 
         absolute := ifx base then tprint("%/%", base, prefix) else prefix;
         if !file_exists(absolute) {
