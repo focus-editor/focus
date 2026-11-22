@@ -10,6 +10,7 @@ init_finder :: () {
     start(*thread_group);
 
     finder.initted = true;
+    if !is_empty(finder.input.text) then finder.need_to_refresh_results = true;
 }
 
 deinit_finder :: () {
