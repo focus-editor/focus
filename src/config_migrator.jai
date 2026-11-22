@@ -534,7 +534,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 25, "line_endings",                                       "preserve  # options: lf, crlf, preserve" },
 
-    .{ 27, "search_max_results",                                 "2000  # maximum number of workspace search results" },
+    .{ 27, "search_max_results",                                 "4000  # maximum number of workspace search results" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -1413,7 +1413,7 @@ closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
 line_endings:                                    preserve  # options: lf, crlf, preserve
-search_max_results:                              2000  # maximum number of workspace search results
+search_max_results:                              4000  # maximum number of workspace search results
 
 FOCUS_CONFIG
 
@@ -1565,7 +1565,7 @@ closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
 line_endings:                                    preserve  # options: lf, crlf, preserve
-search_max_results:                              2000  # maximum number of workspace search results
+search_max_results:                              4000  # maximum number of workspace search results
 
 FOCUS_CONFIG
 
@@ -1955,7 +1955,7 @@ closing_last_editor_should_exit_program:         false
 show_pane_numbers:                               false
 show_tab_characters_in_selection:                true
 line_endings:                                    preserve  # options: lf, crlf, preserve
-search_max_results:                              2000  # maximum number of workspace search results
+search_max_results:                              4000  # maximum number of workspace search results
 
 [[keymap]]
 # ...

@@ -973,7 +973,7 @@ Settings :: struct {
     prefer_system_file_dialogs                              := false;   @v1
     persist_local_search_results                            := false;   @v2
     search_is_case_sensitive_when_uppercase_present         := false;   @v6
-    search_max_results                                      := 2000;    @v27
+    search_max_results                                      := 4000;    @v27
     load_most_recent_project_on_start                       := false;   @v5
     build_panel_width_percent                               := 50;      @v2
     build_panel_height_percent                              := 50;      @v2
