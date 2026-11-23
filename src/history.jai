@@ -1,8 +1,56 @@
+move_back_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
+    moved, editor_id, cursor := move_in_cursor_history(*back_history, *forward_history);
+    return moved, editor_id, cursor;
+}
+
+move_forward_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
+    moved, editor_id, cursor := move_in_cursor_history(*forward_history, *back_history);
+    return moved, editor_id, cursor;
+}
+
+move_in_cursor_history :: (from: *[..] History_Frame, to: *[..] History_Frame) -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
+    apply_edit_notifications();
+
+    current_editor := get_visible_editor_and_buffer();
+    current_cursor: Cursor;
+
+    if current_editor then current_cursor = get_main_cursor(current_editor);
+
+    for < frame, index : from.* {
+        found, editor := find_editor(frame.editor_id);
+        if !found continue;
+
+        target := Cursor.{ pos = frame.pos, sel = frame.sel };
+        put_cursor_in_valid_spot(*target, get_buffer(editor.buffer_id));
+
+        existing_editor := find_editor_to_reuse(editor);
+        target_id := ifx existing_editor then existing_editor.id else editor.id;
+        if current_editor && target_id == current_editor.id && target.pos == current_cursor.pos && target.sel == current_cursor.sel  continue;
+
+        from.count = index;
+        if current_editor {
+            push_history_frame(to, .{
+                editor_id = current_editor.id,
+                pos = current_cursor.pos,
+                sel = current_cursor.sel,
+            });
+        }
+
+        return true, target_id, target;
+    }
+
+    return false;
+}
+
+push_history_frame :: (history: *[..] History_Frame, frame: History_Frame) {
+    if history.count == MAX_HISTORY_FRAMES then array_ordered_remove_by_index(history, 0);
+    array_add(history, frame);
+}
+
 deinit_cursor_history :: () {
     array_reset(*forward_history);
-    array_reset(*global_history);
+    array_reset(*back_history);
     array_reset(*edit_notifications);
-    table_reset(*editor_history_table);
 
     last_seen_cursor.editor_id = -1;
     last_seen_cursor.cursor = .{};
@@ -10,7 +58,8 @@ deinit_cursor_history :: () {
 }
 
 maybe_save_cursor_history :: () {
-    defer apply_edit_notifications();
+    apply_edit_notifications();
+    if active_global_widget == .go_to_line_dialog  return;
 
     editor_id := get_visible_editor_id(editors.active_pane);
     _, editor := find_editor(editor_id);
@@ -24,99 +73,32 @@ maybe_save_cursor_history :: () {
 
     defer last_seen_cursor = .{ editor_id = editor_id, cursor = cursor, moved_at = now };
 
-    saved := false;
-
     if editor_changed {
-        last_global_frame := ifx global_history then peek_pointer(global_history) else null;
-        if !last_global_frame {
-            // Always save the first valid editor we see when there's no history
-            // (e.g. when we just started or went all the way back in history)
-            editor_id_to_save := last_seen_cursor.editor_id;
-            cursor_to_save    := last_seen_cursor.cursor;
-            if last_seen_cursor.editor_id < 0 {
-                editor_id_to_save = editor_id;
-                cursor_to_save    = cursor;
-            }
-            saved = maybe_save_cursor_position(editor_id_to_save, cursor_to_save);
-        } else if last_global_frame.editor_id == last_seen_cursor.editor_id {
-            saved = maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
+        if last_seen_cursor.editor_id >= 0 {
+            maybe_save_cursor_position(last_seen_cursor.editor_id, last_seen_cursor.cursor, force = true);
+            array_reset_keeping_memory(*forward_history);
+        } else if !back_history && !forward_history {
+            maybe_save_cursor_position(editor_id, cursor);
         }
-    } else if cursor_moved {
-        if (now - last_seen_cursor.moved_at) < IDLE_THRESHOLD_IN_SECONDS return;  // cursor is actively moving, wait
-        saved = maybe_save_cursor_position(editor_id, last_seen_cursor.cursor);
+        return;
     }
 
-    if saved then array_reset_keeping_memory(*forward_history);
+    if now - last_seen_cursor.moved_at < IDLE_THRESHOLD_IN_SECONDS return;
+    if maybe_save_cursor_position(editor_id, last_seen_cursor.cursor) {
+        array_reset_keeping_memory(*forward_history);
+    }
 }
-
-move_back_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
-    if !global_history return false;
-
-    // Save current cursor position in the forward history
-    current_line: s32;
-    editor: *Editor;
-    buffer: *Buffer;
-    editor_id := get_visible_editor_id(editors.active_pane);
-    if editor_id >= 0 {
-        editor, buffer = get_editor_and_buffer(editor_id);
-        cursor := get_main_cursor(editor);
-        array_add(*forward_history, .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel });
-        current_line = offset_to_line(editor, buffer, cursor.pos, safe = true);
-    }
-
-    // Find the previous cursor position
-    // If there are similar positions in the history, skip them all
-    last_global_frame: *Global_History_Frame;
-    last_editor_frame: Editor_History_Frame;
-    while global_history {
-        last_global_frame = peek_pointer(global_history);
-        editor_history := table_find_pointer(*editor_history_table, last_global_frame.editor_id);
-        assert(editor_history != null);
-
-        has_editor_history:, last_editor_frame = ringbuffer_pop(editor_history);
-        history_debug_print("<<<< EDITOR %, FRAME %, pos = %\n", last_global_frame.editor_id, editor_history.total, last_editor_frame.pos);
-
-        if last_global_frame.start_index >= editor_history.total || !has_editor_history {
-            popped := pop(*global_history);
-            history_debug_print("<<<< GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count, popped.editor_id, popped.start_index);
-        }
-        if last_global_frame.editor_id != editor_id break;
-        if !editor break;
-        if has_editor_history && editor && abs(current_line - offset_to_line(editor, buffer, last_editor_frame.pos, safe = true)) >= MIN_LINE_THRESHOLD break;
-    }
-
-    prev_cursor := Cursor.{ pos = last_editor_frame.pos, sel = last_editor_frame.sel };
-    return true, last_global_frame.editor_id, prev_cursor;
-}
-
-move_forward_in_cursor_history :: () -> moved: bool, editor_id: Editor_Id = -1, cursor := Cursor.{} {
-    if !forward_history return false;
-
-    // Save current cursor position in the history
-    editor_id := get_visible_editor_id(editors.active_pane);
-    found, editor := find_editor(editor_id);
-    if found {
-        cursor := get_main_cursor(editor);
-        maybe_save_cursor_position(editor_id, cursor);
-    }
-
-    frame := pop(*forward_history);
-    next_cursor := Cursor.{ pos = frame.pos, sel = frame.sel };
-
-    return true, frame.editor_id, next_cursor;
-}
-
 
 history_reopen_editor_and_set_cursor :: (editor_id: Editor_Id, new_cursor: Cursor) {
     editor, buffer := reopen_editor_by_id(editor_id);
 
-    make_editor_active(editor_id);
+    make_editor_active(editor.id);
 
     cursor := leave_only_main_cursor(editor);
     cursor.* = new_cursor;
     put_cursor_in_valid_spot(cursor, buffer);
 
-    last_seen_cursor = .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel };
+    last_seen_cursor = .{ editor_id = editor.id, pos = cursor.pos, sel = cursor.sel };
 
     editor.scroll_to_cursor = .yes;
 }
@@ -125,91 +107,89 @@ history_add_edit_notification_to_batch :: (notification: Buffer.Edit_Notificatio
     array_add(*edit_notifications, notification);
 }
 
-history_reset_last_seen_cursor :: () {
+history_reset_last_seen_cursor :: (buffer_id: Buffer_Id) {
     // Occasionally we manually adjust cursor positions, e.g. after converting indentation to another type
     // or stripping whitespace. In this case the cursor position might change, but we don't want to
     // remember the previous one in that case because the perceived cursor position hasn't changed
     editor_id := get_visible_editor_id(editors.active_pane);
+    if editor_id != last_seen_cursor.editor_id return;
+
     found, editor := find_editor(editor_id);
-    if !found return;
+    if !found || editor.buffer_id != buffer_id return;
 
-    cursor := get_main_cursor(editor);
+    apply_edit_notifications();
 
-    last_seen_cursor.editor_id = editor_id;
-    last_seen_cursor.cursor = cursor;
+    last_seen_cursor.cursor = get_main_cursor(editor);
 }
 
 
 #scope_file
 
 maybe_save_cursor_position :: (editor_id: Editor_Id, cursor: Cursor, force := false) -> saved: bool {
-    if editor_id < 0 return false;
+    found, editor := find_editor(editor_id);
+    if !found return false;
 
-    editor, buffer := get_editor_and_buffer(editor_id);
-    editor_history := find_or_add(*editor_history_table, editor_id);
+    buffer := get_buffer(editor.buffer_id);
+    put_cursor_in_valid_spot(*cursor, buffer);
 
-    last_frame := ringbuffer_peek_pointer(editor_history);
-    last_global_frame := ifx global_history then peek_pointer(global_history) else null;
-    need_new_global_frame := !last_global_frame || last_global_frame.editor_id != editor_id;
-
-    if !force && last_frame && !need_new_global_frame {
-        last_line    := offset_to_line(editor, buffer, last_frame.pos, safe = true);
-        current_line := offset_to_line(editor, buffer, cursor.pos, safe = true);
-        if abs(last_line - current_line) < MIN_LINE_THRESHOLD return false;  // cursor hasn't moved far enough
+    if back_history {
+        last := peek_pointer(back_history);
+        if last.editor_id == editor_id {
+            if last.pos == cursor.pos {
+                last.sel = cursor.sel;
+                return false;
+            }
+            if !force {
+                last_pos  := clamp(last.pos, 0, buffer.bytes.count);
+                last_line := offset_to_real_line(buffer, last_pos);
+                line      := offset_to_real_line(buffer, cursor.pos);
+                if abs(last_line - line) < MIN_LINE_THRESHOLD return false;
+            }
+        }
     }
 
-    // Add a new global frame if we're recording a frame for a new editor
-    if need_new_global_frame {
-        array_add(*global_history, .{ editor_id = editor_id, start_index = editor_history.total });
-        history_debug_print(">> GLOBAL FRAME %, EDITOR %, start_index = %\n", global_history.count - 1, editor_id, editor_history.total);
-    }
-
-    history_debug_print(">> EDITOR %, FRAME %, pos = %\n", editor_id, editor_history.total, cursor.pos);
-    ringbuffer_add(editor_history, .{ pos = cursor.pos, sel = cursor.sel });
+    push_history_frame(*back_history, .{ editor_id = editor_id, pos = cursor.pos, sel = cursor.sel });
 
     return true;
 }
 
 apply_edit_notifications :: () {
-    // @speed: measure speed and maybe optimise later, if large edit groups end up being a problem
-    while edit_notifications {
-        buffer_id := edit_notifications[0].buffer_id;
+    if !edit_notifications return;
 
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
-            editor_history := table_find_pointer(*editor_history_table, editor.id);
-            if !editor_history continue;
+    for * frame : back_history    adjust_history_offsets(frame.editor_id, *frame.pos, *frame.sel);
+    for * frame : forward_history adjust_history_offsets(frame.editor_id, *frame.pos, *frame.sel);
+    adjust_history_offsets(last_seen_cursor.editor_id, *last_seen_cursor.pos, *last_seen_cursor.sel);
 
-            for edit_notifications {
-                if buffer_id != it.buffer_id continue;
-                apply_edit_to_history(editor_history, it);
-            }
-        }
+    array_reset_keeping_memory(*edit_notifications);
+}
 
-        for edit_notifications { if buffer_id == it.buffer_id remove it; }
+adjust_history_offsets :: (editor_id: Editor_Id, pos: *s32, sel: *s32) {
+    found, editor := find_editor(editor_id);
+    if !found return;
+
+    for edit : edit_notifications {
+        if edit.buffer_id != editor.buffer_id continue;
+        if pos.* >= edit.offset then pos.* = max(pos.* + edit.delta, edit.offset);
+        if sel.* >= edit.offset then sel.* = max(sel.* + edit.delta, edit.offset);
     }
 }
 
-apply_edit_to_history :: (history: *Editor_History, edit: Buffer.Edit_Notification) {
-    for * frame : history {
-        if frame.pos >= edit.offset then frame.pos = max(frame.pos + edit.delta, edit.offset);
-        if frame.sel >= edit.offset then frame.sel = max(frame.sel + edit.delta, edit.offset);
-    }
+
+MAX_HISTORY_FRAMES :: 256;
+
+History_Frame :: struct {
+    editor_id: Editor_Id;
+    pos: s32;
+    sel: s32;
 }
 
+back_history:    [..] History_Frame;
+forward_history: [..] History_Frame;
 
 IDLE_THRESHOLD_IN_SECONDS :: 1;     // for how long the cursor needs to stay in one place to be recorded
 MIN_LINE_THRESHOLD :: 10;           // how many lines the cursor needs to move by to qualify for recording
 
 NO_CURSOR :: Cursor.{ pos = -1, sel = -1 };
-
-EDITOR_HISTORY_SIZE :: 64;  // per editor
-
-Editor_History :: Ring_Buffer(Editor_History_Frame, EDITOR_HISTORY_SIZE);
-
-editor_history_table: Table(Editor_Id, Editor_History);
-global_history:  [..] Global_History_Frame;
-forward_history: [..] Forward_History_Frame;
 
 edit_notifications: [..] Buffer.Edit_Notification;
 
@@ -219,26 +199,3 @@ last_seen_cursor: struct {
     moved_at: float64;
 };
 
-
-Editor_History_Frame :: struct {
-    pos: s32;
-    sel: s32;
-}
-
-Global_History_Frame :: struct {
-    editor_id:   Editor_Id;
-    start_index: s64;  // index within the editor history
-}
-
-Forward_History_Frame :: struct {
-    editor_id: Editor_Id;
-    using frame: Editor_History_Frame;
-}
-
-DEBUG_HISTORY :: false;
-
-history_debug_print :: (format_string: string, args: .. Any) {
-    #if DEBUG_HISTORY {
-        history_debug_print(format_string, ..args);
-    }
-} @PrintLike

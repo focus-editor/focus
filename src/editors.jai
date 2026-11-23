@@ -1828,36 +1828,38 @@ action_reopen_closed_editor :: () {
 
     editor_id := pop(*recently_closed_editors);
 
-    reopen_editor_by_id(editor_id);
+    editor := reopen_editor_by_id(editor_id);
 
-    make_editor_active(editor_id);
+    make_editor_active(editor.id);
+}
+
+find_editor_to_reuse :: (editor: *Editor) -> *Editor {
+    pane, index := editors_find_pane_with_editor(editor.id);
+    if pane return editor;
+
+    visible_editor := get_visible_editor_and_buffer();
+    if visible_editor && visible_editor.buffer_id == editor.buffer_id return visible_editor;
+
+    pane, index = _find_pane_with_buffer_id(editor.buffer_id, editors.active_pane);
+    if !pane then pane, index = editors_find_pane_with_buffer(editor.buffer_id);
+    if pane return get_editor(pane.editor_ids[index]);
+
+    return null;
 }
 
 reopen_editor_by_id :: (editor_id: Editor_Id) -> *Editor, *Buffer {
     editor, buffer := get_editor_and_buffer(editor_id);
 
-    pane, editor_index := editors_find_pane_with_editor(editor_id);
-    if !pane {
-        // Editor is not in the tree any more, check if there's an editor for the same buffer in the current pane first
-        found_in_active_pane := false;
-        for editors.active_pane.editor_ids {
-            if get_editor(it).buffer_id == editor.buffer_id {
-                found_in_active_pane = true;
-                editor_id = it;
-                editor, buffer = get_editor_and_buffer(editor_id);
-                break;
-            }
-        }
-
-        if !found_in_active_pane {
-            // Insert next to the visible editor in the active pane
-            active_pane := editors.active_pane;
-            array_insert_at(*active_pane.editor_ids, editor_id, active_pane.editor_index + 1);
-            active_pane.editor_index += 1;
-        }
+    existing_editor := find_editor_to_reuse(editor);
+    if existing_editor {
+        editor = existing_editor;
+    } else {
+        active_pane := editors.active_pane;
+        array_insert_at(*active_pane.editor_ids, editor_id, active_pane.editor_index + 1);
+        active_pane.editor_index += 1;
     }
 
-    assert(editor != null && buffer != null, "Tried to reopen an editor which doesn't exist. This is a bug.");
+    array_ordered_remove_by_value(*recently_closed_editors, editor.id);
 
     return editor, buffer;
 }

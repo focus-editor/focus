@@ -33,6 +33,11 @@ refresh_open_buffers :: () {
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);
+
+    pos = to_valid_utf8_char_offset(buffer.bytes, pos);
+    sel = to_valid_utf8_char_offset(buffer.bytes, sel);
+    if pos == -1 then pos = buffer.bytes.count;
+    if sel == -1 then sel = buffer.bytes.count;
 }
 
 insert_string_at_offset :: (buffer: *Buffer, offset: s32, str: string) {
@@ -246,7 +251,7 @@ restore_cursor_positions :: (buffer_id: Buffer_Id, cursor_positions: [] Editor_C
         cursor.sel = real_coords_to_offset(buffer, sel);
     }
 
-    history_reset_last_seen_cursor();
+    history_reset_last_seen_cursor(buffer_id);
 }
 
 search_line_num_by_offset :: (line_starts: [] s32, offset: s64) -> line_num: s32 {
