@@ -36,8 +36,6 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
 
     pos = to_valid_utf8_char_offset(buffer.bytes, pos);
     sel = to_valid_utf8_char_offset(buffer.bytes, sel);
-    if pos == -1 then pos = buffer.bytes.count;
-    if sel == -1 then sel = buffer.bytes.count;
 }
 
 insert_string_at_offset :: (buffer: *Buffer, offset: s32, str: string) {
@@ -187,46 +185,45 @@ offset_to_real_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
 
 Editor_Cursor_Position :: struct { editor_id: Editor_Id; cursor_id: s64; coords: Cursor_Coords; }
 
-remember_cursor_positions :: (buffer_id: Buffer_Id, in: enum { all_editors; active_editor; }) -> [] Editor_Cursor_Position /* temp */ {
+remember_cursor_positions :: (buffer_id: Buffer_Id) -> [] Editor_Cursor_Position /* temp */ {
     buffer := get_buffer(buffer_id);
 
-    cursor_positions: [..] Editor_Cursor_Position;
-    cursor_positions.allocator = temp;
+    remember_cursors_for_undo(buffer);
 
-    active_editor_id := get_active_editor_id();
+    editor := get_active_editor_and_buffer();
+    if !editor || editor.buffer_id != buffer_id return .[];
 
-    for * editor : open_editors {
-        if editor.buffer_id != buffer_id continue;
-        if in == .active_editor && editor.id != active_editor_id continue;
-        editor.refresh_selection = true;
+    editor.refresh_selection = true;
 
-        new_edit_group(buffer, editor);
-
-        for cursor, cursor_id : editor.cursors {
-            array_add(*cursor_positions, Editor_Cursor_Position.{ editor.id, cursor_id, get_real_cursor_coords(buffer, cursor) });
-        }
-    }
-
-    // We also want to remember cursors in the buffer itself for the subsequent undos, preferably from the active editor
-    editor_cursors: [] Cursor;
-    active_editor, _ := get_active_editor_and_buffer();
-    if active_editor && active_editor.buffer_id == buffer_id {
-        editor_cursors = to_view(active_editor.cursors);
-    } else {
-        // Just take any editor
-        for editor : open_editors {
-            if editor.buffer_id == buffer_id {
-                editor_cursors = to_view(editor.cursors);
-                break;
-            }
-        }
-    }
-    if editor_cursors {
-        resize(*buffer.cursors, editor_cursors.count);
-        for * cursor, i : buffer.cursors { cursor.* = editor_cursors[i]; }
+    cursor_positions := NewArray(editor.cursors.count, Editor_Cursor_Position,, temp);
+    for cursor, cursor_id : editor.cursors {
+        cursor_positions[cursor_id] = .{ editor.id, cursor_id, get_real_cursor_coords(buffer, cursor) };
     }
 
     return cursor_positions;
+}
+
+remember_cursors_for_undo :: (buffer: *Buffer) {
+    editor := get_active_editor_and_buffer();
+    if !editor || editor.buffer_id != buffer.id {
+        editor = null;
+        for * candidate : open_editors {
+            if candidate.buffer_id != buffer.id continue;
+            editor = candidate;
+            break;
+        }
+    }
+    if !editor return;
+
+    if buffer.edits.count != 0 {
+        new_edit_group(buffer, editor);
+        return;  // new_edit_group already copies the current cursors into buffer.cursors
+    }
+
+    resize(*buffer.cursors, editor.cursors.count);
+    for * cursor, i : buffer.cursors {
+        cursor.* = editor.cursors[i];
+    }
 }
 
 restore_cursor_positions :: (buffer_id: Buffer_Id, cursor_positions: [] Editor_Cursor_Position) {
@@ -975,7 +972,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, except_lines_with_cursor :=
 
     // Only remember and restore cursor positions in the active editor.
     // Any other editors will be handled by the edit notifications
-    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id);
 
     // Apply the delete edits
     offset_difference: s32 = 0;
@@ -1041,7 +1038,7 @@ indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
     }
 
     // Apply the edits
-    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id);
 
     offset_difference: s32 = 0;
     for edit : replace_edits {
@@ -1080,7 +1077,7 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
     }
 
     // Apply the edits
-    cursor_positions := remember_cursor_positions(buffer.id, in = .active_editor);
+    cursor_positions := remember_cursor_positions(buffer.id);
 
     offset_difference: s32 = 0;
     for edit : replace_edits {
@@ -1296,10 +1293,6 @@ replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
         return;
     }
 
-    previous_buffer_id := context.current_buffer_id;
-    context.current_buffer_id = buffer.id;
-    defer context.current_buffer_id = previous_buffer_id;
-
     lock(*buffer.metadata_lock);
     buffer.mod_info = buffer_data.mod_info;
     buffer.file_identity = buffer_data.file_identity;
@@ -1323,11 +1316,7 @@ replace_buffer_data :: (buffer: *Buffer, buffer_data: Buffer_Data) {
     } else {
         buffer.modified_on_disk = false;
 
-        if buffer.dirty then rescan_for_lines(buffer);
-
-        cursor_positions := remember_cursor_positions(buffer.id, in = .all_editors);
-        replace_range(buffer, .{ 0, buffer.bytes.count }, to_string(buffer_data.bytes));
-        restore_cursor_positions(buffer.id, cursor_positions);
+        apply_contents(buffer, to_string(buffer_data.bytes));
 
         buffer.needs_tokenizing = true;
     }
@@ -1723,13 +1712,45 @@ reload_from_disk :: (buffer_id: Buffer_Id, force := false, show_user_messages :=
         buffer.modified_on_disk = true;
     } else {
         buffer.modified_on_disk = false;
-        cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
-        replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
-        restore_cursor_positions(buffer_id, cursor_positions);
+        apply_contents(buffer, file_contents_str);
     }
 
     refresh_all_editors_for_buffer(buffer_id);
     return true;
+}
+
+apply_contents :: (buffer: *Buffer, new_contents: string) {
+    defer {
+        if buffer.dirty then rescan_for_lines(buffer);
+    }
+
+    // Figure out common prefix and suffix to avoid replacing the whole contents on small changes
+    // TODO: we could do more involved diffs here someday, but even this is probably fine
+    old_contents := to_string(buffer.bytes);
+
+    start := 0;
+    old_end := old_contents.count;
+    new_end := new_contents.count;
+
+    while start < old_end && start < new_end && old_contents[start] == new_contents[start] {
+        start += 1;
+    }
+    if start == old_end && start == new_end return;
+
+    start = min(prev_utf8_char_boundary(xx old_contents, start), prev_utf8_char_boundary(xx new_contents, start));
+
+    while old_end > start && new_end > start && old_contents[old_end - 1] == new_contents[new_end - 1] {
+        old_end -= 1;
+        new_end -= 1;
+    }
+    old_end = next_utf8_char_boundary(xx old_contents, old_end);
+    new_end = next_utf8_char_boundary(xx new_contents, new_end);
+
+    apply_buffer_edit_notifications(buffer.id);
+    remember_cursors_for_undo(buffer);
+
+    // Notify all editors
+    replace_range(buffer, .{ xx start, xx old_end }, slice(new_contents, start, new_end - start),, current_editor_id = -1, current_buffer_id = buffer.id);
 }
 
 maybe_mark_buffer_as_deleted :: (buffer_id: Buffer_Id) {
@@ -1902,7 +1923,8 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
     editor_id := context.current_editor_id;
     buffer_id := context.current_buffer_id;
 
-    if exists(editor_id) {
+    has_editor := exists(editor_id);
+    if has_editor {
         editor := get_editor(editor_id);
         if buffer.id != editor.buffer_id || (exists(buffer_id) && editor.buffer_id != buffer_id) {
             log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
@@ -1920,8 +1942,8 @@ add_edit_notification :: (buffer: *Buffer, offset: s64, old_count: s64, new_coun
 
     history_add_edit_notification_to_batch(notification);
 
-    if buffer.num_editors_open >= 2 {
-        // Notify other editors
+    num_editors_to_skip := ifx has_editor then 1 else 0;
+    if buffer_id == buffer.id && buffer.num_editors_open > num_editors_to_skip {
         add(*buffer_edit_notifications, notification);
     }
 }

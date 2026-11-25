@@ -133,14 +133,26 @@ prev_char_offset :: (bytes: Array(u8), offset: s32) -> s32, byte: u8 {
     return new_offset, byte;
 }
 
-// If the passed offset falls in the middle of a utf8 char, it will return the next valid char's offset
-// or -1 if valid char is not found
-to_valid_utf8_char_offset :: (bytes: Array(u8), offset: s32) -> s32 {
+prev_utf8_char_boundary :: (bytes: [] u8, offset: int) -> int {
+    if offset >= bytes.count return bytes.count;
+    while offset > 0 {
+        if (bytes[offset] & 0b1100_0000) != 0b1000_0000 return offset;
+        offset -= 1;
+    }
+    return 0;
+}
+
+next_utf8_char_boundary :: (bytes: [] u8, offset: int) -> int {
+    if offset < 0 return 0;
     while offset < bytes.count {
         if (bytes[offset] & 0b1100_0000) != 0b1000_0000 return offset;
         offset += 1;
     }
-    return -1;
+    return bytes.count;
+}
+
+to_valid_utf8_char_offset :: (bytes: Array(u8), offset: s32) -> s32 {
+    return cast(s32) next_utf8_char_boundary(to_view(bytes), offset);
 }
 
 unicode_character_and_next_position :: (ptr: *u8) -> char: u32, next_ptr: *u8 {

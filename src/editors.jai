@@ -510,15 +510,12 @@ get_visible_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
-refresh_all_editors_for_buffer :: (buffer_id: Buffer_Id) {
-    buffer := get_buffer(buffer_id);
+apply_buffer_edit_notifications :: (buffer_id: Buffer_Id) {
+    if is_empty(buffer_edit_notifications) return;
 
     for * editor : open_editors {
         if editor.buffer_id != buffer_id continue;
 
-        if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
-
-        // Adjust cursors and viewport.
         // When edits are made in another editor for the same buffer, this editor's cursors
         // need to be adjusted. The viewport glue point also needs to move.
         for edit : buffer_edit_notifications {
@@ -534,15 +531,31 @@ refresh_all_editors_for_buffer :: (buffer_id: Buffer_Id) {
                 if cursor.sel >= edit.offset then cursor.sel = max(cursor.sel + edit.delta, edit.offset);
             }
         }
+    }
+
+    // Keep pending edits for other buffers in the order they occurred
+    remaining: s32;
+    for buffer_edit_notifications {
+        if it.buffer_id == buffer_id continue;
+        buffer_edit_notifications[remaining] = it;
+        remaining += 1;
+    }
+    buffer_edit_notifications.count = remaining;
+}
+
+refresh_all_editors_for_buffer :: (buffer_id: Buffer_Id) {
+    apply_buffer_edit_notifications(buffer_id);
+
+    buffer := get_buffer(buffer_id);
+
+    for * editor : open_editors {
+        if editor.buffer_id != buffer_id continue;
+
+        if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
         organise_cursors(editor);
 
         editor.refresh_selection = true;
         if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer);
-    }
-
-    // Clear applied notifications
-    for buffer_edit_notifications {
-        if it.buffer_id == buffer_id remove it;
     }
 }
 
@@ -4094,7 +4107,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
 sort_lines :: (editor: *Editor, buffer: *Buffer) {
     line_ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
 
-    cursor_positions := remember_cursor_positions(editor.buffer_id, .active_editor);
+    cursor_positions := remember_cursor_positions(editor.buffer_id);
 
     for * line_range : line_ranges {
         range_str := get_range_as_string(buffer, line_range.range);
