@@ -792,22 +792,8 @@ editors_open_buffer_in_pane :: (buffer_id: Buffer_Id, target_pane: *Editor_Pane)
 
     editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
 
-    // We always want to keep the editor if opening in a different pane
-    should_use_temporary_editor := context.config.settings.enable_temporary_editors && target_pane == editors.active_pane;
+    insert_editor_in_pane(editor_id, target_pane);
 
-    // Open the editor in the target pane
-    if should_use_temporary_editor && target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count{
-        // Remove old temporary editor
-        old_temporary_editor_id := target_pane.editor_ids[target_pane.temporary_editor_index];
-        remove_editor_from_pane(target_pane, old_temporary_editor_id);
-        editor_do_post_close_cleanup(old_temporary_editor_id);
-    }
-    new_index := target_pane.editor_index + 1;
-    array_insert_at(*target_pane.editor_ids, editor_id, new_index);
-    target_pane.editor_index = new_index;
-    if should_use_temporary_editor then target_pane.temporary_editor_index = new_index;
-
-    // In case we've just opened a previously closed editor, remove it from the closed list
     array_ordered_remove_by_value(*recently_closed_editors, editor_id);
 
     return editor_id;
@@ -1867,14 +1853,30 @@ reopen_editor_by_id :: (editor_id: Editor_Id) -> *Editor, *Buffer {
     if existing_editor {
         editor = existing_editor;
     } else {
-        active_pane := editors.active_pane;
-        array_insert_at(*active_pane.editor_ids, editor_id, active_pane.editor_index + 1);
-        active_pane.editor_index += 1;
+        insert_editor_in_pane(editor_id, editors.active_pane);
     }
 
     array_ordered_remove_by_value(*recently_closed_editors, editor.id);
 
     return editor, buffer;
+}
+
+insert_editor_in_pane :: (editor_id: Editor_Id, target_pane: *Editor_Pane) {
+    // We always want to keep the editor if opening in a different pane
+    should_use_temporary_editor := context.config.settings.enable_temporary_editors && target_pane == editors.active_pane;
+
+    if should_use_temporary_editor && target_pane.temporary_editor_index >= 0 && target_pane.temporary_editor_index < target_pane.editor_ids.count{
+        old_temporary_editor_id := target_pane.editor_ids[target_pane.temporary_editor_index];
+        remove_editor_from_pane(target_pane, old_temporary_editor_id);
+        editor_do_post_close_cleanup(old_temporary_editor_id);
+    } else if target_pane.temporary_editor_index > target_pane.editor_index {
+        target_pane.temporary_editor_index += 1;
+    }
+
+    new_index := target_pane.editor_index + 1;
+    array_insert_at(*target_pane.editor_ids, editor_id, new_index);
+    target_pane.editor_index = new_index;
+    if should_use_temporary_editor then target_pane.temporary_editor_index = new_index;
 }
 
 action_duplicate_editor :: (placement: Editor_Placement) {
