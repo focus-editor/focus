@@ -323,6 +323,7 @@ reload_workspace :: (automatic := false) {
     activate_editors();
     editor, buffer := get_visible_editor_and_buffer();
     editors.last_active_editor_id = ifx editor then editor.id else -1;
+    remember_last_file_backed_buffer(buffer);
     update_window_title(ifx buffer then buffer.id else -1);
 
     if !automatic then show_open_file_dialog(.search);

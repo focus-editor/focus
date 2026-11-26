@@ -2380,6 +2380,7 @@ update_active_editor :: (editor_id: Editor_Id) {
     editors.last_active_editor_id = editor_id;
 
     editor, buffer := get_editor_and_buffer(editor_id);
+    remember_last_file_backed_buffer(buffer);
     update_window_title(buffer.id);
     update_most_recent_buffers(buffer.id);
     maybe_detect_and_set_indentation(buffer);
@@ -2413,6 +2414,10 @@ make_editor_active :: (editor_id: Editor_Id) {
 update_most_recent_buffers :: (buffer_id: Buffer_Id) {
     array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
     array_insert_at(*most_recent_buffers, buffer_id, 0);
+}
+
+remember_last_file_backed_buffer :: inline (buffer: *Buffer) {
+    if buffer && buffer.has_file && buffer.file.full_path && !buffer.internal then editors.last_file_backed_buffer_id = buffer.id;
 }
 
 update_window_title :: (buffer_id: Buffer_Id = -1) {
@@ -4975,6 +4980,8 @@ Editor_State :: struct {
     expand_active_pane := false;
 
     last_active_editor_id: Editor_Id = -1;
+
+    last_file_backed_buffer_id: Buffer_Id = -1;
 
     Layout :: enum u8 {
         None    :: 0;

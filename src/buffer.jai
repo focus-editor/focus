@@ -804,7 +804,11 @@ save_buffer_to_file :: (buffer: *Buffer, file_path: string) {
         if new_id < 0 return;  // logged elsewhere
 
         reroute_editors_to_new_buffer(buffer.id, new_id);
-        update_window_title(get_editor(get_active_editor_id()).buffer_id);
+        _, active_buffer := get_active_editor_and_buffer();
+        if active_buffer {
+            update_window_title(active_buffer.id);
+            if active_buffer.id == new_id then remember_last_file_backed_buffer(active_buffer);
+        }
         update_most_recent_buffers(new_id);
         file_watcher_ignore_pending_results(new_id);
     }
@@ -866,7 +870,10 @@ save_buffer :: (using buffer: *Buffer) -> success: bool {
     unlock(*metadata_lock);
 
     _, active_buffer := get_active_editor_and_buffer();
-    if active_buffer then update_window_title(active_buffer.id);
+    if active_buffer {
+        update_window_title(active_buffer.id);
+        if success then remember_last_file_backed_buffer(active_buffer);
+    }
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up

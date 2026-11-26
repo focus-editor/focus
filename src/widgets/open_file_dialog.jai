@@ -119,12 +119,21 @@ open_file_dialog_maybe_refresh_entries :: () {
 }
 
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: Buffer_Id = -1, triggered_by: Deferred_Action_Id = -1, from_root := false) {
-    if !from_root {
-        // Derive the path chunks from the current open file
+    if from_root {
+        clear_path_chunks();
+    } else if mode == .save || mode == .move {
+        source := get_buffer(buffer_id_to_save);
+        if !source.has_file || !source.file.full_path {
+            _, source = find_buffer(editors.last_file_backed_buffer_id);
+        }
+        if source && source.has_file && source.file.full_path {
+            set_path_chunks_from_file(source.file.full_path);
+        } else {
+            clear_path_chunks();
+        }
+    } else {
         editor, buffer := get_visible_editor_and_buffer();
         if active_global_widget == .editors && buffer && buffer.has_file then set_path_chunks_from_file(buffer.file.full_path);
-    } else {
-        clear_path_chunks();
     }
 
     active_global_widget = .open_file_dialog;
@@ -387,7 +396,7 @@ set_path_chunks_from_file :: (file_path: string) {
 
     is_project_dir, project_dir := path_is_within_project(parent_dir);
     if is_project_dir {
-        root_dir = copy_string(project_dir.path);  // leak
+        root_dir = project_dir.path;
         array_add(*path_chunks, copy_string(project_dir.name));
     } else {
         #if OS != .WINDOWS then array_add(*path_chunks, copy_string("/"));
@@ -397,9 +406,8 @@ set_path_chunks_from_file :: (file_path: string) {
     advance(*parent_dir, project_dir.path.count);
 
     for chunk : split(parent_dir, cast(u8) #char "/",, allocator = temp) {
-        trimmed := trim(chunk);
-        if !trimmed continue;
-        array_add(*path_chunks, copy_string(trimmed));
+        if !chunk continue;
+        array_add(*path_chunks, copy_string(chunk));
     }
 }
 
