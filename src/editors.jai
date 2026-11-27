@@ -229,9 +229,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .move_selection_to_next_word;                 move_selection_to_next_word(editor, buffer);                 keep_selection = true;
 
         case .toggle_line_wrap;                 action_toggle_line_wrap(editor);
-        case .toggle_line_numbers;              action_toggle_line_numbers();
+        case .toggle_line_numbers;              action_toggle_line_numbers(buffer);
         case .toggle_pane_numbers;              action_toggle_pane_numbers();
-        case .toggle_indent_guides;             action_toggle_indent_guides();
+        case .toggle_indent_guides;             action_toggle_indent_guides(buffer);
 
         case .copy_current_line_info;           action_copy_current_line_info           (editor, buffer);
         case .copy_current_file_path;           action_copy_current_file_path           (editor. buffer_id);
@@ -4821,38 +4821,20 @@ action_toggle_line_wrap :: (editor: *Editor) {
     redraw_requested = true;
 }
 
-action_toggle_line_numbers :: () {
+action_toggle_line_numbers :: (buffer: *Buffer) {
+    current := ifx force_show_line_numbers.is_set then force_show_line_numbers.value else get_settings(buffer).show_line_numbers;
+    force_show_line_numbers = some(!current);
     redraw_requested = true;
-
-    _, buffer := get_active_editor_and_buffer();
-    if buffer {
-        buffer_settings := get_settings(buffer);
-        if buffer_settings != *context.config.settings {
-            buffer_settings.show_line_numbers = !buffer_settings.show_line_numbers;
-            return;
-        }
-    }
-
-    context.config.settings.show_line_numbers = !context.config.settings.show_line_numbers;
 }
 
 action_toggle_pane_numbers :: () {
     context.config.settings.show_pane_numbers = !context.config.settings.show_pane_numbers;
 }
 
-action_toggle_indent_guides :: () {
+action_toggle_indent_guides :: (buffer: *Buffer) {
+    current := ifx force_draw_indent_guides.is_set then force_draw_indent_guides.value else get_settings(buffer).draw_indent_guides;
+    force_draw_indent_guides = some(!current);
     redraw_requested = true;
-
-    _, buffer := get_active_editor_and_buffer();
-    if buffer {
-        buffer_settings := get_settings(buffer);
-        if buffer_settings != *context.config.settings {
-            buffer_settings.draw_indent_guides = !buffer_settings.draw_indent_guides;
-            return;
-        }
-    }
-
-    context.config.settings.draw_indent_guides = !context.config.settings.draw_indent_guides;
 }
 
 action_copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
@@ -5037,6 +5019,9 @@ Editor_Placement :: enum {
 most_recent_buffers: [..] Buffer_Id;  // updated when an editor is activated, used to switch between open files
 
 editors: Editor_State;
+
+force_show_line_numbers:  Option(bool);
+force_draw_indent_guides: Option(bool);
 
 editor_paste_animations: [..] Paste_Animation;
 

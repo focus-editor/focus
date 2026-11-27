@@ -245,6 +245,15 @@ clamp_config_values :: (new_config: *Config) {
 }
 
 replace_and_apply_config :: (new_config: Config, diff: Config_Diff) {
+    if context.config {
+        if (context.config.settings.show_line_numbers != new_config.settings.show_line_numbers || diff.file_specific_settings_changed) {
+            force_show_line_numbers = .{};
+        }
+        if (context.config.settings.draw_indent_guides != new_config.settings.draw_indent_guides || diff.file_specific_settings_changed) {
+            force_draw_indent_guides = .{};
+        }
+    }
+
     publish_new_config_snapshot(new_config);
 
     new_snapshot := acquire_current_config_snapshot();

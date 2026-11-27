@@ -858,7 +858,7 @@ get_editor_subrects :: (editor_id: Editor_Id, main_area: Rect, has_status_bar: b
         rect.w = max_width;
     }
 
-    if buffer_settings.show_line_numbers && !is_build_panel(editor_id) {
+    if should_show_line_numbers(buffer_settings) && !is_build_panel(editor_id) {
         max_lines  := get_max_line_num(editor, buffer) + 1;
         num_digits := tprint("%", max_lines).count;
         panel_width := (num_digits + 2) * get_char_x_advance();
@@ -866,6 +866,16 @@ get_editor_subrects :: (editor_id: Editor_Id, main_area: Rect, has_status_bar: b
     }
 
     return align_to_grid(rect), status_bar_rect, line_number_panel;
+}
+
+should_show_line_numbers :: (buffer_settings: *Settings) -> bool {
+    if force_show_line_numbers.is_set then return force_show_line_numbers.value;
+    return buffer_settings.show_line_numbers;
+}
+
+should_draw_indent_guides :: (buffer_settings: *Settings) -> bool {
+    if force_draw_indent_guides.is_set then return force_draw_indent_guides.value;
+    return buffer_settings.draw_indent_guides;
 }
 
 status_bar_is_drawn_at_the_bottom :: inline () -> bool {
@@ -1478,7 +1488,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
         }
 
         // Draw indent guides
-        if buffer_settings.draw_indent_guides && !as_build_panel {
+        if should_draw_indent_guides(buffer_settings) && !as_build_panel {
             indent_levels: [..] int;
             indent_levels.allocator = temp;
 
@@ -1590,7 +1600,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
         draw_code(get_font(.editor), pen, code_lines, tab_size, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
 
         // Draw continuation markers for wrapped lines
-        if line_wrap_is_active(editor) && !buffer_settings.show_line_numbers && !as_build_panel {
+        if line_wrap_is_active(editor) && line_number_panel.w == 0 && !as_build_panel {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
