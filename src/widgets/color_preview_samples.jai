@@ -1239,6 +1239,9 @@ SAMPLE_Markdown :: #string MARKDOWN
 
 ## Heading Level 2
 
+Alternate Heading
+=================
+
 This is a paragraph with **bold text**, *italic text*, and `inline code`.
 
 > This is a blockquote.
@@ -1286,6 +1289,31 @@ def hello_world():
 This is a footnote reference[^1].
 
 [^1]: This is the footnote text.
+
+### Alerts
+
+> [!NOTE]
+> Useful information that users should know, even when skimming content.
+
+> [!TIP]
+> Helpful advice for doing things better or more easily.
+
+> [!IMPORTANT]
+> Key information users need to know to achieve their goal.
+
+> [!WARNING]
+> Urgent info that needs immediate user attention to avoid problems.
+
+> [!CAUTION]
+> Advises about risks or negative outcomes of certain actions.
+
+### Escape character
+
+\# Escape heading
+
+\*This is also escaped\*
+
+`Escape character \` inside backtick highlighting`
 
 MARKDOWN
 
