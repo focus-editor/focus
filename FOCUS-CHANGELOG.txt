@@ -1,5 +1,12 @@
 # Main Git Branch
 
++ ...
+
+
+# RELEASES ==================================================================
+
+# Version 0.3.9
+
 + New features:
     + The editor now supports more than two panes:
         + Old behaviour still works when there are only 2 panes - hold `Ctrl`/`Cmd` to open on the side, `Ctrl-1` to open on the left, `Ctrl-2` to open on the right
@@ -181,8 +188,6 @@
     + Made numerous internal changes and stability improvements
     + The minimum Jai version for source builds is now `0.2.029`. Source builds support metaprogram plugins and can target Apple Silicon natively on macOS (thanks @caztanj)
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.8
 

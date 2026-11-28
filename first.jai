@@ -1,19 +1,19 @@
 MIN_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 29 };
 MAX_COMPILER_VERSION :: Version_Info.{ major = 0, minor = 2, micro = 99 };
 
-VERSION      :: #run -> string {
-    result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
-    if revision return sprint("0.3.8-%", trim(revision));
-    return "0.3.8-dev";
-}
-RELEASE_DATE :: #run -> string {
-    current_time := to_calendar(current_time_consensus());
-    return calendar_to_string(current_time);
-}
+// VERSION      :: #run -> string {
+//     result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
+//     if revision return sprint("0.3.8-%", trim(revision));
+//     return "0.3.8-dev";
+// }
+// RELEASE_DATE :: #run -> string {
+//     current_time := to_calendar(current_time_consensus());
+//     return calendar_to_string(current_time);
+// }
 
-// // NOTE: Uncomment when releasing, comment out when not releasing
-// VERSION :: "0.3.8";
-// RELEASE_DATE :: "27 February 2025";
+// NOTE: Uncomment when releasing, comment out when not releasing
+VERSION :: "0.3.9";
+RELEASE_DATE :: "28 November 2026";
 
 #run,stallable build();
 
