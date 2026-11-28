@@ -337,11 +337,11 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .choose_theme;                                     show_dialog(*theme_dialog);                         return true;
         case .edit_current_theme;                               edit_current_theme(placement);                      return true;
 
-        case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
+        case .open_directory_with_project_files;                platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;
         case .open_project_config;                              editors_open_project_config(placement);             return true;
-        case .show_default_config;                              editors_show_default_config(placement);             return true;
-        case .show_troubleshooting_info;                        editors_show_troubleshooting_info(placement);       return true;
+        case .show_default_config_readonly;                     editors_show_default_config(placement);             return true;
+        case .show_troubleshooting_information;                 editors_show_troubleshooting_info(placement);       return true;
 
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
         case .create_new_file;                                  editors_create_new_file(placement);                 return true;
@@ -367,11 +367,11 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .go_to_previous_buffer;                            action_go_to_previous_buffer(event);                return true;
         case .go_to_next_buffer;                                action_go_to_next_buffer(event);                    return true;
 
-        case .toggle_build_panel;                               action_toggle_build_panel();                        return true;
-        case .toggle_build_panel_focus;                         action_toggle_build_panel_focus();                  return true;
+        case .build_toggle_build_panel;                         action_toggle_build_panel();                        return true;
+        case .build_toggle_build_panel_focus;                   action_toggle_build_panel_focus();                  return true;
 
         case .build_kill_running_command;                       build_kill_running_command();                       return true;
-        case .build_clear_output;                               build_clear_output();                               return true;
+        case .build_clear_build_output;                         build_clear_output();                               return true;
 
         case .switch_to_left_pane;                              switch_to_pane(.left);                              return true;
         case .switch_to_right_pane;                             switch_to_pane(.right);                             return true;
@@ -404,7 +404,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .center_all_pane_splitters;                        center_all_pane_splitters();                        return true;
 
         // TODO: search_in_buffer
-        case .search_in_project;
+        case .search_in_workspace;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;
     }
     return false;

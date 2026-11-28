@@ -237,7 +237,7 @@ draw_welcome_screen :: (main_area: Rect) {
             .{ .switch_between_open_files,          "Switch Between Open Files" },
             .{ .search_in_buffer,                   "Search In Open File" },
             .{ .search_in_buffer_dropdown_mode,     "Search In Open File (Dropdown Mode)" },
-            .{ .search_in_project,                  "Search In Workspace" },
+            .{ .search_in_workspace,                  "Search In Workspace" },
         ];
 
         right_area = shrink(right_area, margin);

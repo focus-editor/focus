@@ -303,7 +303,7 @@ Ctrl-Alt-P                  switch_to_project
 
 Ctrl-F                      search_in_buffer_dropdown_mode
 Alt-F                       search_in_buffer
-Ctrl-Shift-F                search_in_project
+Ctrl-Shift-F                search_in_workspace
 
 Ctrl-P                      open_file_by_name
 Ctrl-O                      navigate_to_file
@@ -339,7 +339,7 @@ Escape                      escape  # combines close_dialog and remove_additiona
 
 Ctrl-Shift-L                toggle_expand
 
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_toggle_build_panel
 
 F11                         toggle_fullscreen
 

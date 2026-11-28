@@ -157,13 +157,13 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
 
             // Actions which close the search bar
-            case .choose_language;                  close_search_bar(editor);
+            case .choose_language_syntax;                  close_search_bar(editor);
 
             // Actions which don't close the search bar
-            case .indentation_detect_from_buffer_contents;
-            case .indentation_use_defaults_for_buffer;
-            case .indentation_convert_to_tabs_for_buffer;
-            case .indentation_convert_to_spaces_for_buffer;
+            case .indentation_detect_from_file_contents;
+            case .indentation_use_defaults_for_file;
+            case .indentation_convert_file_indentation_to_tabs;
+            case .indentation_convert_file_indentation_to_spaces;
 
             // If none of these actions match, don't propagate
             case;                                   return false;
@@ -199,9 +199,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .save_all;                         action_save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
         case .open_file_directory;              action_open_file_directory(editor.buffer_id);
-        case .move_current_file;                defer_action_move  (editor.buffer_id);
+        case .move_current_file;                #through;
+        case .rename_current_file;              defer_action_move  (editor.buffer_id);
         case .delete_current_file;              defer_action_delete(editor.buffer_id);
-        case .reload_from_disk;                 action_reload_from_disk(editor.buffer_id);
+        case .reload_file_from_disk;                 action_reload_from_disk(editor.buffer_id);
 
         case .duplicate_editor;                 action_duplicate_editor(.on_the_side);
         case .duplicate_editor_left;            action_duplicate_editor(.left);
@@ -247,15 +248,15 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .create_cursors_around;            create_cursors_around                   (editor, buffer);           keep_selection = true;
         case .strip_trailing_whitespace;        strip_trailing_whitespace               (buffer); keep_selection = true;
 
-        case .choose_language;                  show_dialog                             (*language_dialog);
+        case .choose_language_syntax;                  show_dialog                             (*language_dialog);
 
-        case .convert_buffer_to_crlf;           action_convert_buffer_to_crlf           (buffer);
-        case .convert_buffer_to_lf;             action_convert_buffer_to_lf             (buffer);
+        case .line_endings_convert_buffer_to_crlf;           action_convert_buffer_to_crlf           (buffer);
+        case .line_endings_convert_buffer_to_lf;             action_convert_buffer_to_lf             (buffer);
 
-        case .indentation_detect_from_buffer_contents;  indentation_detect_from_buffer_contents (buffer);
-        case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
-        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer);
-        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer);
+        case .indentation_detect_from_file_contents;  indentation_detect_from_buffer_contents (buffer);
+        case .indentation_use_defaults_for_file;      indentation_use_defaults_for_buffer     (buffer);
+        case .indentation_convert_file_indentation_to_tabs;   indentation_convert_to_tabs_for_buffer  (buffer);
+        case .indentation_convert_file_indentation_to_spaces; indentation_convert_to_spaces_for_buffer(buffer);
 
         // Actions that do something per cursor
         case .move_left;                         move_cursors_left                   (editor, buffer, by = .by_character,           shift_pressed);

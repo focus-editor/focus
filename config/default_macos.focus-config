@@ -284,7 +284,7 @@ Cmd-Shift-P                     show_commands
 
 Cmd-F                           search_in_buffer_dropdown_mode
 Cmd-Opt-F                       search_in_buffer
-Cmd-Shift-F                     search_in_project
+Cmd-Shift-F                     search_in_workspace
 
 Cmd-Opt-P                       switch_to_project
 
@@ -322,7 +322,7 @@ Escape                          escape  # combines close_dialog and remove_addit
 
 Cmd-Shift-L                     toggle_expand
 
-Cmd-B                           toggle_build_panel
+Cmd-B                           build_toggle_build_panel
 
 Enter                           open_entry
 Cmd-Enter                       open_entry_in_side_pane

@@ -9,8 +9,8 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
 
     is_global_config := contains_nocase(name, "global.focus-config");
 
-    assume_section := "";
-    if ends_with_nocase(name, ".focus-theme") then assume_section = "style";
+    is_theme := ends_with_nocase(name, ".focus-theme");
+    assume_section := ifx is_theme then "style" else "";
 
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
@@ -342,6 +342,10 @@ DONE
         // Do replacements and deletions
         start_from_memory(*handler, name, name, data_with_insertions);
 
+        font_size: string;
+        font_size_offset: int;
+        has_font_ui_size := false;
+
         while true {
             line, found := consume_next_line(*handler);
             if !found break;
@@ -359,7 +363,7 @@ DONE
                 if current_subsection == "user interface" {
                     // Remove the subsection, but leave everything that was there intact
                     offset_difference += replace_line(*modified_data, line_start_offset, "[fonts]\n");
-                    current_subsection = "";
+                    current_subsection = "fonts";
                 }
                 continue;
             }
@@ -394,7 +398,16 @@ DONE
                     }
 
                 case "style";
-                    if current_subsection == "colors" {
+                    if current_subsection == "fonts" && !is_theme {
+                        key, value := break_by_spaces(line);
+                        key = trim_right(key, ":");
+                        if key == "font_size" {
+                            font_size = value;
+                            font_size_offset = line_start_offset;
+                        } else if key == "font_ui_size" {
+                            has_font_ui_size = true;
+                        }
+                    } else if current_subsection == "colors" {
                         color_name, color_value := break_by_spaces(line);
                         color_name = trim_right(color_name, ":");
                         #insert -> string {
@@ -431,21 +444,34 @@ DONE
                                 offset_difference += replace_line(*modified_data, line_start_offset, new_binding);
                             }
                         }
+                        new_name := action_name;
                         for RENAMED_KEYBINDS {
-                            if action_name == it.old_name && (!it.subsection || it.subsection == current_subsection) {
-                                if it.new_name {
-                                    // Renamed
-                                    action_offset := action_name.data - data_with_insertions.data + offset_difference;
-                                    offset_difference += replace_line(*modified_data, action_offset, tprint("%\n", it.new_name));
-                                } else {
-                                    // Removed
-                                    offset_difference += replace_line(*modified_data, line_start_offset, "");
-                                }
+                            if new_name == it.old_name && (!it.subsection || it.subsection == current_subsection) && valid_version(it.version, config_info.version) {
+                                new_name = it.new_name;
+                                if !new_name break;
+                            }
+                        }
+                        if new_name != action_name {
+                            if new_name {
+                                // Renamed
+                                action_offset := action_name.data - data_with_insertions.data + offset_difference;
+                                offset_difference += replace_line(*modified_data, action_offset, tprint("%\n", new_name));
+                            } else {
+                                // Removed
+                                offset_difference += replace_line(*modified_data, line_start_offset, "");
                             }
                         }
                     }
             }
         }
+
+        if font_size && !has_font_ui_size {
+            insert_offset := font_size_offset + get_line_length(modified_data, font_size_offset);
+            prefix := ifx modified_data[insert_offset - 1] == #char "\n" then "" else "\n";
+            new_line := tprint("%1font_ui_size:  %2\n", prefix, font_size);
+            array_insert_bytes_at(*modified_data, insert_offset, cast([]u8) new_line);
+        }
+
     }
 
     return true, cast(string) modified_data;
@@ -785,6 +811,22 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 26, "common",    "reset_font_size_to_default",               "reset_zoom" },
     .{ 26, "common",    "increase_font_size",                       "zoom_in"    },
     .{ 26, "common",    "decrease_font_size",                       "zoom_out"   },
+
+    .{ 28, "", "open_projects_directory",                      "open_directory_with_project_files" },
+    .{ 28, "", "show_default_config",                          "show_default_config_readonly" },
+    .{ 28, "", "search_in_project",                            "search_in_workspace" },
+    .{ 28, "", "build_clear_output",                           "build_clear_build_output" },
+    .{ 28, "", "toggle_build_panel",                           "build_toggle_build_panel" },
+    .{ 28, "", "toggle_build_panel_focus",                     "build_toggle_build_panel_focus" },
+    .{ 28, "", "choose_language",                              "choose_language_syntax" },
+    .{ 28, "", "reload_from_disk",                             "reload_file_from_disk" },
+    .{ 28, "", "indentation_detect_from_buffer_contents",      "indentation_detect_from_file_contents" },
+    .{ 28, "", "indentation_use_defaults_for_buffer",          "indentation_use_defaults_for_file" },
+    .{ 28, "", "indentation_convert_to_tabs_for_buffer",       "indentation_convert_file_indentation_to_tabs" },
+    .{ 28, "", "indentation_convert_to_spaces_for_buffer",     "indentation_convert_file_indentation_to_spaces" },
+    .{ 28, "", "convert_buffer_to_crlf",                       "line_endings_convert_buffer_to_crlf" },
+    .{ 28, "", "convert_buffer_to_lf",                         "line_endings_convert_buffer_to_lf" },
+    .{ 28, "", "show_troubleshooting_info",                    "show_troubleshooting_information" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -996,9 +1038,11 @@ MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
     run_test("Сolors from [2]",               "global.focus-config",  COLORS_2,                 COLORS_2_EXPECTED);
     run_test("Colors and settings from [1]",  "global.focus-config",  COLORS_AND_SETTINGS_1,    COLORS_AND_SETTINGS_1_EXPECTED);
     run_test("Keybinds from [1]",             "global.focus-config",  KEYBINDS_1,               KEYBINDS_1_EXPECTED);
+    run_test("Build panel keybinds from [22]", "project.focus-config", BUILD_PANEL_KEYBINDS_22, BUILD_PANEL_KEYBINDS_EXPECTED);
+    run_test("Build panel keybinds from [23]", "project.focus-config", BUILD_PANEL_KEYBINDS_23, BUILD_PANEL_KEYBINDS_EXPECTED);
+    run_test("Keybinds from [27]",            "project.focus-config", KEYBINDS_27,              KEYBINDS_27_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
-    // !!!!!!!!!!!
     // run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 
@@ -1322,7 +1366,7 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -1473,7 +1517,7 @@ SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [2]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
@@ -1609,7 +1653,7 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -2033,6 +2077,97 @@ region_deletion:                        7722224C
 FOCUS_CONFIG
 
 
+BUILD_PANEL_KEYBINDS_22 :: #string FOCUS_CONFIG
+[22]  # Version number. Do not delete.
+
+[[keymap]]
+[common]
+Ctrl-B                      build_panel_toggle
+Ctrl-Shift-B                build_panel_toggle_focus
+FOCUS_CONFIG
+
+BUILD_PANEL_KEYBINDS_23 :: #string FOCUS_CONFIG
+[23]  # Version number. Do not delete.
+
+[[keymap]]
+[common]
+Ctrl-B                      toggle_build_panel
+Ctrl-Shift-B                toggle_build_panel_focus
+FOCUS_CONFIG
+
+BUILD_PANEL_KEYBINDS_EXPECTED :: #string FOCUS_CONFIG
+[!latest!]  # Version number. Do not delete.
+
+[[keymap]]
+[common]
+Ctrl-B                      build_toggle_build_panel
+Ctrl-Shift-B                build_toggle_build_panel_focus
+FOCUS_CONFIG
+
+KEYBINDS_27 :: #string FOCUS_CONFIG
+[27]  # Version number. Do not delete.
+
+[[keymap]]
+[common]
+Ctrl-F1                     open_projects_directory
+Ctrl-F2                     show_default_config
+Ctrl-F3                     search_in_project
+Ctrl-F4                     build_clear_output
+Ctrl-F5                     toggle_build_panel
+Ctrl-F6                     toggle_build_panel_focus
+Ctrl-F7                     choose_language
+Ctrl-F8                     show_troubleshooting_info
+
+[editors]
+Ctrl-F1 Ctrl-F2             reload_from_disk
+Ctrl-F3                     indentation_detect_from_buffer_contents
+Ctrl-F4                     indentation_use_defaults_for_buffer
+Ctrl-F5                     indentation_convert_to_tabs_for_buffer
+Ctrl-F6                     indentation_convert_to_spaces_for_buffer
+Ctrl-F7                     convert_buffer_to_crlf
+Ctrl-F8                     convert_buffer_to_lf
+Ctrl-F9                     search_in_project
+Ctrl-F10                    save
+
+[open file dialog]
+F1                          open_projects_directory
+
+[search dialog]
+F1                          search_in_project
+FOCUS_CONFIG
+
+KEYBINDS_27_EXPECTED :: #string FOCUS_CONFIG
+[!latest!]  # Version number. Do not delete.
+
+[[keymap]]
+[common]
+Ctrl-F1                     open_directory_with_project_files
+Ctrl-F2                     show_default_config_readonly
+Ctrl-F3                     search_in_workspace
+Ctrl-F4                     build_clear_build_output
+Ctrl-F5                     build_toggle_build_panel
+Ctrl-F6                     build_toggle_build_panel_focus
+Ctrl-F7                     choose_language_syntax
+Ctrl-F8                     show_troubleshooting_information
+
+[editors]
+Ctrl-F1 Ctrl-F2             reload_file_from_disk
+Ctrl-F3                     indentation_detect_from_file_contents
+Ctrl-F4                     indentation_use_defaults_for_file
+Ctrl-F5                     indentation_convert_file_indentation_to_tabs
+Ctrl-F6                     indentation_convert_file_indentation_to_spaces
+Ctrl-F7                     line_endings_convert_buffer_to_crlf
+Ctrl-F8                     line_endings_convert_buffer_to_lf
+Ctrl-F9                     search_in_workspace
+Ctrl-F10                    save
+
+[open file dialog]
+F1                          open_directory_with_project_files
+
+[search dialog]
+F1                          search_in_workspace
+FOCUS_CONFIG
+
 KEYBINDS_1 :: #string FOCUS_CONFIG
 [1]  # Version number. Do not delete.
 
@@ -2215,7 +2350,7 @@ Ctrl-Tab                    switch_between_open_files
 Ctrl-Alt-P                  switch_to_project
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance

@@ -4,7 +4,7 @@
 
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is best.
-CURRENT_CONFIG_VERSION :: 27;
+CURRENT_CONFIG_VERSION :: 28;
 
 get_global_config_path :: inline () -> string /* temp */ {
     return tprint("%/global.focus-config", config_dir);
