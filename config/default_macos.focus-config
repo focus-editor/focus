@@ -282,8 +282,8 @@ Cmd-Opt-R                       toggle_regex_search
 
 Cmd-Shift-P                     show_commands
 
-Cmd-F                           search_in_buffer
-Cmd-Opt-F                       search_in_buffer_dropdown_mode
+Cmd-F                           search_in_buffer_dropdown_mode
+Cmd-Opt-F                       search_in_buffer
 Cmd-Shift-F                     search_in_project
 
 Cmd-Opt-P                       switch_to_project

@@ -301,8 +301,8 @@ Ctrl-Shift-P                show_commands
 
 Ctrl-Alt-P                  switch_to_project
 
-Ctrl-F                      search_in_buffer
-Alt-F                       search_in_buffer_dropdown_mode
+Ctrl-F                      search_in_buffer_dropdown_mode
+Alt-F                       search_in_buffer
 Ctrl-Shift-F                search_in_project
 
 Ctrl-P                      open_file_by_name
