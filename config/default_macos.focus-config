@@ -200,8 +200,8 @@ Cmd-Shift-S                     save_as
 Cmd-Opt-Minus                   cursor_go_back
 Cmd-Opt-Plus                    cursor_go_forward
 
-Cmd-Shift-Minus                 go_to_previous_buffer
-Cmd-Shift-Plus                  go_to_next_buffer
+Ctrl-PageUp                     go_to_previous_buffer
+Ctrl-PageDown                   go_to_next_buffer
 
 Cmd-/                           toggle_comment
 Cmd-L                           select_line
