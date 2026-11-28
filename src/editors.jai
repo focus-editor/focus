@@ -466,15 +466,9 @@ active_editor_type_char :: (char: u32) {
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
 }
 
-maybe_deactivate_lingering_actions :: () {
+maybe_deactivate_lingering_actions :: (held_modifiers: Mods) {
     for active_lingering_actions {
-        all_modifier_keys_released := (
-            (!it.modifier_keys.ctrl_pressed     || !ctrl_pressed()     ) &&
-            (!it.modifier_keys.shift_pressed    || !shift_pressed()    ) &&
-            (!it.modifier_keys.alt_pressed      || !alt_pressed()      ) &&
-            (!it.modifier_keys.cmd_meta_pressed || !cmd_meta_pressed() )
-        );
-        if all_modifier_keys_released {
+        if (it.modifier_keys.packed & held_modifiers.packed) == 0 {
             deactivate_lingering_action(it);
             remove it;
         }

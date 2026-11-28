@@ -184,6 +184,12 @@ main :: () {
                     defer_action_quit();
 
                 case .KEYBOARD;
+                    #if OS == .MACOS {
+                        if !event.key_pressed && (event.key_code == .CTRL || event.key_code == .SHIFT || event.key_code == .ALT || event.key_code == .CMD) {
+                            maybe_deactivate_lingering_actions(event.modifier_flags);
+                        }
+                    }
+
                     // Double shift click
                     if context.config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
@@ -259,7 +265,7 @@ main :: () {
             if handled && !lingering_action_activated_this_frame then clear_all_lingering_actions();
         }
 
-        maybe_deactivate_lingering_actions();
+        maybe_deactivate_lingering_actions(.{ ctrl_pressed = ctrl_pressed(), shift_pressed = shift_pressed(), alt_pressed = alt_pressed(), cmd_meta_pressed = cmd_meta_pressed() });
 
         execute_deferred_actions();
 
