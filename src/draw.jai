@@ -1181,6 +1181,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
             // properly handle horizontal scrolling.
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, min_y_scroll, max_y_scroll);
+            if new_target != top then start_scrollbar_fade_out_animation(scrollbar_id);
             if mouse.smooth_scroll {
                 start_animation(*scroll_y, top, new_target);
             } else {
