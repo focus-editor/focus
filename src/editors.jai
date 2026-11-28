@@ -397,10 +397,10 @@ active_editor_type_char :: (char: u32) {
 
     utf8_char := convert_utf32_to_utf8(char);
 
-    new_group := false;  // we always want to remember cursor state when a selection is replaced with anything
-    for editor.cursors { if has_selection(it) { new_group = true; break; } }
+    has_any_selection := false;
+    for editor.cursors { if has_selection(it) { has_any_selection = true; break; } }
 
-    if new_group || (to_float64_seconds(frame_time) - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
+    if has_any_selection || (to_float64_seconds(frame_time) - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
         new_edit_group(buffer, editor);
     }
 
@@ -452,7 +452,7 @@ active_editor_type_char :: (char: u32) {
         }
     }
 
-    if new_group then new_edit_group(buffer, editor);  // make sure selection operations have a dedicated group
+    if should_surround_selection then new_edit_group(buffer, editor);
 
     rescan_for_lines(buffer);
     if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
