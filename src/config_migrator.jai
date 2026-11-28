@@ -1046,6 +1046,19 @@ MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
     // run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 
+    run_test("Copy editor font size to UI font size", "global.focus-config",
+             "[27]\n\n[[style]]\n\n[fonts]\nfont_size:  14  # Editor size",
+             "[!latest!]  # Version number. Do not delete.\n\n[[style]]\n\n[fonts]\nfont_size:  14  # Editor size\nfont_ui_size:  14\n");
+
+    run_test("Preserve explicit UI font size", "global.focus-config",
+             "[27]\n\n[[style]]\n\n[fonts]\nfont_size:  14\nfont_ui_size:  12\n",
+             "[!latest!]  # Version number. Do not delete.\n\n[[style]]\n\n[fonts]\nfont_size:  14\nfont_ui_size:  12\n");
+
+    run_test("Do not add UI font size without editor font size", "global.focus-config",
+             "[27]\n\n[[style]]\n\n[fonts]\nfont:       default\n",
+             "[!latest!]  # Version number. Do not delete.\n\n[[style]]\n\n[fonts]\nfont:       default\n");
+
+
     print("All unit tests passed!\n");
 
     if MIGRATE_BUILTIN_THEMES #run,stallable {
@@ -1732,6 +1745,7 @@ COLORS_1_EXPECTED :: #string FOCUS_CONFIG
 [fonts]
 font:       default
 font_size:  14
+font_ui_size:  14
 
 [colors]
 background0:                            15212AFF
@@ -1832,6 +1846,7 @@ COLORS_2_EXPECTED :: #string FOCUS_CONFIG
 [fonts]
 font:       default
 font_size:  14
+font_ui_size:  14
 
 [colors]
 background0:                            15212AFF
@@ -2009,6 +2024,7 @@ search_max_results:                              4000  # maximum number of works
 [fonts]
 font:       default
 font_size:  14
+font_ui_size:  14
 
 [colors]
 background0:                            15212AFF
@@ -2229,6 +2245,7 @@ KEYBINDS_1_EXPECTED :: #string FOCUS_CONFIG
 [fonts]
 font:       default
 font_size:  14
+font_ui_size:  14
 
 [colors]
 background0:                            15212AFF

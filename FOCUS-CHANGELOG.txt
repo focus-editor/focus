@@ -14,15 +14,22 @@
             + `split_(left|right|top|bottom)` (by default `Ctrl-Alt-X Arrow(Left|Right|Up|Down)`)
         + To duplicate an editor in the specified direction:
             + `duplicate_editor_(left|right|top|bottom)` (by default `Ctrl-Alt-D Arrow(Left|Right|Up|Down)`)
+        + Drag files onto a pane to open them there
+        + Use `rotate_panes_clockwise` and `rotate_panes_counterclockwise` to rearrange panes
+        + Use `close_pane`, `close_other_panes` or `close_(left|right|top|bottom)_pane` to close panes
     + The editor now supports per-pane buffer lists ("tabs"):
         + Use `go_to_previous_buffer` (`Ctrl-PageUp` by default) or `go_to_next_buffer` (`Ctrl-PageDown`) to switch between buffers in the pane
         + If an editor is moved to a pane where an editor for the same buffer already exists, it will overwrite the existing one
+        + `Switch Between Open Files` switches to the existing editor in its pane instead of opening another view of the file
     + Newly opened editors will be temporary by default (will be replaced by the next opened editor unless made permanent by editing, double clicking the name or using a `keep_editor` command):
         + Set the new setting `enable_temporary_editors` to `false` to disable this behaviour if needed
+        + Explicitly opening a file in another pane keeps that editor permanent
     + Editor history has been reworked. It is much less granular now and works correctly on edited files
+        + Editors reopened through cursor history are temporary when temporary editors are enabled
     + It is now possible to specify words which will be highlighted in comments, such as TODO, NOTE etc. (see example in settings)
     + When saving as or moving a file it is now possible to specify a folder which doesn't exist, and it will be created (thanks @caztanj):
         + NOTE: special handling of the slash in the file dialogs has been removed, they will no longer open the current entry
+    + All bindable actions are now available in the command palette
     + New commands:
         + `center_pane_splitter` and `center_all_pane_splitters`.
             + Note that previously whenever a pane was unexpanded using `toggle_expand` the splitter would be centered, but now it will return to its previous position, which is why a separate command for centering might be useful
@@ -30,6 +37,11 @@
         + `toggle_indent_guides` - use to temporarily switch indent guides on or off (thanks @fbjerno)
         + `keep_editor` - make a temporary editor permanent
         + `reopen_closed_editor`
+        + `close_all_editors` and `close_other_editors_in_pane`
+        + `sort_lines` - sort the selected lines (thanks @hovsater)
+        + `copy_current_file_path` - copy the full path of the current file (thanks @LainLayer)
+        + `rename_current_file` - an alias for `move_current_file`
+        + `toggle_status_bar` - use to temporarily show or hide the status bar (thanks @nick-celestin-zizic)
     + New settings:
         + `cursor_position_after_jump` (defaults to `0.45`) - controls where the cursor will end up after jumping to a search result 0.0 is top, 1.0 is bottom
         + `closing_last_editor_in_pane_should_close_pane` (defaults to `true`)
@@ -39,14 +51,19 @@
         + `active_pane_border_width` (defaults to `1.0`) - set to `0.0` to disable the border or set to a value larger than `1.0` to make it thicker
         + `inactive_pane_dim_overlay_opacity` (defaults to `0.0`) - controls how dim the inactive panes should be. Set to a value between `0.0` and `1.0` to see the dim overlay
         + `comment_highlight_words1` - `comment_highlight_words4` can be used to put words into 4 different groups to highlight them with 4 different colors
+        + `scroll_behind_first_line` (defaults to `false`) - allow scrolling above the start of a file (thanks Kuju)
+        + `search_max_results` (defaults to `4000`) - maximum number of workspace search results
     + New colors:
         + `inactive_pane_dim_overlay`
         + `active_pane_border`
         + `code_comment_highlight1` - `code_comment_highlight4`
+        + `code_addition`, `code_deletion`, `region_addition` and `region_deletion` for patch/diff highlighting (thanks @SentientCoffee)
+    + `Hash` can now be used in keybinds for the `#` key on layouts such as German (thanks @LainLayer)
     + New variables to be used in build commands: `%FILE_LINE%` and `%FILE_COLUMN%` (thanks @fda0)
     + CRLF line endings support (thanks @filippocrocchini):
         + New setting `line_endings` (options: `preserve`, `lf`, `crlf`)
         + New commands: `convert_buffer_to_crlf`, `convert_buffer_to_lf`
+        + The final command names are `line_endings_convert_buffer_to_crlf` and `line_endings_convert_buffer_to_lf`
 
 + Bug fixes:
     + Fixed a crash when using block comments with multicursor in some cases (thanks @fbjerno)
@@ -67,6 +84,30 @@
     + Linux: fixed a scrolling issue on X11/XCB when scrolling horizontally (thanks @ostef)
     + macOS: fixed an issue where the mouse would not interact with the window after resizing unless clicked and improved mouse pointer behaviour (thanks @caztanj)
     + Fix search window not being auto-populated with the selected text in some cases when using line wrap
+    + Fixed crashes when highlighting certain `.ini` section headers or incomplete XML declarations
+    + Fixed a crash when parsed build errors are missing line or column information (thanks Sebastian B)
+    + Fixed build commands sometimes using the wrong editor for file and cursor variables
+    + Fixed a race when switching projects while the workspace is still scanning
+    + Fixed Move and Save As sometimes leaving other views of the same file pointing at the old buffer
+    + Fixed Save As and Move sometimes starting in the wrong folder. For a new file, Save As uses the last file-backed editor's folder when available
+    + Fixed redundant leading slashes in paths shown by the Save As and Move dialogs (thanks @caztanj)
+    + Fixed indentation detection incorrectly choosing one space in some files
+    + Fixed color picker edits and drags not being recorded correctly for undo and redo
+    + Fixed font rendering glitches when zooming. Focus falls back to the default font if a configured font cannot be initialized
+    + Fixed stray text input from Ctrl/Cmd/Meta shortcuts without blocking Alt/Option character input (thanks @caztanj)
+    + Workspace search focuses the search field when reopened, and in-file search text no longer overlaps the search buttons
+    + Fixed highlighting of unterminated multiline comments at the end of a file (thanks @caztanj)
+    + Swift: fixed single-line comment highlighting (thanks @caztanj)
+    + Lua: fixed names after a dot being incorrectly highlighted as built-in functions (thanks @SentientCoffee)
+    + Jai: fixed highlighting for enum variants (thanks @Roman-Skabin), nested block comments, and an unterminated `#string` at the end of a file
+    + Linux: fixed a crash when resuming from sleep on Wayland
+    + Linux: fixed window glitches while resizing on Wayland and cases where the editor would not sleep when idle (thanks @caztanj)
+    + Linux: fixed copy and paste failing on some Wayland compositors (thanks @caztanj)
+    + Linux: fixed input lag on X11 (thanks @caztanj) and drag and drop on Linux Mint (thanks @jlami)
+    + Linux: create missing parent directories for the config and data folders
+    + macOS: fixed the scrollbar not appearing during touchpad scrolling
+    + macOS: restored the default `Cmd-R` and `Cmd-Y` shortcuts for removing and skipping selection matches
+    + macOS: fixed a memory leak when processing input events
 
 + Other changes:
     + Linux: improved touchpad scrolling on Wayland (thanks @caztanj)
@@ -74,6 +115,8 @@
     + New builtin themes:
         + Catppuccin, Rosé Pine, Jellybeans, Kanagawa, VSCode Dark (thanks @daolgierd)
         + Redshift (thanks @MusaMahmood)
+        + Kujukuju (thanks Kujukuju)
+    + Inactive selections are now more visible in the jblowtorch theme (thanks Niza Toshpulatov)
     + Mac: Hide command and Services menu added
     + Syntax highlighting:
         + Improved the speed of syntax highlighting significantly
@@ -82,6 +125,13 @@
         + Patch/diff (thanks @SentientCoffee)
         + Dart (thanks @fbjerno)
         + Powershell (thanks @JeremyLullaby and @fda0)
+        + TOML and Luau (thanks @LainLayer)
+        + `.tpp` files now use C++ syntax highlighting (thanks @fbjerno)
+        + HTML: CSS in `<style>` tags and `style` attributes (thanks @caztanj)
+        + C: added highlighting for more keywords and types, including `nullptr`, `_BitInt` and `#embed` (thanks @LainLayer), as well as `constexpr` and `thread_local`. C and C++ now highlight `ssize_t`
+        + Java: improved number literal highlighting, including hexadecimal floating-point literals and type suffixes (thanks @LainLayer)
+        + Odin: added highlighting for `#all_or_none`, `#simple` and `#must_tail` (thanks @LainLayer)
+        + Jai: added highlighting for `#exists` and `#overlay` (thanks Nathaniel Taulbut for `#overlay`), and improved function call and modifier highlighting (thanks @myri4)
     + New colors: `cursor_line_highlight` and `color_preview_title_bar` for more granular control (thanks @NotKyon)
     + Adding subdirectories of existing directories in the workspace is now allowed
     + When max_editor_width is used, the scrollbar will be positioned outside the editor area if there's available space for it
@@ -89,10 +139,47 @@
     + Renamed actions:
         + `build_panel_toggle` -> `toggle_build_panel`
         + `build_panel_toggle_focus` -> `toggle_build_panel_focus`
+        + The final names for the build panel actions above are `build_toggle_build_panel` and `build_toggle_build_panel_focus`
+        + `search_in_project` -> `search_in_workspace`, `reload_from_disk` -> `reload_file_from_disk`
+        + `move_to_previous_editor_history` -> `cursor_go_back`, `move_to_next_editor_history` -> `cursor_go_forward`
+        + `increase_font_size` -> `zoom_in`, `decrease_font_size` -> `zoom_out`, `reset_font_size_to_default` -> `reset_zoom`
+        + `close_current_editor` -> `close_editor`. The old `close_other_editor`, `close_left_editor` and `close_right_editor` actions were replaced by pane commands
+        + Other action names were updated to match their command palette labels. Existing keybinds for renamed actions are migrated
     + macOS: change the dir where the editor looks for system fonts to the correct one (thanks @hovsater)
     + macOS: `prefer_system_file_dialogs` now works on macOS (thanks @caztanj)
     + `move{left|right}_through_word_throttled` will now stop at newline
     + When pointing the editor to a directory it will now load any `*.focus-config` file as its project config provided it's the only config file in that directory (previously it was a hard requirement that the file was called exactly `.focus-config`)
+    + Focus no longer loads a project from the current working directory implicitly. Pass the directory or use `-project` to load it. Opening individual files from the command line doesn't reopen the most recent project
+    + `-project` now recognizes `.focus-config` extensions regardless of case
+    + Reloading the workspace preserves the editor layout. Reloading a file from disk only replaces the changed span, which keeps cursor positions more accurate
+    + Workspace file changes are processed in the background. Open editors follow files that are moved or renamed within the workspace, including when their containing folder is renamed
+    + Workspace scanning is faster, especially on Windows. Scan progress no longer obscures text in the file and search dialogs
+    + Workspace search:
+        + Search is faster while typing and when results contain very long lines
+        + Include and exclude filters accept plain substrings as well as wildcards. Use `^` or `$` to anchor a match, e.g. `.cpp$` or `^node_modules$`
+        + Results refresh when workspace scanning finishes and keep their selection and scroll position on file updates when possible
+    + File name search:
+        + Fuzzy matching is faster and ranks filename prefixes and other contiguous matches above scattered matches
+        + File name searches respect `search_is_case_sensitive_when_uppercase_present`
+        + The file dialog keeps its selection and scroll position on file updates when possible
+    + `Ctrl-F` (`Cmd-F` on macOS) now opens dropdown search by default. Use `Alt-F` (`Cmd-Opt-F` on macOS) for the other in-file search mode
+    + `Shift-Enter` and `Shift-NumpadEnter` now break the line by default
+    + macOS: `Ctrl-PageUp` and `Ctrl-PageDown` now switch between editors in a pane, replacing `Cmd-Shift-Minus` and `Cmd-Shift-Plus`
+    + Replacing selected text by typing now undoes as one edit. Moving the cursor with the keyboard starts a separate undo group for subsequent typing
+    + `Escape` now also clears the selection if there is nothing else to dismiss
+    + Closing editors asks what to do with unsaved changes if the last view of a modified file is being closed. This also applies to Close All Editors
+    + Confirmation dialogs select the first option by default
+    + The build panel is positioned opposite the active pane and shows a border when focused. Custom build commands are listed under `Build Command:` in the command palette
+    + Build error navigation reuses open editors when possible. Added an Odin error regex example to the default configs
+    + When `max_editor_width` is set, clicking outside the text area still activates the pane
+    + Scrollbars fade out after 1 second instead of 2 by default and respond to the mouse only when it is near the scrollbar itself
+    + Maximum font size increased from 30 to 90 (thanks @rexim)
+    + Config and theme reloads wait for workspace scanning to finish. Focus watches the themes used by both the global and project configs
+    + Color previews better reflect the active global and project styles. The language list in the preview can be scrolled (thanks @fbjerno)
+    + `toggle_line_numbers` and `toggle_indent_guides` temporarily override per-file settings across panes
+    + Removed the `editor_history_size` and `disable_file_open_close_animations` settings. Renamed the theme color `code_header` to `code_header1`
+    + Made numerous internal changes and stability improvements
+    + The minimum Jai version for source builds is now `0.2.029`. Source builds support metaprogram plugins and can target Apple Silicon natively on macOS (thanks @caztanj)
 
 
 # RELEASES ==================================================================
