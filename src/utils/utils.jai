@@ -185,7 +185,7 @@ bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_t
 kmp_build_prefix_table :: (needle: string) -> [] int {
     if !needle return .[];
 
-    table := NewArray(needle.count, int, initialized = false,, temp);
+    table := NewArray(needle.count, int, initialize = false,, temp);
     table[0] = 0;
 
     matched := 0;

@@ -1091,7 +1091,7 @@ get_device_info :: (xd: *XCB_Display, device_id: xcb_input_device_id_t) -> *XCB_
             }
         }
 
-        new_dev := New(XCB_Device_Info, initialized=false);
+        new_dev := New(XCB_Device_Info, initialize=false);
         new_dev.* = device_info;
         table_add(*xd.devices, info.deviceid, new_dev);
         if !ret then ret = new_dev;

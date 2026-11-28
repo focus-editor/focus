@@ -497,7 +497,7 @@ handle_request :: (queue: *Queue($T), thread: *Worker_Thread, request: *File_Ope
                 } else {
                     file_size := file_metadata.st_size;
 
-                    request.data = NewArray(file_size, u8, initialized = false);
+                    request.data = NewArray(file_size, u8, initialize = false);
                 }
             }
             #through;

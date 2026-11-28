@@ -296,7 +296,7 @@ wait_for_completion :: (queue: *Queue($T), check_only := false) -> T, data: [] u
                         }
                     }
 
-                    original_request.data = NewArray(xx size, u8, initialized = false);
+                    original_request.data = NewArray(xx size, u8, initialize = false);
 
                     submitted := submit_sq_entry(queue, #code {
                         using entry;

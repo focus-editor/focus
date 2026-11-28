@@ -1,7 +1,7 @@
 fuzzy_match :: (s: string, filter: Fuzzy_Filter, only_exact := false, $want_highlights := false) -> score: s32, exact_match := false, highlights: [] bool = .[] {
     highlights: [] bool;
     #if want_highlights {
-        highlights = NewArray(s.count, bool, initialized = true);
+        highlights = NewArray(s.count, bool, initialize = true);
     }
 
     auto_release_temp();
@@ -44,7 +44,7 @@ fuzzy_match :: (s: string, filter: Fuzzy_Filter, only_exact := false, $want_high
     #if want_highlights {
         // Take the mark after allocating the returned mask, which may also use temp
         temp_mark = get_temporary_storage_mark();
-        chunk_highlights = NewArray(str.count, bool, initialized = false,, temp);
+        chunk_highlights = NewArray(str.count, bool, initialize = false,, temp);
     }
     defer {
         #if want_highlights {

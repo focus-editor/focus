@@ -1280,7 +1280,7 @@ push_repeat_op :: (using ps: *ParseState, op: RegexpOp, s: string, nongreedy: bo
 
 	re := new_regexp(*ps.pool, op, fl);
 	re.down = stacktop.down;
-	re.subs = NewArray(1, *Regexp_Node, initialized = false);
+	re.subs = NewArray(1, *Regexp_Node, initialize = false);
 	re.subs[0] = finish_regexp(stacktop);
 	re.simple = compute_simple(re);
 	stacktop = re;
@@ -1470,7 +1470,7 @@ do_right_paren :: (using ps: *ParseState) -> bool {
 	if re.cap > 0 {
 		re.op = .Capture;
 		// re.cap is already set
-		re.subs = NewArray(1, *Regexp_Node, initialized = false);
+		re.subs = NewArray(1, *Regexp_Node, initialize = false);
 		re.subs[0] = finish_regexp(r1);
 		re.simple = compute_simple(re);
 	} else {

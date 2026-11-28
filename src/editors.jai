@@ -2562,7 +2562,7 @@ create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
 
     organise_cursors(editor);
 
-    from_cursors := NewArray(cursors.count, Cursor, initialized = false,, temp);
+    from_cursors := NewArray(cursors.count, Cursor, initialize = false,, temp);
     memcpy(from_cursors.data, cursors.data, cursors.count * size_of(Cursor));
 
     for from_cursor : from_cursors {
@@ -3351,7 +3351,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
 
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
     Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
-    space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false,, allocator = temp);
+    space_per_cursor := NewArray(editor.cursors.count, Space, initialize = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         start := get_real_line_start_offset(buffer, offset_to_real_line(buffer, selection.start));
@@ -3389,7 +3389,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
 
     Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; last_line: bool; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialize = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         last_line := offset_to_real_line(buffer, selection.end);
@@ -3422,7 +3422,7 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
 
     Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialize = false,, allocator = temp);
     for cursor : editor.cursors {
         selection  := get_selection(cursor);
         first_line := offset_to_real_line(buffer, selection.start);
@@ -3490,7 +3490,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
-    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false,, allocator = temp);
+    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialize = false,, allocator = temp);
     for cursor : editor.cursors {
         if should_delete_closing_bracket {
             range_per_cursor[it_index] = .{ start = cursor.pos - 1, end = cursor.pos + 1 };

@@ -1141,7 +1141,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
 
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
-    cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false,, allocator = temp);
+    cursor_coords := NewArray(cursors.count, Cursor_Coords, initialize = false,, allocator = temp);
     for cursors cursor_coords[it_index] = get_cursor_coords(editor, buffer, it);
 
     visible_lines_start: s32;
@@ -1576,7 +1576,7 @@ draw_editor :: (editor_id: Editor_Id, main_area: Rect, ui_id: Ui_Id, pane: *Edit
         pen.y += (line_height - char_x_advance) / 2 - visible_lines_start * line_height;
         pen.x += hidden_chars_on_the_left * char_x_advance;
 
-        code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false,, allocator = temp);
+        code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialize = false,, allocator = temp);
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;

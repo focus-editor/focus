@@ -32,7 +32,7 @@ maybe_grow :: inline (using queue: *Fifo_Queue($T)) {
     if size < array.count return;
 
     new_capacity := max(array.count * 2, INITIAL_SIZE);
-    new_array := NewArray(new_capacity, T, initialized = false);
+    new_array := NewArray(new_capacity, T, initialize = false);
 
     if head > tail {
         assert(size == head - tail);
