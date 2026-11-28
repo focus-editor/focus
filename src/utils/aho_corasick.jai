@@ -156,7 +156,7 @@ get_or_create_child :: (using automaton: *Aho_Corasick_Automaton, node_index: s3
 }
 
 cleanup :: (using automaton: *Aho_Corasick_Automaton) {
-    nodes = NewArray(raw_nodes.count, Node, initialized = false);
+    nodes = NewArray(raw_nodes.count, Node, initialize = false);
     for raw_node : raw_nodes {
         node := *nodes[it_index];
         node.children     = raw_node.children;

@@ -122,7 +122,7 @@ get_immutable_buffer_ptrs_snapshot :: () -> [] *Buffer {
     }
 
     // Build a new snapshot
-    buffer_ptrs := NewArray(open_buffers.count, *Buffer, initialized = false);
+    buffer_ptrs := NewArray(open_buffers.count, *Buffer, initialize = false);
     for * open_buffers {
         buffer_ptrs[it_index] = it;
     }

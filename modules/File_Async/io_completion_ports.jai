@@ -90,7 +90,7 @@ read_entire_file :: (queue: *Queue($T), file_path: string, user_data: T) -> resu
         return error(.FileAccessFailed, code);
     }
 
-    file_data := Basic.NewArray(file_info.EndOfFile.QuadPart, u8, initialized = false);
+    file_data := Basic.NewArray(file_info.EndOfFile.QuadPart, u8, initialize = false);
 
     file.unfinished_operations = Basic.New(u64);
     file.unfinished_operations.* = 0;

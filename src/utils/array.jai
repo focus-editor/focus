@@ -173,7 +173,7 @@ ordered_remove_by_index :: inline (array: *Array($T), index: s32) {
 }
 
 copy :: (array: Array($T)) -> Array(T) {
-    dest := NewArray(array.count, T, initialized=false);
+    dest := NewArray(array.count, T, initialize=false);
     memcpy(dest.data, array.data, array.count * size_of(T));
     return from_view(dest);
 }

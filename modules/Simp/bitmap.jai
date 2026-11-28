@@ -22,7 +22,7 @@ bitmap_alloc :: (using bitmap: *Bitmap, w: s32, h: s32, _format: Texture_Format)
     bpp  := get_image_bytes_per_texel(_format);
     size := w * h * bpp;
 
-    data   = NewArray(size, u8, initialized=false);
+    data   = NewArray(size, u8, initialize=false);
     stride = xx (w*bpp);
 
     format = _format;
