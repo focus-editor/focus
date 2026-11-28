@@ -171,6 +171,7 @@ base_commands := #run -> [] Command {
         cmd( "Open File Directory",               .open_file_directory,              .Single ),
 
         cmd( "Move Current File",                 .move_current_file,                .Single ),
+        cmd( "Rename Current File",               .move_current_file,                .Single ),  // an alias 
         cmd( "Delete Current File",               .delete_current_file,              .Single ),
 
         cmd( "Join Lines",                        .join_lines,                       .Single ),
